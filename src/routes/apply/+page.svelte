@@ -1,0 +1,681 @@
+<script lang="ts">
+	import { resolve } from '$app/paths';
+	import { goto } from '$app/navigation';
+	import LinkReveal from '$lib/components/LinkReveal.svelte';
+	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
+	import { saveUserSession } from '$lib/utils/userSession';
+
+	let name = $state('');
+	let email = $state('');
+	let phone = $state('');
+	let password = $state('');
+	let confirmPassword = $state('');
+	let agreed = $state(false);
+	let captchaChecked = $state(false);
+	let captchaVerifying = $state(false);
+	let attempted = $state(false);
+
+	type Errors = {
+		name?: string;
+		email?: string;
+		phone?: string;
+		password?: string;
+		confirmPassword?: string;
+		agreed?: string;
+		captcha?: string;
+	};
+
+	let errors = $state<Errors>({});
+
+	const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+	function validate(): Errors {
+		const e: Errors = {};
+
+		if (!name.trim()) {
+			e.name = 'Full name is required.';
+		} else if (name.trim().length < 2) {
+			e.name = 'Please enter your full name.';
+		}
+
+		if (!email.trim()) {
+			e.email = 'Email is required.';
+		} else if (!EMAIL_RE.test(email.trim())) {
+			e.email = 'Enter a valid email address.';
+		}
+
+		const digits = phone.replace(/\D/g, '');
+		if (!phone.trim()) {
+			e.phone = 'Phone number is required.';
+		} else if (digits.length !== 10) {
+			e.phone = 'Phone must be exactly 10 digits.';
+		}
+
+		if (!password) {
+			e.password = 'Password is required.';
+		} else if (password.length < 8) {
+			e.password = 'Use at least 8 characters.';
+		}
+
+		if (!confirmPassword) {
+			e.confirmPassword = 'Please confirm your password.';
+		} else if (confirmPassword !== password) {
+			e.confirmPassword = 'Passwords do not match.';
+		}
+
+		if (!agreed) {
+			e.agreed = 'You must accept the Terms and Privacy Policy.';
+		}
+
+		if (!captchaChecked) {
+			e.captcha = 'Please verify the reCAPTCHA.';
+		}
+
+		return e;
+	}
+
+	function revalidate() {
+		if (attempted) errors = validate();
+	}
+
+	function onPhoneInput(ev: Event) {
+		const input = ev.currentTarget as HTMLInputElement;
+		const digits = input.value.replace(/\D/g, '').slice(0, 10);
+		phone = digits;
+		input.value = digits;
+		revalidate();
+	}
+
+	function toggleCaptcha() {
+		if (captchaChecked || captchaVerifying) return;
+		captchaVerifying = true;
+		setTimeout(() => {
+			captchaChecked = true;
+			captchaVerifying = false;
+			revalidate();
+		}, 700);
+	}
+
+	function handleSubmit(e: Event) {
+		e.preventDefault();
+		attempted = true;
+		const result = validate();
+		errors = result;
+		if (Object.keys(result).length === 0) {
+			saveUserSession({ name: name.trim(), email: email.trim(), phone: phone.trim() });
+			goto(resolve('/application'));
+		}
+	}
+</script>
+
+<svelte:head>
+	<title>Sign up · IITG TIC</title>
+</svelte:head>
+
+<section class="apply">
+	<div class="apply__inner">
+		<div class="apply__grid">
+				<!-- LEFT: Instructions -->
+				<aside class="info">
+					<h2 class="info__title">Instructions</h2>
+					<ol class="info__list">
+						<li>Sign up to create your IITG TIC account before submitting an application.</li>
+						<li>
+							Already registered? Log in to apply for Incubation or the TIC Equity and
+							Investment Summit.
+						</li>
+						<li>
+							Keep your supporting documents ready, such as Company Registration, GST and Trade
+							Licence.
+						</li>
+					</ol>
+				</aside>
+
+				<!-- RIGHT: Form -->
+				<div class="form-wrap">
+					<header class="apply__header">
+						<h1>Sign up</h1>
+					</header>
+
+					<form class="form" onsubmit={handleSubmit} novalidate>
+						<label class="field" class:has-error={errors.name}>
+							<span class="field__label">
+								<span class="field__name">Full name <em class="req">*</em></span>
+								{#if errors.name}
+									<span class="field__error">{errors.name}</span>
+								{/if}
+							</span>
+							<input
+								type="text"
+								bind:value={name}
+								autocomplete="name"
+								oninput={revalidate}
+								aria-invalid={!!errors.name}
+							/>
+						</label>
+
+						<label class="field" class:has-error={errors.email}>
+							<span class="field__label">
+								<span class="field__name">Email <em class="req">*</em></span>
+								{#if errors.email}
+									<span class="field__error">{errors.email}</span>
+								{/if}
+							</span>
+							<input
+								type="email"
+								bind:value={email}
+								autocomplete="email"
+								oninput={revalidate}
+								aria-invalid={!!errors.email}
+							/>
+						</label>
+
+						<label class="field" class:has-error={errors.phone}>
+							<span class="field__label">
+								<span class="field__name">Phone <em class="req">*</em></span>
+								{#if errors.phone}
+									<span class="field__error">{errors.phone}</span>
+								{/if}
+							</span>
+							<input
+								type="tel"
+								inputmode="numeric"
+								maxlength="10"
+								value={phone}
+								oninput={onPhoneInput}
+								autocomplete="tel"
+								aria-invalid={!!errors.phone}
+							/>
+						</label>
+
+						<div class="form__row">
+							<label class="field" class:has-error={errors.password}>
+								<span class="field__label">
+									<span class="field__name">Password <em class="req">*</em></span>
+									{#if errors.password}
+										<span class="field__error">{errors.password}</span>
+									{/if}
+								</span>
+								<input
+									type="password"
+									bind:value={password}
+									autocomplete="new-password"
+									oninput={revalidate}
+									aria-invalid={!!errors.password}
+								/>
+							</label>
+							<label class="field" class:has-error={errors.confirmPassword}>
+								<span class="field__label">
+									<span class="field__name">Confirm <em class="req">*</em></span>
+									{#if errors.confirmPassword}
+										<span class="field__error">{errors.confirmPassword}</span>
+									{/if}
+								</span>
+								<input
+									type="password"
+									bind:value={confirmPassword}
+									autocomplete="new-password"
+									oninput={revalidate}
+									aria-invalid={!!errors.confirmPassword}
+								/>
+							</label>
+						</div>
+
+						<div class="agree-wrap" class:has-error={errors.agreed}>
+							<label class="agree">
+								<input
+									type="checkbox"
+									class="agree__input"
+									bind:checked={agreed}
+									onchange={revalidate}
+								/>
+								<span class="agree__dot" aria-hidden="true"></span>
+								<span class="agree__text">
+									I agree to the <LinkReveal
+										href="/apply"
+										text="Terms of Use"
+										class="inline-link"
+									/> and
+									<LinkReveal href="/apply" text="Privacy Policy" class="inline-link" />
+									<em class="req">*</em>
+								</span>
+							</label>
+							{#if errors.agreed}
+								<span class="field__error field__error--block">{errors.agreed}</span>
+							{/if}
+						</div>
+
+						<div class="recaptcha-wrap" class:has-error={errors.captcha}>
+							<div class="recaptcha">
+								<button
+									type="button"
+									class="recaptcha__box"
+									class:is-checked={captchaChecked}
+									onclick={toggleCaptcha}
+									aria-pressed={captchaChecked}
+								>
+								<span class="recaptcha__check">
+									{#if captchaVerifying}
+										<span class="recaptcha__spinner"></span>
+									{:else if captchaChecked}
+										<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+											<path
+												d="M5 12.5l4 4 10-10"
+												fill="none"
+												stroke="#0EB05B"
+												stroke-width="3"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											/>
+										</svg>
+									{/if}
+								</span>
+								<span class="recaptcha__label">I'm not a robot</span>
+							</button>
+							<div class="recaptcha__brand" aria-hidden="true">
+								<svg viewBox="0 0 48 48" width="22" height="22">
+									<circle cx="24" cy="24" r="20" fill="none" stroke="#4A90E2" stroke-width="3" />
+									<path
+										d="M24 10v6M24 32v6M10 24h6M32 24h6"
+										stroke="#4A90E2"
+										stroke-width="3"
+										stroke-linecap="round"
+									/>
+									<circle cx="24" cy="24" r="4" fill="#4A90E2" />
+								</svg>
+								<div>
+									<strong>reCAPTCHA</strong>
+									<span>Privacy · Terms</span>
+								</div>
+							</div>
+						</div>
+							{#if errors.captcha}
+								<span class="field__error field__error--block">{errors.captcha}</span>
+							{/if}
+						</div>
+
+						<ButtonReveal type="submit" text="Sign up" class="submit" />
+
+						<p class="form__login">
+							Already have an account?
+							<LinkReveal href="/login" text="Login" class="inline-link" />
+						</p>
+					</form>
+				</div>
+			</div>
+	</div>
+</section>
+
+<style lang="scss">
+	@use '$styles/variables' as *;
+	@use '$styles/mixins' as *;
+
+	.apply {
+		min-height: 100svh;
+		background: $color-accent-blue;
+		color: $color-white;
+		padding: calc(var(--page-shell-top, 104px) + #{$space-10}) 0 $space-8;
+
+		@include breakpoint-down($bp-sm) {
+			padding-top: calc(var(--page-shell-top, 100px) + #{$space-8});
+		}
+	}
+
+	.apply__inner {
+		width: 100%;
+		max-width: 1360px;
+		margin-inline: auto;
+		padding-inline: $space-6;
+
+		@include breakpoint-down($bp-sm) {
+			padding-inline: $space-4;
+		}
+	}
+
+	.apply__grid {
+		display: grid;
+		grid-template-columns: 1fr 1px 1fr;
+		column-gap: $space-10;
+		row-gap: $space-7;
+		align-items: start;
+
+		&::before {
+			content: '';
+			grid-column: 2;
+			grid-row: 1;
+			align-self: stretch;
+			width: 1px;
+			background: rgba($color-white, 0.3);
+		}
+
+		@include breakpoint-down($bp-md) {
+			grid-template-columns: 1fr;
+			column-gap: 0;
+			row-gap: $space-5;
+
+			&::before {
+				display: none;
+			}
+		}
+	}
+
+	// ---- Info (left) ----
+	.info {
+		grid-column: 1;
+		padding-top: $space-2;
+	}
+
+	.info__title {
+		margin: 0 0 $space-5;
+		font-size: $font-size-3xl;
+		font-weight: $font-weight-bold;
+		letter-spacing: $letter-spacing-tight;
+		text-transform: none;
+	}
+
+	.info__list {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		counter-reset: info;
+		display: flex;
+		flex-direction: column;
+		gap: $space-3;
+
+		> li {
+			counter-increment: info;
+			position: relative;
+			padding-left: $space-5;
+			font-size: $font-size-base;
+			line-height: $line-height-snug;
+			color: rgba($color-white, 0.92);
+
+			&::before {
+				content: counter(info) '.';
+				position: absolute;
+				left: 0;
+				top: 0;
+				font-weight: $font-weight-semibold;
+				color: $color-white;
+			}
+		}
+	}
+
+	// ---- Form (right) ----
+	.form-wrap {
+		grid-column: 3;
+
+		@include breakpoint-down($bp-md) {
+			grid-column: 1;
+		}
+	}
+
+	.apply__header {
+		margin-bottom: $space-5;
+
+		h1 {
+			margin: 0;
+			font-size: $font-size-3xl;
+			font-weight: $font-weight-bold;
+			letter-spacing: $letter-spacing-tight;
+		}
+	}
+
+	.form {
+		display: flex;
+		flex-direction: column;
+		gap: $space-4;
+	}
+
+	.form__row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: $space-3;
+
+		@include breakpoint-down($bp-xs) {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	$color-error: #ffb4b4;
+
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+
+		input {
+			appearance: none;
+			width: 100%;
+			padding: 8px 2px;
+			font: inherit;
+			font-size: $font-size-base;
+			color: $color-white;
+			background: transparent;
+			border: 0;
+			border-bottom: 1px solid rgba($color-white, 0.5);
+			border-radius: 0;
+			transition: border-color $transition-fast;
+
+			&::placeholder {
+				color: rgba($color-white, 0.45);
+			}
+
+			&:focus {
+				outline: none;
+				border-bottom-color: $color-white;
+			}
+
+			&:-webkit-autofill {
+				-webkit-text-fill-color: $color-white;
+				-webkit-box-shadow: 0 0 0 1000px $color-accent-blue inset;
+				caret-color: $color-white;
+			}
+		}
+
+		&.has-error input {
+			border-bottom-color: $color-error;
+		}
+	}
+
+	.field__label {
+		display: flex;
+		align-items: baseline;
+		gap: $space-2;
+		flex-wrap: wrap;
+	}
+
+	.field__name {
+		font-size: $font-size-xs;
+		font-weight: $font-weight-semibold;
+		letter-spacing: $letter-spacing-wide;
+		text-transform: uppercase;
+		color: rgba($color-white, 0.85);
+	}
+
+	.req {
+		font-style: normal;
+		color: $color-error;
+		margin-left: 2px;
+	}
+
+	.field__error {
+		font-size: $font-size-xs;
+		font-weight: $font-weight-medium;
+		color: $color-error;
+		letter-spacing: 0;
+		text-transform: none;
+	}
+
+	.field__error--block {
+		display: block;
+		margin-top: 6px;
+	}
+
+	.agree-wrap {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		align-self: flex-start;
+	}
+
+	.recaptcha-wrap {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.agree {
+		display: inline-flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: $space-2;
+		font-size: $font-size-sm;
+		line-height: 1.3;
+		color: $color-white;
+		align-self: flex-start;
+		cursor: pointer;
+		position: relative;
+	}
+
+	:global(.inline-link) {
+		color: $color-white;
+		font-weight: $font-weight-semibold;
+	}
+
+	.agree__input {
+		position: absolute;
+		opacity: 0;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		cursor: pointer;
+	}
+
+	.agree__dot {
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		background: transparent;
+		border: 1.5px solid $color-white;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+
+		&::after {
+			content: '';
+			width: 6px;
+			height: 6px;
+			border-radius: 50%;
+			background: $color-white;
+			transform: scale(0);
+			transition: transform $transition-fast;
+		}
+	}
+
+	.agree__input:checked ~ .agree__dot::after {
+		transform: scale(1);
+	}
+
+	.recaptcha {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: $space-3;
+		max-width: 260px;
+		padding: 8px 10px;
+		background: #f9f9f9;
+		border: 1px solid #d3d3d3;
+		border-radius: 3px;
+	}
+
+	.recaptcha__box {
+		@include reset-button;
+		display: inline-flex;
+		align-items: center;
+		gap: $space-2;
+	}
+
+	.recaptcha__check {
+		width: 20px;
+		height: 20px;
+		border: 2px solid #c1c1c1;
+		background: $color-white;
+		border-radius: 2px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		transition: border-color $transition-base;
+	}
+
+	.recaptcha__box.is-checked .recaptcha__check {
+		border-color: $color-primary-green;
+	}
+
+	.recaptcha__spinner {
+		width: 14px;
+		height: 14px;
+		border: 2px solid #c1c1c1;
+		border-top-color: #4a90e2;
+		border-radius: 50%;
+		animation: recaptcha-spin 0.7s linear infinite;
+	}
+
+	@keyframes recaptcha-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.recaptcha__label {
+		font-size: 12px;
+		color: #000;
+	}
+
+	.recaptcha__brand {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+
+		div {
+			display: flex;
+			flex-direction: column;
+			line-height: 1.1;
+		}
+
+		strong {
+			font-size: 8px;
+			font-weight: $font-weight-bold;
+			color: #555;
+		}
+
+		span {
+			font-size: 6px;
+			color: #888;
+		}
+	}
+
+	:global(button.button-reveal.submit) {
+		padding: 11px 28px;
+		border: 1px solid $color-black;
+		background: $color-black;
+		color: $color-white;
+		font-size: $font-size-sm;
+		font-weight: $font-weight-bold;
+		letter-spacing: $letter-spacing-wide;
+		text-transform: uppercase;
+		align-self: flex-start;
+	}
+
+	.form__login {
+		margin: $space-2 0 0;
+		display: flex;
+		align-items: baseline;
+		gap: 6px;
+		font-size: $font-size-sm;
+		color: $color-white;
+	}
+
+</style>

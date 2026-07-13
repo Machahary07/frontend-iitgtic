@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+Disallow: /tic-admin
+Disallow: /tic-admin/
+Disallow: /login
+Disallow: /apply
+Disallow: /application
+Disallow: /status
+Disallow: /opportunities/job-posting-admin
+Disallow: /opportunities/job-posting-admin/
+
+Sitemap: https://iitgtic.vercel.app/sitemap.xml

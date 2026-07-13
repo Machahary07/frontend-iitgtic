@@ -1,0 +1,222 @@
+@use 'variables' as *;
+@use 'mixins' as *;
+@use 'reset';
+
+:root {
+	// Colors
+	--color-black: #{$color-black};
+	--color-white: #{$color-white};
+	--color-bg: #{$color-bg};
+	--color-fg: #{$color-fg};
+	--color-muted: #{$color-muted};
+	--color-subtle: #{$color-subtle};
+	--color-border: #{$color-border};
+
+	// Layout
+	--event-bar-height: 40px;
+	--event-bar-offset: var(--event-bar-height);
+	--nav-height: 64px;
+	--page-shell-top: calc(var(--event-bar-height) + var(--nav-height));
+
+	// Typography
+	--font-family-base: #{$font-family-base};
+	--font-family-serif: #{$font-family-serif};
+	--font-weight-light: #{$font-weight-light};
+	--font-weight-regular: #{$font-weight-regular};
+	--font-weight-medium: #{$font-weight-medium};
+	--font-weight-semibold: #{$font-weight-semibold};
+	--font-weight-bold: #{$font-weight-bold};
+	--font-weight-black: #{$font-weight-black};
+
+	--font-style-normal: #{$font-style-normal};
+	--font-style-italic: #{$font-style-italic};
+
+	--font-size-xs: #{$font-size-xs};
+	--font-size-sm: #{$font-size-sm};
+	--font-size-base: #{$font-size-base};
+	--font-size-md: #{$font-size-md};
+	--font-size-lg: #{$font-size-lg};
+	--font-size-xl: #{$font-size-xl};
+	--font-size-2xl: #{$font-size-2xl};
+	--font-size-3xl: #{$font-size-3xl};
+	--font-size-4xl: #{$font-size-4xl};
+	--font-size-5xl: #{$font-size-5xl};
+
+	--line-height-tight: #{$line-height-tight};
+	--line-height-snug: #{$line-height-snug};
+	--line-height-base: #{$line-height-base};
+	--line-height-relaxed: #{$line-height-relaxed};
+
+	// Spacing
+	--space-1: #{$space-1};
+	--space-2: #{$space-2};
+	--space-3: #{$space-3};
+	--space-4: #{$space-4};
+	--space-5: #{$space-5};
+	--space-6: #{$space-6};
+	--space-7: #{$space-7};
+	--space-8: #{$space-8};
+	--space-9: #{$space-9};
+	--space-10: #{$space-10};
+	--space-11: #{$space-11};
+
+	// Radius
+	--radius-sm: #{$radius-sm};
+	--radius-md: #{$radius-md};
+	--radius-lg: #{$radius-lg};
+	--radius-xl: #{$radius-xl};
+	--radius-pill: #{$radius-pill};
+	--radius-circle: #{$radius-circle};
+
+	// Shadows
+	--shadow-sm: #{$shadow-sm};
+	--shadow-md: #{$shadow-md};
+	--shadow-lg: #{$shadow-lg};
+
+	// Motion
+	--transition-fast: #{$transition-fast};
+	--transition-base: #{$transition-base};
+	--transition-slow: #{$transition-slow};
+}
+
+html {
+	font-size: 16px;
+	scroll-behavior: smooth;
+	text-size-adjust: 100%;
+	-webkit-text-size-adjust: 100%;
+	overflow-x: hidden;
+	overflow-x: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+body {
+	font-family: var(--font-family-base);
+	font-size: var(--font-size-base);
+	font-weight: var(--font-weight-regular);
+	line-height: var(--line-height-base);
+	color: var(--color-fg);
+	background-color: var(--color-bg);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	overflow-x: hidden;
+	overflow-x: clip;
+	width: 100%;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-weight: var(--font-weight-bold);
+	line-height: var(--line-height-tight);
+	letter-spacing: #{$letter-spacing-normal};
+}
+
+@media (max-width: $bp-xs) {
+	:root {
+		--event-bar-height: 36px;
+	}
+}
+
+h1 {
+	font-size: var(--font-size-4xl);
+}
+h2 {
+	font-size: var(--font-size-3xl);
+}
+h3 {
+	font-size: var(--font-size-2xl);
+}
+h4 {
+	font-size: var(--font-size-xl);
+}
+h5 {
+	font-size: var(--font-size-lg);
+}
+h6 {
+	font-size: var(--font-size-md);
+}
+
+a {
+	color: inherit;
+	transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+// Inline underlined LinkReveal links. The text inside LinkReveal lives in an
+// overflow:hidden mask, so a plain text-decoration: underline gets clipped at
+// rest and then re-rendered in the wrong place during the hover slide. Draw
+// the underline as a pseudo-element on the outer .link-reveal wrapper, which
+// sits outside the mask and stays put regardless of the animation.
+a.link-reveal.inline-link {
+	position: relative;
+
+	&::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 1px;
+		background: currentColor;
+		pointer-events: none;
+	}
+}
+
+::selection {
+	background: var(--color-black);
+	color: var(--color-white);
+}
+
+// ---- Typography utility classes ----
+.font-light {
+	@include font-light;
+}
+.font-light-italic {
+	@include font-light-italic;
+}
+.font-regular {
+	@include font-regular;
+}
+.font-regular-italic {
+	@include font-regular-italic;
+}
+.font-medium {
+	@include font-medium;
+}
+.font-medium-italic {
+	@include font-medium-italic;
+}
+.font-semibold {
+	@include font-semibold;
+}
+.font-semibold-italic {
+	@include font-semibold-italic;
+}
+.font-bold {
+	@include font-bold;
+}
+.font-bold-italic {
+	@include font-bold-italic;
+}
+.font-black {
+	@include font-black;
+}
+.font-black-italic {
+	@include font-black-italic;
+}

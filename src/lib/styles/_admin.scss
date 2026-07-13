@@ -1,0 +1,126 @@
+// Shared dashboard primitives used by /tic-admin and /opportunities/job-posting-admin.
+// Light theme, dashboard look — small typography, soft borders, neutral palette.
+
+@use 'variables' as *;
+@use 'mixins' as *;
+
+@mixin admin-card {
+	padding: 22px;
+	background: #fff;
+	border: 1px solid #e6e8ec;
+	border-radius: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	font-family: $font-family-base;
+}
+
+@mixin admin-input {
+	padding: 10px 12px;
+	font: inherit;
+	font-family: $font-family-base;
+	font-size: 14px;
+	color: #111;
+	background: #fff;
+	border: 1px solid #d8dbe0;
+	border-radius: 6px;
+
+	&:focus {
+		outline: none;
+		border-color: #111;
+		box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
+	}
+
+	&::placeholder {
+		color: #aaa;
+	}
+}
+
+@mixin admin-field-label {
+	font-size: 11px;
+	font-weight: $font-weight-semibold;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: #444;
+}
+
+@mixin admin-btn-base {
+	padding: 9px 16px;
+	font: inherit;
+	font-family: $font-family-base;
+	font-size: 13px;
+	font-weight: $font-weight-semibold;
+	color: #111;
+	background: #fff;
+	border: 1px solid #d8dbe0;
+	border-radius: 6px;
+	cursor: pointer;
+	text-decoration: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	line-height: 1.2;
+
+	&:hover {
+		background: #f3f4f6;
+	}
+}
+
+@mixin admin-btn-primary {
+	@include admin-btn-base;
+	color: #fff;
+	background: #111;
+	border-color: #111;
+
+	&:hover {
+		background: #000;
+	}
+}
+
+@mixin admin-btn-danger {
+	@include admin-btn-base;
+	color: #a01515;
+	border-color: #f5c2c2;
+
+	&:hover {
+		background: #fdecec;
+	}
+}
+
+@mixin admin-msg-ok {
+	margin: 0;
+	padding: 9px 12px;
+	font-size: 13px;
+	color: #0e6b2c;
+	background: #e8f7ee;
+	border: 1px solid #c2eacd;
+	border-radius: 6px;
+}
+
+@mixin admin-msg-err {
+	margin: 0;
+	padding: 9px 12px;
+	font-size: 13px;
+	color: #a01515;
+	background: #fdecec;
+	border: 1px solid #f5c2c2;
+	border-radius: 6px;
+}
+
+@mixin admin-eyebrow {
+	margin: 0 0 6px;
+	font-size: 11px;
+	font-weight: $font-weight-bold;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	color: #888;
+}
+
+@mixin admin-section-title {
+	margin: 0;
+	font-size: 14px;
+	font-weight: $font-weight-semibold;
+	letter-spacing: 0;
+	color: #111;
+	font-family: $font-family-base;
+}

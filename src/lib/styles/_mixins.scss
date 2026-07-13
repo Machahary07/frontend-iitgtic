@@ -1,0 +1,235 @@
+@use 'variables' as *;
+
+@mixin breakpoint-up($bp) {
+	@media (min-width: $bp) {
+		@content;
+	}
+}
+
+@mixin breakpoint-down($bp) {
+	@media (max-width: ($bp - 1px)) {
+		@content;
+	}
+}
+
+@mixin container($max: $container-xl) {
+	width: 100%;
+	max-width: $max;
+	margin-inline: auto;
+	padding-inline: $space-4;
+
+	@include breakpoint-up($bp-md) {
+		padding-inline: $space-6;
+	}
+}
+
+@mixin flex-center {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+@mixin focus-ring {
+	outline: 2px solid $color-black;
+	outline-offset: 2px;
+}
+
+@mixin reset-button {
+	background: none;
+	border: 0;
+	padding: 0;
+	font: inherit;
+	color: inherit;
+	cursor: pointer;
+}
+
+// ---- Typography: weight × style ----
+@mixin font($weight: $font-weight-regular, $style: $font-style-normal) {
+	font-family: $font-family-base;
+	font-weight: $weight;
+	font-style: $style;
+}
+
+@mixin font-light {
+	@include font($font-weight-light, $font-style-normal);
+}
+@mixin font-light-italic {
+	@include font($font-weight-light, $font-style-italic);
+}
+
+@mixin font-regular {
+	@include font($font-weight-regular, $font-style-normal);
+}
+@mixin font-regular-italic {
+	@include font($font-weight-regular, $font-style-italic);
+}
+
+@mixin font-medium {
+	@include font($font-weight-medium, $font-style-normal);
+}
+@mixin font-medium-italic {
+	@include font($font-weight-medium, $font-style-italic);
+}
+
+@mixin font-semibold {
+	@include font($font-weight-semibold, $font-style-normal);
+}
+@mixin font-semibold-italic {
+	@include font($font-weight-semibold, $font-style-italic);
+}
+
+@mixin font-bold {
+	@include font($font-weight-bold, $font-style-normal);
+}
+@mixin font-bold-italic {
+	@include font($font-weight-bold, $font-style-italic);
+}
+
+@mixin font-black {
+	@include font($font-weight-black, $font-style-normal);
+}
+@mixin font-black-italic {
+	@include font($font-weight-black, $font-style-italic);
+}
+
+// ============================================================================
+// Page-level patterns — shared across marketing pages.
+// Admin pages (using _admin.scss) deliberately do not use these.
+// ============================================================================
+
+// Small uppercase tracking label used as an eyebrow above headings or
+// inside body sections. Pass `dark: true` on dark backgrounds.
+@mixin eyebrow($dark: false) {
+	margin: 0;
+	font-family: $font-family-base;
+	font-size: $font-size-xs;
+	font-weight: $font-weight-semibold;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+	@if $dark {
+		color: rgba($color-white, 0.7);
+	} @else {
+		color: rgba($color-black, 0.55);
+	}
+}
+
+// Standard centered marketing-page hero container.
+@mixin page-hero(
+	$min-height: 80svh,
+	$bg: $color-white,
+	$fg: #1a1a1a,
+	$pad-top-extra: $space-8,
+	$pad-x: $space-8,
+	$pad-bottom: $space-9,
+	$gap: $space-5
+) {
+	min-height: $min-height;
+	width: 100%;
+	background: $bg;
+	color: $fg;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	text-align: center;
+	padding: calc(var(--page-shell-top, 104px) + #{$pad-top-extra}) $pad-x $pad-bottom;
+	font-family: $font-family-serif;
+	gap: $gap;
+}
+
+// Mobile padding overrides for hero. Call inside @include breakpoint-down($bp-sm).
+@mixin page-hero-mobile($gap: $space-4, $pad-x: $space-5, $pad-bottom: $space-8, $pad-top-extra: $space-7) {
+	min-height: auto;
+	padding: calc(var(--page-shell-top, 100px) + #{$pad-top-extra}) $pad-x $pad-bottom;
+	gap: $gap;
+}
+
+// Large serif h1 used in heroes. The <em> child italicises.
+@mixin serif-h1($max-ch: 16ch) {
+	margin: 0;
+	font-size: clamp(2rem, 6vw, #{$font-size-5xl});
+	line-height: $line-height-tight;
+	font-weight: $font-weight-regular;
+	max-width: $max-ch;
+	text-wrap: balance;
+
+	em {
+		font-style: italic;
+	}
+}
+
+// Hero supporting paragraph — narrow column, relaxed serif.
+@mixin hero-lede(
+	$max-width: 720px,
+	$line-height: $line-height-relaxed,
+	$opacity: 0.82
+) {
+	max-width: $max-width;
+	margin: 0 auto;
+
+	p {
+		margin: 0;
+		font-size: $font-size-md;
+		line-height: $line-height;
+		opacity: $opacity;
+	}
+}
+
+// Hero lede paragraph at the mobile breakpoint.
+@mixin hero-lede-mobile {
+	p {
+		font-size: $font-size-base;
+	}
+}
+
+// Standard white-background body section sitting below a hero. Adds the
+// usual top hairline and vertical padding.
+@mixin page-section(
+	$bg: $color-white,
+	$fg: $color-black,
+	$pad-y-top: $space-9,
+	$pad-y-bottom: $space-10,
+	$pad-x: $space-8
+) {
+	background: $bg;
+	color: $fg;
+	padding: $pad-y-top $pad-x $pad-y-bottom;
+	border-top: 1px solid rgba($color-black, 0.08);
+}
+
+// Mobile padding for body sections.
+@mixin page-section-mobile($pad-y-top: $space-8, $pad-y-bottom: $space-9, $pad-x: $space-5) {
+	padding: $pad-y-top $pad-x $pad-y-bottom;
+}
+
+// Constrained inner width for a section, centered.
+@mixin section-inner($max: $container-lg, $gap: $space-7) {
+	width: min(100%, $max);
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: $gap;
+}
+
+// Serif prose paragraph — readable body copy.
+@mixin serif-prose($max-ch: 60ch, $color: $color-black) {
+	margin: 0;
+	font-family: $font-family-serif;
+	font-size: $font-size-md;
+	line-height: $line-height-relaxed;
+	color: $color;
+	max-width: $max-ch;
+}
+
+// Monospace string formatting (registration numbers, IDs).
+@mixin mono {
+	font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+	font-size: $font-size-sm;
+	letter-spacing: 0.02em;
+}
+
+// "← Back to X" footer used at the bottom of detail pages.
+@mixin back-link-footer {
+	padding-top: $space-6;
+	border-top: 1px solid rgba($color-black, 0.16);
+}

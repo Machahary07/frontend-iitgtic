@@ -1,0 +1,63 @@
+import content from '$lib/data/content.json';
+import type { RequestHandler } from './$types';
+
+const SITE = 'https://iitgtic.vercel.app';
+
+const STATIC_ROUTES = [
+	'/',
+	'/about',
+	'/about/what-happens',
+	'/about/governing-body',
+	'/about/team',
+	'/about/faq',
+	'/about/blog',
+	'/about/mentors',
+	'/events',
+	'/incubated-startups',
+	'/incubation',
+	'/opportunities',
+	'/partners'
+];
+
+function buildUrls(): string[] {
+	const urls = [...STATIC_ROUTES];
+
+	for (const p of content.pages.events.posts) urls.push(`/events/${p.slug}`);
+	for (const p of content.pages.blog.posts) urls.push(`/about/blog/${p.slug}`);
+	for (const p of content.pages.incubation.links) urls.push(`/incubation/${p.slug}`);
+
+	for (const cat of content.pages.incubatedStartups.categories) {
+		urls.push(`/incubated-startups/${cat.slug}`);
+		for (const s of cat.startups) urls.push(`/incubated-startups/${cat.slug}/${s.slug}`);
+	}
+
+	for (const p of content.pages.opportunities.posts) urls.push(`/opportunities/${p.slug}`);
+
+	return urls;
+}
+
+export const GET: RequestHandler = () => {
+	const today = new Date().toISOString().split('T')[0];
+	const urls = buildUrls();
+
+	const body = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls
+	.map(
+		(path) => `	<url>
+		<loc>${SITE}${path}</loc>
+		<lastmod>${today}</lastmod>
+		<changefreq>${path === '/' ? 'weekly' : 'monthly'}</changefreq>
+		<priority>${path === '/' ? '1.0' : '0.7'}</priority>
+	</url>`
+	)
+	.join('\n')}
+</urlset>`;
+
+	return new Response(body, {
+		headers: {
+			'Content-Type': 'application/xml',
+			'Cache-Control': 'public, max-age=3600'
+		}
+	});
+};
