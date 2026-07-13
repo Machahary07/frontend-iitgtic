@@ -7,6 +7,8 @@
 		type CompanyAccount
 	} from '$lib/utils/companyAuth';
 	import { deleteJob, getMyJobs, type PostedJob } from '$lib/utils/jobPostings';
+	import Turnstile from '$lib/components/Turnstile.svelte';
+	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 	import { onMount } from 'svelte';
 
 	const navItems = [
@@ -22,6 +24,8 @@
 	let email = $state('');
 	let password = $state('');
 	let loginError = $state('');
+	let turnstileToken = $state('');
+	let captcha = $state<{ reset: () => void }>();
 
 	const isVerified = $derived(account?.status === 'verified');
 
@@ -36,8 +40,18 @@
 		jobs = getMyJobs(account.id);
 	}
 
-	function handleLogin(e: Event) {
+	async function handleLogin(e: Event) {
 		e.preventDefault();
+		if (!turnstileToken) {
+			loginError = 'Please complete the verification below.';
+			return;
+		}
+		const human = await verifyTurnstileToken(turnstileToken);
+		captcha?.reset();
+		if (!human) {
+			loginError = 'Verification failed. Please try again.';
+			return;
+		}
 		const result = loginCompany(email, password);
 		if (!result.ok) {
 			loginError = result.error;
@@ -93,6 +107,8 @@
 					<span>Password</span>
 					<input type="password" bind:value={password} autocomplete="current-password" required />
 				</label>
+
+				<Turnstile bind:token={turnstileToken} bind:this={captcha} />
 
 				{#if loginError}
 					<p class="error" role="alert">{loginError}</p>

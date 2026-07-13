@@ -119,7 +119,7 @@
 			name: 'TIC team admin · Login',
 			path: '/tic-admin/login',
 			status: 'done',
-			note: 'Hardcoded password (1234) gate; localStorage session'
+			note: 'Server-verified password gate (env var); localStorage session'
 		},
 		{
 			name: 'TIC team admin · Overview',
@@ -214,7 +214,7 @@
 		{
 			name: 'TIC admin auth (mock)',
 			status: 'done',
-			note: 'ticAdminAuth.ts — hardcoded password gate for /tic-admin'
+			note: 'ticAdminAuth.ts — server-verified password gate for /tic-admin'
 		},
 		{
 			name: 'Admin layout isolation',

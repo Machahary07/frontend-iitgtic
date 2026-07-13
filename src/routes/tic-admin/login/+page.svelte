@@ -1,13 +1,27 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { loginTicAdmin } from '$lib/utils/ticAdminAuth';
+	import Turnstile from '$lib/components/Turnstile.svelte';
+	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	let password = $state('');
 	let error = $state('');
+	let turnstileToken = $state('');
+	let captcha = $state<{ reset: () => void }>();
 
-	function handleSubmit(e: Event) {
+	async function handleSubmit(e: Event) {
 		e.preventDefault();
-		const result = loginTicAdmin(password);
+		if (!turnstileToken) {
+			error = 'Please complete the verification below.';
+			return;
+		}
+		const human = await verifyTurnstileToken(turnstileToken);
+		captcha?.reset();
+		if (!human) {
+			error = 'Verification failed. Please try again.';
+			return;
+		}
+		const result = await loginTicAdmin(password);
 		if (!result.ok) {
 			error = result.error;
 			return;
@@ -38,6 +52,8 @@
 					required
 				/>
 			</label>
+
+			<Turnstile bind:token={turnstileToken} bind:this={captcha} />
 
 			{#if error}
 				<p class="error" role="alert">{error}</p>

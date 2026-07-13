@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { signupCompany } from '$lib/utils/companyAuth';
+	import Turnstile from '$lib/components/Turnstile.svelte';
+	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	let companyName = $state('');
 	let contactName = $state('');
@@ -9,11 +11,23 @@
 	let confirm = $state('');
 	let error = $state('');
 	let submittedEmail = $state('');
+	let turnstileToken = $state('');
+	let captcha = $state<{ reset: () => void }>();
 
-	function handleSubmit(e: Event) {
+	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		if (password !== confirm) {
 			error = 'Passwords do not match.';
+			return;
+		}
+		if (!turnstileToken) {
+			error = 'Please complete the verification below.';
+			return;
+		}
+		const human = await verifyTurnstileToken(turnstileToken);
+		captcha?.reset();
+		if (!human) {
+			error = 'Verification failed. Please try again.';
 			return;
 		}
 		const result = signupCompany({ email, password, companyName, website, contactName });
@@ -89,6 +103,8 @@
 						<input type="password" bind:value={confirm} autocomplete="new-password" required />
 					</label>
 				</div>
+
+				<Turnstile bind:token={turnstileToken} bind:this={captcha} />
 
 				{#if error}
 					<p class="error" role="alert">{error}</p>

@@ -3,17 +3,31 @@
 	import { goto } from '$app/navigation';
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
+	import Turnstile from '$lib/components/Turnstile.svelte';
 	import { saveUserSession } from '$lib/utils/userSession';
+	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	let email = $state('');
 	let password = $state('');
 	let remember = $state(false);
 	let error = $state('');
+	let turnstileToken = $state('');
+	let captcha = $state<{ reset: () => void }>();
 
-	function handleSubmit(e: Event) {
+	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		if (!email || !password) {
 			error = 'Please enter both your email and password.';
+			return;
+		}
+		if (!turnstileToken) {
+			error = 'Please complete the verification below.';
+			return;
+		}
+		const human = await verifyTurnstileToken(turnstileToken);
+		captcha?.reset();
+		if (!human) {
+			error = 'Verification failed. Please try again.';
 			return;
 		}
 		error = '';
@@ -57,6 +71,8 @@
 					</label>
 					<LinkReveal href="/login" text="Forgot password?" class="form__forgot inline-link" />
 				</div>
+
+				<Turnstile bind:token={turnstileToken} bind:this={captcha} />
 
 				{#if error}
 					<p class="form__error" role="alert">{error}</p>

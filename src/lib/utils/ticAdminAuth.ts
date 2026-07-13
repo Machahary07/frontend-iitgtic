@@ -1,18 +1,27 @@
-// Mock TIC team admin auth.
-// Password comes from the PUBLIC_TIC_ADMIN_PASSWORD env var (checked client-side,
-// so it is visible in the bundle) — replace with Supabase when wired.
-
-import { PUBLIC_TIC_ADMIN_PASSWORD } from '$env/static/public';
+// TIC team admin auth. The password lives in the server-only TIC_ADMIN_PASSWORD
+// env var and is checked by /api/tic-admin-login — it never reaches the browser.
 
 const SESSION_KEY = 'tic.admin.session';
-const ADMIN_PASSWORD = PUBLIC_TIC_ADMIN_PASSWORD;
 
 function isBrowser() {
 	return typeof localStorage !== 'undefined';
 }
 
-export function loginTicAdmin(password: string): { ok: true } | { ok: false; error: string } {
-	if (password !== ADMIN_PASSWORD) {
+export async function loginTicAdmin(
+	password: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+	let valid = false;
+	try {
+		const res = await fetch('/api/tic-admin-login', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ password })
+		});
+		valid = res.ok && ((await res.json()) as { ok?: boolean }).ok === true;
+	} catch {
+		return { ok: false, error: 'Could not reach the server. Please try again.' };
+	}
+	if (!valid) {
 		return { ok: false, error: 'Incorrect password.' };
 	}
 	if (isBrowser()) {

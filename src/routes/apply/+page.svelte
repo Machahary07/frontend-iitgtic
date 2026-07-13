@@ -3,7 +3,9 @@
 	import { goto } from '$app/navigation';
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
+	import Turnstile from '$lib/components/Turnstile.svelte';
 	import { saveUserSession } from '$lib/utils/userSession';
+	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	let name = $state('');
 	let email = $state('');
@@ -11,9 +13,9 @@
 	let password = $state('');
 	let confirmPassword = $state('');
 	let agreed = $state(false);
-	let captchaChecked = $state(false);
-	let captchaVerifying = $state(false);
 	let attempted = $state(false);
+	let turnstileToken = $state('');
+	let captcha = $state<{ reset: () => void }>();
 
 	type Errors = {
 		name?: string;
@@ -67,8 +69,8 @@
 			e.agreed = 'You must accept the Terms and Privacy Policy.';
 		}
 
-		if (!captchaChecked) {
-			e.captcha = 'Please verify the reCAPTCHA.';
+		if (!turnstileToken) {
+			e.captcha = 'Please complete the verification.';
 		}
 
 		return e;
@@ -86,25 +88,20 @@
 		revalidate();
 	}
 
-	function toggleCaptcha() {
-		if (captchaChecked || captchaVerifying) return;
-		captchaVerifying = true;
-		setTimeout(() => {
-			captchaChecked = true;
-			captchaVerifying = false;
-			revalidate();
-		}, 700);
-	}
-
-	function handleSubmit(e: Event) {
+	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		attempted = true;
 		const result = validate();
 		errors = result;
-		if (Object.keys(result).length === 0) {
-			saveUserSession({ name: name.trim(), email: email.trim(), phone: phone.trim() });
-			goto(resolve('/application'));
+		if (Object.keys(result).length > 0) return;
+		const human = await verifyTurnstileToken(turnstileToken);
+		captcha?.reset();
+		if (!human) {
+			errors = { captcha: 'Verification failed. Please try again.' };
+			return;
 		}
+		saveUserSession({ name: name.trim(), email: email.trim(), phone: phone.trim() });
+		goto(resolve('/application'));
 	}
 </script>
 
@@ -246,49 +243,7 @@
 						</div>
 
 						<div class="recaptcha-wrap" class:has-error={errors.captcha}>
-							<div class="recaptcha">
-								<button
-									type="button"
-									class="recaptcha__box"
-									class:is-checked={captchaChecked}
-									onclick={toggleCaptcha}
-									aria-pressed={captchaChecked}
-								>
-								<span class="recaptcha__check">
-									{#if captchaVerifying}
-										<span class="recaptcha__spinner"></span>
-									{:else if captchaChecked}
-										<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-											<path
-												d="M5 12.5l4 4 10-10"
-												fill="none"
-												stroke="#0EB05B"
-												stroke-width="3"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											/>
-										</svg>
-									{/if}
-								</span>
-								<span class="recaptcha__label">I'm not a robot</span>
-							</button>
-							<div class="recaptcha__brand" aria-hidden="true">
-								<svg viewBox="0 0 48 48" width="22" height="22">
-									<circle cx="24" cy="24" r="20" fill="none" stroke="#4A90E2" stroke-width="3" />
-									<path
-										d="M24 10v6M24 32v6M10 24h6M32 24h6"
-										stroke="#4A90E2"
-										stroke-width="3"
-										stroke-linecap="round"
-									/>
-									<circle cx="24" cy="24" r="4" fill="#4A90E2" />
-								</svg>
-								<div>
-									<strong>reCAPTCHA</strong>
-									<span>Privacy · Terms</span>
-								</div>
-							</div>
-						</div>
+							<Turnstile bind:token={turnstileToken} bind:this={captcha} />
 							{#if errors.captcha}
 								<span class="field__error field__error--block">{errors.captcha}</span>
 							{/if}
@@ -579,83 +534,6 @@
 		transform: scale(1);
 	}
 
-	.recaptcha {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: $space-3;
-		max-width: 260px;
-		padding: 8px 10px;
-		background: #f9f9f9;
-		border: 1px solid #d3d3d3;
-		border-radius: 3px;
-	}
-
-	.recaptcha__box {
-		@include reset-button;
-		display: inline-flex;
-		align-items: center;
-		gap: $space-2;
-	}
-
-	.recaptcha__check {
-		width: 20px;
-		height: 20px;
-		border: 2px solid #c1c1c1;
-		background: $color-white;
-		border-radius: 2px;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		transition: border-color $transition-base;
-	}
-
-	.recaptcha__box.is-checked .recaptcha__check {
-		border-color: $color-primary-green;
-	}
-
-	.recaptcha__spinner {
-		width: 14px;
-		height: 14px;
-		border: 2px solid #c1c1c1;
-		border-top-color: #4a90e2;
-		border-radius: 50%;
-		animation: recaptcha-spin 0.7s linear infinite;
-	}
-
-	@keyframes recaptcha-spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.recaptcha__label {
-		font-size: 12px;
-		color: #000;
-	}
-
-	.recaptcha__brand {
-		display: flex;
-		align-items: center;
-		gap: 4px;
-
-		div {
-			display: flex;
-			flex-direction: column;
-			line-height: 1.1;
-		}
-
-		strong {
-			font-size: 8px;
-			font-weight: $font-weight-bold;
-			color: #555;
-		}
-
-		span {
-			font-size: 6px;
-			color: #888;
-		}
-	}
 
 	:global(button.button-reveal.submit) {
 		padding: 11px 28px;
