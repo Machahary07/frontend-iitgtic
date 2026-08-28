@@ -65,7 +65,7 @@
 			name: 'Incubated Startups',
 			path: '/incubated-startups',
 			status: 'done',
-			note: 'Current / Virtual / Graduated cohort pages with per-startup placeholder cards'
+			note: 'Current / Virtual / Graduated cohort pages + dynamic per-startup detail pages'
 		},
 		{
 			name: 'Events & Workshops',
@@ -95,13 +95,13 @@
 			name: 'Job-posting admin',
 			path: '/opportunities/job-posting-admin',
 			status: 'done',
-			note: 'Company login + dashboard; status-gated (pending / verified / rejected) banner'
+			note: 'Company login (Turnstile-gated) + dashboard; status-gated (pending / verified / rejected) banner'
 		},
 		{
 			name: 'Job-posting · Signup',
 			path: '/opportunities/job-posting-admin/signup',
 			status: 'done',
-			note: 'Creates pending account; shows "TIC team will verify" confirmation card'
+			note: 'Creates pending account (Turnstile-gated); shows "TIC team will verify" confirmation card'
 		},
 		{
 			name: 'Job-posting · Edit / create',
@@ -119,7 +119,7 @@
 			name: 'TIC team admin · Login',
 			path: '/tic-admin/login',
 			status: 'done',
-			note: 'Server-verified password gate (env var); localStorage session'
+			note: 'Server-verified password gate (env var) + Turnstile; localStorage session'
 		},
 		{
 			name: 'TIC team admin · Overview',
@@ -140,7 +140,13 @@
 			note: 'Read-only table of all seed + company-posted jobs'
 		},
 		{
-			name: 'TIC content editor',
+			name: 'TIC team admin · Home page editor',
+			path: '/tic-admin/home-page',
+			status: 'in-progress',
+			note: 'Edits home hero / association logos / CTA; save disabled pending Supabase wiring'
+		},
+		{
+			name: 'TIC content editor (other pages)',
 			status: 'todo',
 			note: 'Deferred until Supabase wiring; content.json is static today'
 		},
@@ -148,7 +154,7 @@
 			name: 'Apply',
 			path: '/apply',
 			status: 'done',
-			note: 'Entry point — sign-in / sign-up before the application form'
+			note: 'Full sign-up form with field validation + Turnstile; saves user session'
 		},
 		{
 			name: 'Application',
@@ -160,7 +166,7 @@
 			name: 'Login',
 			path: '/login',
 			status: 'in-progress',
-			note: 'Mock auth — any non-empty credentials succeed; needs real backend wiring'
+			note: 'Turnstile-gated, but auth is mock — any non-empty credentials succeed; needs real backend wiring'
 		}
 	];
 
@@ -175,6 +181,13 @@
 		{ name: 'HomeIntroHero', status: 'done' },
 		{ name: 'HomeAssociationMarquee', status: 'done' },
 		{ name: 'HomeHeroSlider (events-driven)', status: 'done' },
+		{ name: 'EventCalendar', status: 'done' },
+		{ name: 'BrandIcon', status: 'done' },
+		{
+			name: 'Turnstile (captcha widget)',
+			status: 'done',
+			note: 'Cloudflare Turnstile with server-side token verification via /api/turnstile'
+		},
 		{ name: 'TextReveal', status: 'done' },
 		{ name: 'LinkReveal', status: 'done' },
 		{ name: 'ButtonReveal', status: 'done' },
@@ -212,9 +225,19 @@
 			note: 'jobPostings.ts — CRUD, applyLink scheme validation, hides jobs from unverified companies'
 		},
 		{
-			name: 'TIC admin auth (mock)',
+			name: 'TIC admin auth',
 			status: 'done',
-			note: 'ticAdminAuth.ts — server-verified password gate for /tic-admin'
+			note: 'ticAdminAuth.ts + /api/tic-admin-login — server-verified password gate for /tic-admin'
+		},
+		{
+			name: 'Turnstile verification',
+			status: 'done',
+			note: 'turnstile.ts + /api/turnstile — gates user login / apply, company login / signup, TIC admin login'
+		},
+		{
+			name: 'User session (mock)',
+			status: 'done',
+			note: 'userSession.ts — localStorage session saved by login / apply before the application wizard'
 		},
 		{
 			name: 'Admin layout isolation',
