@@ -1,4 +1,5 @@
-import content from '$lib/data/content.json';
+import { getSiteContent } from '$lib/server/siteContent';
+import type { SiteContent } from '$lib/content';
 import type { RequestHandler } from './$types';
 
 const SITE = 'https://iitgtic.vercel.app';
@@ -19,7 +20,7 @@ const STATIC_ROUTES = [
 	'/partners'
 ];
 
-function buildUrls(): string[] {
+function buildUrls(content: SiteContent): string[] {
 	const urls = [...STATIC_ROUTES];
 
 	for (const p of content.pages.events.posts) urls.push(`/events/${p.slug}`);
@@ -36,9 +37,11 @@ function buildUrls(): string[] {
 	return urls;
 }
 
-export const GET: RequestHandler = () => {
+export const GET: RequestHandler = async () => {
+	const content = await getSiteContent();
+
 	const today = new Date().toISOString().split('T')[0];
-	const urls = buildUrls();
+	const urls = buildUrls(content);
 
 	const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

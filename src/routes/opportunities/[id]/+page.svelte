@@ -1,9 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
 	import { getJob, type AnyJob } from '$lib/utils/jobPostings';
 	import { onMount } from 'svelte';
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
+
+	const content = getContent();
 
 	const slug = $derived(page.params.id ?? '');
 
@@ -34,8 +36,8 @@
 
 	const job = $derived<AnyJob | null>(userJob ?? seedBySlug(slug));
 
-	onMount(() => {
-		userJob = getJob(slug);
+	onMount(async () => {
+		userJob = await getJob(slug);
 		resolved = true;
 	});
 
@@ -65,7 +67,9 @@
 			{:else if job}
 				<header class="detail__header">
 					<div class="meta-top">
-						<span class="type-pill" class:type-pill--intern={job.type.startsWith('Internship')}>{job.type}</span>
+						<span class="type-pill" class:type-pill--intern={job.type.startsWith('Internship')}
+							>{job.type}</span
+						>
 						<span class="date">Posted {formatPosted(job.posted)}</span>
 					</div>
 					<h1>{job.role}</h1>

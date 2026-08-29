@@ -1,35 +1,48 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
-	import { isTicAdminAuthed, logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import { getAllJobs, type AnyJob } from '$lib/utils/jobPostings';
-	import { getAllCompanies, type CompanyAccount } from '$lib/utils/companyAuth';
+	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
+	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
+	import { seedJobs, type AnyJob } from '$lib/utils/jobPostings';
+	import type { CompanyAccount } from '$lib/utils/companyAuth';
+	import { adminDeleteJob } from '$lib/utils/ticAdmin';
+	import type { PageData } from './$types';
 
-	const navItems = [
-		{ label: 'Overview', href: '/tic-admin' },
-		{ label: 'Companies', href: '/tic-admin/companies' },
-		{ label: 'Posted jobs', href: '/tic-admin/jobs' },
-		{ separator: true as const },
-		{ label: 'Home page', href: '/tic-admin/home-page' }
-	];
 
 	type Filter = 'all' | 'user' | 'seed';
 
-	let mounted = $state(false);
-	let jobs = $state<AnyJob[]>([]);
-	let companies = $state<CompanyAccount[]>([]);
-	let filter = $state<Filter>('all');
+	let { data }: { data: PageData } = $props();
 
-	onMount(() => {
-		if (!isTicAdminAuthed()) {
-			goto('/tic-admin/login');
-			return;
-		}
-		jobs = getAllJobs();
-		companies = getAllCompanies();
-		mounted = true;
-	});
+	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
+	const companies = $derived(data.companies as CompanyAccount[]);
+
+	// Seed posts live in content.json rather than the database, so the admin list
+	// is the union — the same thing the public Opportunities page shows.
+	const jobs = $derived<AnyJob[]>(
+		[
+			...data.jobs.map((row) => ({
+				id: row.id,
+				slug: row.slug,
+				companyId: row.company_id,
+				role: row.role,
+				company: row.company,
+				companySlug: row.company_slug,
+				location: row.location,
+				type: row.type,
+				sector: row.sector,
+				posted: row.posted,
+				description: row.description,
+				applyLink: row.apply_link,
+				createdAt: row.created_at,
+				updatedAt: row.updated_at,
+				source: 'user' as const
+			})),
+			...seedJobs()
+		].sort((a, b) => (a.posted < b.posted ? 1 : a.posted > b.posted ? -1 : 0))
+	);
+
+	let filter = $state<Filter>('all');
 
 	const filtered = $derived(filter === 'all' ? jobs : jobs.filter((j) => j.source === filter));
 	const counts = $derived({
@@ -38,14 +51,20 @@
 		seed: jobs.filter((j) => j.source === 'seed').length
 	});
 
+	async function removeJob(id: string, role: string) {
+		if (!confirm(`Remove "${role}"? The posting disappears from Opportunities immediately.`)) return;
+		await adminDeleteJob(id);
+		await invalidateAll();
+	}
+
 	function companyStatus(companyId: string): CompanyAccount['status'] | null {
 		if (!companyId) return null;
 		return companies.find((c) => c.id === companyId)?.status ?? null;
 	}
 
-	function handleLogout() {
-		logoutTicAdmin();
-		goto('/tic-admin/login');
+	async function handleLogout() {
+		await logoutTicAdmin();
+		goto(resolve('/tic-admin/login'));
 	}
 
 	function fmtDate(iso: string) {
@@ -61,14 +80,13 @@
 	<title>TIC Admin · Posted jobs</title>
 </svelte:head>
 
-{#if mounted}
-	<AdminShell
+<AdminShell
 		brand="TIC Team Admin"
 		brandSub="Internal"
-		{navItems}
+		navItems={TIC_ADMIN_NAV}
 		title="Posted jobs"
 		eyebrow="Opportunities"
-		user="TIC Team"
+		user={adminName}
 		onLogout={handleLogout}
 	>
 		<div class="tabs">
@@ -84,8 +102,8 @@
 		</div>
 
 		<p class="note">
-			Read-only view. To remove a company-posted job, the posting company must delete it from their
-			dashboard, or you can delete the company from <a href="/tic-admin/companies">Companies</a>.
+			Seed roles come from <code>content.json</code> and can only be changed in the codebase.
+			Company-posted roles can be removed here, or by the company from its own dashboard.
 		</p>
 
 		<div class="panel">
@@ -126,7 +144,19 @@
 										<span class="src src--{job.source}">{job.source}</span>
 									</td>
 									<td class="actions-col">
-										<a class="link" href="/opportunities/{job.slug}" target="_blank" rel="noopener noreferrer">View →</a>
+										<div class="actions">
+											<a
+												class="link"
+												href="/opportunities/{job.slug}"
+												target="_blank"
+												rel="noopener noreferrer">View →</a
+											>
+											{#if job.source === 'user'}
+												<button class="btn btn--danger" onclick={() => removeJob(job.id, job.role)}>
+													Remove
+												</button>
+											{/if}
+										</div>
 									</td>
 								</tr>
 							{/each}
@@ -135,8 +165,7 @@
 				</div>
 			{/if}
 		</div>
-	</AdminShell>
-{/if}
+</AdminShell>
 
 <style lang="scss">
 	@use '$styles/variables' as *;
@@ -192,15 +221,6 @@
 		border: 1px solid #e6e8ec;
 		border-left: 3px solid #2050d4;
 		border-radius: 6px;
-
-		a {
-			color: #2050d4;
-			text-decoration: none;
-
-			&:hover {
-				text-decoration: underline;
-			}
-		}
 	}
 
 	.panel {
@@ -309,6 +329,46 @@
 			background: #f0f0f0;
 			color: #555;
 		}
+	}
+
+	.actions {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		justify-content: flex-end;
+	}
+
+	.btn {
+		padding: 6px 12px;
+		font: inherit;
+		font-family: $font-family-base;
+		font-size: 12px;
+		font-weight: $font-weight-semibold;
+		color: #111;
+		background: #fff;
+		border: 1px solid #d8dbe0;
+		border-radius: 6px;
+		cursor: pointer;
+
+		&:hover {
+			background: #f3f4f6;
+		}
+
+		&--danger {
+			color: #a01515;
+			border-color: #f5c2c2;
+
+			&:hover {
+				background: #fdecec;
+			}
+		}
+	}
+
+	.note code {
+		font-size: 11px;
+		background: #f1f2f4;
+		padding: 1px 5px;
+		border-radius: 3px;
 	}
 
 	.actions-col {

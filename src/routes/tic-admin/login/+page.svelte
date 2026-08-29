@@ -1,32 +1,97 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { loginTicAdmin } from '$lib/utils/ticAdminAuth';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { bootstrapFirstAdmin, loginTicAdmin } from '$lib/utils/ticAdminAuth';
+	import type { PageData } from './$types';
 	import Turnstile from '$lib/components/Turnstile.svelte';
 	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
+	// The layout load already knows whether an admin exists, so this screen paints
+	// in its right state immediately rather than after a round trip.
+	let { data }: { data: PageData } = $props();
+	let bootstrapped = $state(false);
+	const needsBootstrap = $derived(data.needsBootstrap && !bootstrapped);
+
+	let email = $state('');
 	let password = $state('');
 	let error = $state('');
+	let submitting = $state(false);
 	let turnstileToken = $state('');
 	let captcha = $state<{ reset: () => void }>();
 
-	async function handleSubmit(e: Event) {
-		e.preventDefault();
+	// First-run only: the shared setup password from the environment creates the
+	// very first admin account, then stops working.
+	let setupPassword = $state('');
+	let setupName = $state('');
+	let setupEmail = $state('');
+	let setupPw = $state('');
+	let setupConfirm = $state('');
+	let setupDone = $state(false);
+
+	async function passedCaptcha() {
 		if (!turnstileToken) {
 			error = 'Please complete the verification below.';
-			return;
+			return false;
 		}
 		const human = await verifyTurnstileToken(turnstileToken);
 		captcha?.reset();
+		turnstileToken = '';
 		if (!human) {
 			error = 'Verification failed. Please try again.';
+			return false;
+		}
+		return true;
+	}
+
+	async function handleSignIn(e: Event) {
+		e.preventDefault();
+		if (submitting) return;
+		submitting = true;
+		try {
+			if (!(await passedCaptcha())) return;
+			const result = await loginTicAdmin(email, password);
+			if (!result.ok) {
+				error = result.error;
+				return;
+			}
+			error = '';
+			goto(resolve('/tic-admin'));
+		} finally {
+			submitting = false;
+		}
+	}
+
+	async function handleBootstrap(e: Event) {
+		e.preventDefault();
+		if (submitting) return;
+		if (setupPw !== setupConfirm) {
+			error = 'The two passwords do not match.';
 			return;
 		}
-		const result = await loginTicAdmin(password);
-		if (!result.ok) {
-			error = result.error;
-			return;
+		submitting = true;
+		try {
+			if (!(await passedCaptcha())) return;
+			const result = await bootstrapFirstAdmin({
+				setupPassword,
+				email: setupEmail,
+				password: setupPw,
+				fullName: setupName
+			});
+			if (!result.ok) {
+				error = result.error;
+				return;
+			}
+			error = '';
+			setupDone = true;
+			bootstrapped = true;
+			email = setupEmail;
+			await invalidateAll();
+			setupPassword = '';
+			setupPw = '';
+			setupConfirm = '';
+		} finally {
+			submitting = false;
 		}
-		goto('/tic-admin');
 	}
 </script>
 
@@ -36,33 +101,93 @@
 
 <section class="login">
 	<div class="card">
-		<div class="card__head">
-			<p class="eyebrow">IITG TIC</p>
-			<h1>Team admin</h1>
-			<p class="sub">Sign in to manage companies and posted opportunities.</p>
-		</div>
+		{#if needsBootstrap}
+			<div class="card__head">
+				<p class="eyebrow">IITG TIC · First run</p>
+				<h1>Create the first admin</h1>
+				<p class="sub">
+					No admin account exists yet. Enter the setup password from the server environment to
+					create one — after this, admins sign in with their own email and password and the setup
+					password stops working.
+				</p>
+			</div>
 
-		<form onsubmit={handleSubmit} novalidate>
-			<label class="field">
-				<span>Password</span>
-				<input
-					type="password"
-					bind:value={password}
-					autocomplete="current-password"
-					required
-				/>
-			</label>
+			<form onsubmit={handleBootstrap} novalidate>
+				<label class="field">
+					<span>Setup password</span>
+					<input type="password" bind:value={setupPassword} required />
+				</label>
+				<label class="field">
+					<span>Your name</span>
+					<input type="text" bind:value={setupName} autocomplete="name" />
+				</label>
+				<label class="field">
+					<span>Your email</span>
+					<input type="email" bind:value={setupEmail} autocomplete="email" required />
+				</label>
+				<label class="field">
+					<span>Choose a password</span>
+					<input type="password" bind:value={setupPw} autocomplete="new-password" required />
+				</label>
+				<label class="field">
+					<span>Confirm password</span>
+					<input type="password" bind:value={setupConfirm} autocomplete="new-password" required />
+				</label>
 
-			<Turnstile bind:token={turnstileToken} bind:this={captcha} />
+				<Turnstile bind:token={turnstileToken} bind:this={captcha} />
 
-			{#if error}
-				<p class="error" role="alert">{error}</p>
+				{#if error}
+					<p class="error" role="alert">{error}</p>
+				{/if}
+
+				<button type="submit" disabled={submitting}>
+					{submitting ? 'Creating…' : 'Create admin account'}
+				</button>
+			</form>
+		{:else}
+			<div class="card__head">
+				<p class="eyebrow">IITG TIC</p>
+				<h1>Team admin</h1>
+				<p class="sub">Sign in with your own account to manage the console.</p>
+			</div>
+
+			{#if setupDone}
+				<p class="notice" role="status">
+					Admin account created. Sign in below with the password you just chose.
+				</p>
 			{/if}
 
-			<button type="submit">Sign in</button>
-		</form>
+			<form onsubmit={handleSignIn} novalidate>
+				<label class="field">
+					<span>Email</span>
+					<input type="email" bind:value={email} autocomplete="email" required />
+				</label>
 
-		<p class="hint">For TIC team members only.</p>
+				<label class="field">
+					<span>Password</span>
+					<input
+						type="password"
+						bind:value={password}
+						autocomplete="current-password"
+						required
+					/>
+				</label>
+
+				<Turnstile bind:token={turnstileToken} bind:this={captcha} />
+
+				{#if error}
+					<p class="error" role="alert">{error}</p>
+				{/if}
+
+				<button type="submit" disabled={submitting}>
+					{submitting ? 'Signing in…' : 'Sign in'}
+				</button>
+			</form>
+
+			<p class="hint">
+				For TIC team members only. Ask an existing admin to create your account.
+			</p>
+		{/if}
 	</div>
 </section>
 
@@ -178,6 +303,22 @@
 		&:hover {
 			background: #000;
 		}
+	}
+
+
+	.notice {
+		margin: 0 0 16px;
+		padding: 10px 12px;
+		font-size: 13px;
+		color: #0e6b2c;
+		background: #e8f7ee;
+		border: 1px solid #bfe6cd;
+		border-radius: 6px;
+	}
+
+	button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 
 	.hint {

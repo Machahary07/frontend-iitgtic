@@ -1,8 +1,134 @@
-import { json } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import { TIC_ADMIN_PASSWORD } from '$env/static/private';
+import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import {
+	clearTicAdminSession,
+	issueTicAdminSession,
+	readTicAdminSession
+} from '$lib/server/ticAdminSession';
 import type { RequestHandler } from './$types';
 
-export const POST: RequestHandler = async ({ request }) => {
-	const { password } = (await request.json().catch(() => ({}))) as { password?: string };
-	return json({ ok: typeof password === 'string' && password === TIC_ADMIN_PASSWORD });
+// GET     current session, plus whether the console still needs its first admin
+// POST    { accessToken }                       sign in as an existing admin
+// POST    { bootstrapPassword, email, password } create the first admin, once
+// DELETE  sign out
+
+async function adminCount(): Promise<number> {
+	const { count } = await supabaseAdmin
+		.from('profiles')
+		.select('id', { count: 'exact', head: true })
+		.eq('role', 'admin');
+	return count ?? 0;
+}
+
+export const GET: RequestHandler = async ({ cookies }) => {
+	const session = readTicAdminSession(cookies);
+	return json({
+		ok: session !== null,
+		admin: session,
+		needsBootstrap: (await adminCount()) === 0
+	});
+};
+
+export const POST: RequestHandler = async ({ request, cookies }) => {
+	const body = (await request.json().catch(() => ({}))) as {
+		accessToken?: string;
+		bootstrapPassword?: string;
+		email?: string;
+		password?: string;
+		fullName?: string;
+	};
+
+	// --- bootstrap: only while the console has no admin at all ---------------
+	if (body.bootstrapPassword !== undefined) {
+		if ((await adminCount()) > 0) {
+			error(403, 'An admin account already exists. Sign in with your own credentials.');
+		}
+		if (body.bootstrapPassword !== TIC_ADMIN_PASSWORD) {
+			return json({ ok: false, error: 'Incorrect setup password.' }, { status: 401 });
+		}
+		const email = body.email?.trim().toLowerCase();
+		if (!email || !body.password || body.password.length < 8) {
+			error(400, 'Email and a password of at least 8 characters are required.');
+		}
+
+		const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
+			email,
+			password: body.password,
+			email_confirm: true,
+			user_metadata: { role: 'admin', full_name: body.fullName?.trim() ?? '' }
+		});
+		if (createError || !created.user) error(400, createError?.message ?? 'Could not create account.');
+
+		// The signup trigger writes the profile with whatever role the metadata
+		// asked for, but only 'founder' and 'company' are honoured there — so the
+		// promotion to admin happens here, with the service role.
+		const { error: roleError } = await supabaseAdmin
+			.from('profiles')
+			.update({ role: 'admin', full_name: body.fullName?.trim() ?? '', email })
+			.eq('id', created.user.id);
+		if (roleError) error(500, roleError.message);
+
+		await supabaseAdmin.from('audit_log').insert({
+			source: 'app',
+			actor_id: created.user.id,
+			actor_label: `${body.fullName?.trim() || email} (admin)`,
+			action: 'bootstrapped the first admin account',
+			table_name: 'profiles',
+			record_id: created.user.id
+		});
+
+		return json({ ok: true, created: true });
+	}
+
+	// --- normal sign-in: verify the Supabase token, then check the role ------
+	if (!body.accessToken) error(400, 'Missing access token.');
+
+	const { data, error: authError } = await supabaseAdmin.auth.getUser(body.accessToken);
+	if (authError || !data.user) {
+		return json({ ok: false, error: 'Invalid or expired session.' }, { status: 401 });
+	}
+
+	const { data: profile } = await supabaseAdmin
+		.from('profiles')
+		.select('role, full_name, email')
+		.eq('id', data.user.id)
+		.maybeSingle();
+
+	if (profile?.role !== 'admin') {
+		return json(
+			{ ok: false, error: 'This account does not have admin access.' },
+			{ status: 403 }
+		);
+	}
+
+	const session = {
+		userId: data.user.id,
+		email: profile.email || data.user.email || '',
+		name: profile.full_name || ''
+	};
+	issueTicAdminSession(cookies, session);
+
+	await supabaseAdmin.from('audit_log').insert({
+		source: 'app',
+		actor_id: session.userId,
+		actor_label: `${session.name || session.email} (admin)`,
+		action: 'signed in to the admin console'
+	});
+
+	return json({ ok: true, admin: session });
+};
+
+export const DELETE: RequestHandler = async ({ cookies }) => {
+	const session = readTicAdminSession(cookies);
+	if (session) {
+		await supabaseAdmin.from('audit_log').insert({
+			source: 'app',
+			actor_id: session.userId,
+			actor_label: `${session.name || session.email} (admin)`,
+			action: 'signed out of the admin console'
+		});
+	}
+	clearTicAdminSession(cookies);
+	return json({ ok: true });
 };

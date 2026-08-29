@@ -1,6 +1,8 @@
 <script lang="ts">
 	import CallToAction from '$lib/components/CallToAction.svelte';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
+
+	const content = getContent();
 
 	const page = content.pages.faq;
 	const ctaContent = content.cta.apply;

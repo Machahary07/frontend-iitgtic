@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { HomeHeroSlider, HomeIntroHero, CallToAction, EventCalendar } from '$lib';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
+
+	const content = getContent();
 
 	const cta = content.cta.apply;
 </script>

@@ -2,7 +2,9 @@
 	import HomeAssociationMarquee from './HomeAssociationMarquee.svelte';
 	import LinkReveal from './LinkReveal.svelte';
 	import { resolve } from '$app/paths';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
+
+	const content = getContent();
 
 	type RouteHref = Parameters<typeof resolve>[0];
 	const intro = content.homeHero.intro;

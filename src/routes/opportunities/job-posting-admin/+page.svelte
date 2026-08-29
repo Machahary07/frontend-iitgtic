@@ -29,15 +29,15 @@
 
 	const isVerified = $derived(account?.status === 'verified');
 
-	onMount(() => {
-		account = getCurrentCompany();
-		if (account) jobs = getMyJobs(account.id);
+	onMount(async () => {
+		account = await getCurrentCompany();
+		if (account) jobs = await getMyJobs(account.id);
 		mounted = true;
 	});
 
-	function refreshJobs() {
+	async function refreshJobs() {
 		if (!account) return;
-		jobs = getMyJobs(account.id);
+		jobs = await getMyJobs(account.id);
 	}
 
 	async function handleLogin(e: Event) {
@@ -52,7 +52,7 @@
 			loginError = 'Verification failed. Please try again.';
 			return;
 		}
-		const result = loginCompany(email, password);
+		const result = await loginCompany(email, password);
 		if (!result.ok) {
 			loginError = result.error;
 			return;
@@ -60,20 +60,20 @@
 		loginError = '';
 		password = '';
 		account = result.account;
-		jobs = getMyJobs(result.account.id);
+		jobs = await getMyJobs(result.account.id);
 	}
 
-	function handleLogout() {
-		logoutCompany();
+	async function handleLogout() {
+		await logoutCompany();
 		account = null;
 		jobs = [];
 	}
 
-	function handleDelete(id: string, role: string) {
+	async function handleDelete(id: string, role: string) {
 		if (!account) return;
 		if (!confirm(`Remove "${role}"? This cannot be undone.`)) return;
-		deleteJob(id, account.id);
-		refreshJobs();
+		await deleteJob(id, account.id);
+		await refreshJobs();
 	}
 
 	function formatPosted(iso: string) {
@@ -171,7 +171,9 @@
 		{:else if jobs.length === 0}
 			<div class="empty">
 				<p>No roles posted yet.</p>
-				<a class="btn-primary" href="/opportunities/job-posting-admin/edit/new">Post your first role</a>
+				<a class="btn-primary" href="/opportunities/job-posting-admin/edit/new"
+					>Post your first role</a
+				>
 			</div>
 		{:else}
 			<div class="panel">
@@ -193,14 +195,28 @@
 										<p class="cell__name">{job.role}</p>
 										<p class="cell__sub">{job.sector}</p>
 									</td>
-									<td><span class="type type--{job.type.startsWith('Internship') ? 'intern' : 'full'}">{job.type}</span></td>
+									<td
+										><span
+											class="type type--{job.type.startsWith('Internship') ? 'intern' : 'full'}"
+											>{job.type}</span
+										></td
+									>
 									<td><p class="cell__sub">{job.location}</p></td>
 									<td><p class="cell__sub">{formatPosted(job.posted)}</p></td>
 									<td class="actions-col">
 										<div class="actions">
-											<a class="link" href="/opportunities/{job.slug}" target="_blank" rel="noopener noreferrer">View</a>
+											<a
+												class="link"
+												href="/opportunities/{job.slug}"
+												target="_blank"
+												rel="noopener noreferrer">View</a
+											>
 											<a class="link" href="/opportunities/job-posting-admin/edit/{job.id}">Edit</a>
-											<button type="button" class="link link--danger" onclick={() => handleDelete(job.id, job.role)}>Delete</button>
+											<button
+												type="button"
+												class="link link--danger"
+												onclick={() => handleDelete(job.id, job.role)}>Delete</button
+											>
 										</div>
 									</td>
 								</tr>

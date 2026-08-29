@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { loadGsap, prefersReducedMotion } from '$lib/utils/animation';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
+
+	const content = getContent();
 
 	const messages: { text: string; href: string }[] = content.eventBar.messages;
 

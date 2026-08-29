@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
+
+	const content = getContent();
 
 	const { notFound, generic, backHome } = content.error;
 </script>

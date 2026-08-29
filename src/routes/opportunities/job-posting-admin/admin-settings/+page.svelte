@@ -30,8 +30,8 @@
 	let confirmPw = $state('');
 	let pwMsg = $state<{ tone: 'ok' | 'err'; text: string } | null>(null);
 
-	onMount(() => {
-		account = getCurrentCompany();
+	onMount(async () => {
+		account = await getCurrentCompany();
 		if (!account) {
 			goto('/opportunities/job-posting-admin');
 			return;
@@ -42,9 +42,9 @@
 		mounted = true;
 	});
 
-	function handleProfile(e: Event) {
+	async function handleProfile(e: Event) {
 		e.preventDefault();
-		const updated = updateCurrentCompany({ companyName, contactName, website });
+		const updated = await updateCurrentCompany({ companyName, contactName, website });
 		if (!updated) {
 			profileMsg = { tone: 'err', text: 'Could not update profile.' };
 			return;
@@ -53,13 +53,13 @@
 		profileMsg = { tone: 'ok', text: 'Profile saved.' };
 	}
 
-	function handlePassword(e: Event) {
+	async function handlePassword(e: Event) {
 		e.preventDefault();
 		if (newPw !== confirmPw) {
 			pwMsg = { tone: 'err', text: 'New passwords do not match.' };
 			return;
 		}
-		const result = changePassword(currentPw, newPw);
+		const result = await changePassword(currentPw, newPw);
 		if (!result.ok) {
 			pwMsg = { tone: 'err', text: result.error };
 			return;
@@ -70,19 +70,23 @@
 		pwMsg = { tone: 'ok', text: 'Password updated.' };
 	}
 
-	function handleDelete() {
+	async function handleDelete() {
 		if (
 			!confirm(
 				'Delete this company account? Your posted roles will be removed and this cannot be undone.'
 			)
 		)
 			return;
-		deleteCurrentCompany();
+		const removed = await deleteCurrentCompany();
+		if (!removed) {
+			profileMsg = { tone: 'err', text: 'Could not delete the account. Please try again.' };
+			return;
+		}
 		goto('/opportunities/job-posting-admin');
 	}
 
-	function handleLogout() {
-		logoutCompany();
+	async function handleLogout() {
+		await logoutCompany();
 		goto('/opportunities/job-posting-admin');
 	}
 </script>
@@ -126,7 +130,11 @@
 				</label>
 
 				{#if profileMsg}
-					<p class="msg" class:msg--ok={profileMsg.tone === 'ok'} class:msg--err={profileMsg.tone === 'err'}>
+					<p
+						class="msg"
+						class:msg--ok={profileMsg.tone === 'ok'}
+						class:msg--err={profileMsg.tone === 'err'}
+					>
 						{profileMsg.text}
 					</p>
 				{/if}

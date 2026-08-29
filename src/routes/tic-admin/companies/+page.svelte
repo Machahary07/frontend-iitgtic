@@ -1,44 +1,27 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
-	import { isTicAdminAuthed, logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import {
-		getAllCompanies,
-		setCompanyStatus,
-		deleteCompanyById,
-		type CompanyAccount,
-		type CompanyStatus
-	} from '$lib/utils/companyAuth';
-
-	const navItems = [
-		{ label: 'Overview', href: '/tic-admin' },
-		{ label: 'Companies', href: '/tic-admin/companies' },
-		{ label: 'Posted jobs', href: '/tic-admin/jobs' },
-		{ separator: true as const },
-		{ label: 'Home page', href: '/tic-admin/home-page' }
-	];
+	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
+	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
+	import type { CompanyStatus } from '$lib/utils/companyAuth';
+	import { adminDeleteCompany, adminSetCompanyStatus } from '$lib/utils/ticAdmin';
+	import type { PageData } from './$types';
 
 	type Filter = 'all' | CompanyStatus;
 
-	let mounted = $state(false);
-	let companies = $state<CompanyAccount[]>([]);
+	let { data }: { data: PageData } = $props();
+
+	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
+	const companies = $derived(data.companies);
+
 	let filter = $state<Filter>('pending');
 	let rejectingId = $state<string | null>(null);
 	let rejectReason = $state('');
 
-	onMount(() => {
-		if (!isTicAdminAuthed()) {
-			goto('/tic-admin/login');
-			return;
-		}
-		refresh();
-		mounted = true;
-	});
-
-	function refresh() {
-		companies = getAllCompanies();
-	}
+	// Mutations still go through the audited API routes; re-running the server
+	// load is what refreshes the table.
+	const refresh = () => invalidateAll();
 
 	const filtered = $derived(
 		filter === 'all' ? companies : companies.filter((c) => c.status === filter)
@@ -51,9 +34,9 @@
 		rejected: companies.filter((c) => c.status === 'rejected').length
 	});
 
-	function approve(id: string) {
-		setCompanyStatus(id, 'verified');
-		refresh();
+	async function approve(id: string) {
+		await adminSetCompanyStatus(id, 'verified');
+		await refresh();
 	}
 
 	function openReject(id: string) {
@@ -61,12 +44,12 @@
 		rejectReason = '';
 	}
 
-	function confirmReject() {
+	async function confirmReject() {
 		if (!rejectingId) return;
-		setCompanyStatus(rejectingId, 'rejected', rejectReason.trim() || undefined);
+		await adminSetCompanyStatus(rejectingId, 'rejected', rejectReason.trim() || undefined);
 		rejectingId = null;
 		rejectReason = '';
-		refresh();
+		await refresh();
 	}
 
 	function cancelReject() {
@@ -74,20 +57,20 @@
 		rejectReason = '';
 	}
 
-	function remove(id: string, name: string) {
+	async function remove(id: string, name: string) {
 		if (!confirm(`Permanently delete the account for "${name}"? This cannot be undone.`)) return;
-		deleteCompanyById(id);
-		refresh();
+		await adminDeleteCompany(id);
+		await refresh();
 	}
 
-	function revertToPending(id: string) {
-		setCompanyStatus(id, 'pending');
-		refresh();
+	async function revertToPending(id: string) {
+		await adminSetCompanyStatus(id, 'pending');
+		await refresh();
 	}
 
-	function handleLogout() {
-		logoutTicAdmin();
-		goto('/tic-admin/login');
+	async function handleLogout() {
+		await logoutTicAdmin();
+		goto(resolve('/tic-admin/login'));
 	}
 
 	function fmtDate(iso: string) {
@@ -103,24 +86,35 @@
 	<title>TIC Admin · Companies</title>
 </svelte:head>
 
-{#if mounted}
-	<AdminShell
+<AdminShell
 		brand="TIC Team Admin"
 		brandSub="Internal"
-		{navItems}
+		navItems={TIC_ADMIN_NAV}
 		title="Companies"
 		eyebrow="Moderation"
-		user="TIC Team"
+		user={adminName}
 		onLogout={handleLogout}
 	>
 		<div class="tabs">
-			<button class="tab" class:tab--active={filter === 'pending'} onclick={() => (filter = 'pending')}>
+			<button
+				class="tab"
+				class:tab--active={filter === 'pending'}
+				onclick={() => (filter = 'pending')}
+			>
 				Pending <span class="tab__count">{counts.pending}</span>
 			</button>
-			<button class="tab" class:tab--active={filter === 'verified'} onclick={() => (filter = 'verified')}>
+			<button
+				class="tab"
+				class:tab--active={filter === 'verified'}
+				onclick={() => (filter = 'verified')}
+			>
 				Verified <span class="tab__count">{counts.verified}</span>
 			</button>
-			<button class="tab" class:tab--active={filter === 'rejected'} onclick={() => (filter = 'rejected')}>
+			<button
+				class="tab"
+				class:tab--active={filter === 'rejected'}
+				onclick={() => (filter = 'rejected')}
+			>
 				Rejected <span class="tab__count">{counts.rejected}</span>
 			</button>
 			<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
@@ -160,7 +154,12 @@
 									</td>
 									<td>
 										{#if company.website}
-											<a class="link" href={company.website} target="_blank" rel="noopener noreferrer">
+											<a
+												class="link"
+												href={company.website}
+												target="_blank"
+												rel="noopener noreferrer"
+											>
 												{company.website.replace(/^https?:\/\//, '')}
 											</a>
 										{:else}
@@ -177,16 +176,25 @@
 									<td class="actions-col">
 										<div class="actions">
 											{#if company.status === 'pending'}
-												<button class="btn btn--primary" onclick={() => approve(company.id)}>Approve</button>
+												<button class="btn btn--primary" onclick={() => approve(company.id)}
+													>Approve</button
+												>
 												<button class="btn" onclick={() => openReject(company.id)}>Reject</button>
 											{:else if company.status === 'verified'}
-												<button class="btn" onclick={() => revertToPending(company.id)}>Revert</button>
+												<button class="btn" onclick={() => revertToPending(company.id)}
+													>Revert</button
+												>
 												<button class="btn" onclick={() => openReject(company.id)}>Reject</button>
 											{:else}
 												<button class="btn" onclick={() => approve(company.id)}>Approve</button>
-												<button class="btn" onclick={() => revertToPending(company.id)}>Revert</button>
+												<button class="btn" onclick={() => revertToPending(company.id)}
+													>Revert</button
+												>
 											{/if}
-											<button class="btn btn--danger" onclick={() => remove(company.id, company.companyName)}>Delete</button>
+											<button
+												class="btn btn--danger"
+												onclick={() => remove(company.id, company.companyName)}>Delete</button
+											>
 										</div>
 									</td>
 								</tr>
@@ -211,7 +219,8 @@
 				<p class="modal__sub">Optionally add a reason — shown on the company's dashboard.</p>
 				<label class="field">
 					<span>Reason (optional)</span>
-					<textarea bind:value={rejectReason} rows="3" placeholder="e.g. Not affiliated with TIC"></textarea>
+					<textarea bind:value={rejectReason} rows="3" placeholder="e.g. Not affiliated with TIC"
+					></textarea>
 				</label>
 				<div class="modal__actions">
 					<button class="btn" onclick={cancelReject}>Cancel</button>
@@ -220,7 +229,6 @@
 			</div>
 		</div>
 	{/if}
-{/if}
 
 <style lang="scss">
 	@use '$styles/variables' as *;

@@ -4,7 +4,7 @@
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
 	import Turnstile from '$lib/components/Turnstile.svelte';
-	import { saveUserSession } from '$lib/utils/userSession';
+	import { signInFounder } from '$lib/utils/userSession';
 	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	let email = $state('');
@@ -30,8 +30,12 @@
 			error = 'Verification failed. Please try again.';
 			return;
 		}
+		const result = await signInFounder(email, password);
+		if (!result.ok) {
+			error = result.error;
+			return;
+		}
 		error = '';
-		saveUserSession({ email: email.trim() });
 		goto(resolve('/application'));
 	}
 </script>
@@ -43,48 +47,43 @@
 <section class="login">
 	<div class="login__inner">
 		<header class="login__header">
-				<h1>Login</h1>
-				<p class="login__sub">Access your IITG TIC account to continue your application.</p>
-			</header>
+			<h1>Login</h1>
+			<p class="login__sub">Access your IITG TIC account to continue your application.</p>
+		</header>
 
-			<form class="form" onsubmit={handleSubmit} novalidate>
-				<label class="field">
-					<span>Email</span>
-					<input type="email" bind:value={email} autocomplete="email" required />
+		<form class="form" onsubmit={handleSubmit} novalidate>
+			<label class="field">
+				<span>Email</span>
+				<input type="email" bind:value={email} autocomplete="email" required />
+			</label>
+
+			<label class="field">
+				<span>Password</span>
+				<input type="password" bind:value={password} autocomplete="current-password" required />
+			</label>
+
+			<div class="form__meta">
+				<label class="agree">
+					<input type="checkbox" class="agree__input" bind:checked={remember} />
+					<span class="agree__dot" aria-hidden="true"></span>
+					<span class="agree__text">Remember me</span>
 				</label>
+				<LinkReveal href="/login" text="Forgot password?" class="form__forgot inline-link" />
+			</div>
 
-				<label class="field">
-					<span>Password</span>
-					<input
-						type="password"
-						bind:value={password}
-						autocomplete="current-password"
-						required
-					/>
-				</label>
+			<Turnstile bind:token={turnstileToken} bind:this={captcha} />
 
-				<div class="form__meta">
-					<label class="agree">
-						<input type="checkbox" class="agree__input" bind:checked={remember} />
-						<span class="agree__dot" aria-hidden="true"></span>
-						<span class="agree__text">Remember me</span>
-					</label>
-					<LinkReveal href="/login" text="Forgot password?" class="form__forgot inline-link" />
-				</div>
+			{#if error}
+				<p class="form__error" role="alert">{error}</p>
+			{/if}
 
-				<Turnstile bind:token={turnstileToken} bind:this={captcha} />
+			<ButtonReveal type="submit" text="Login" class="submit" />
 
-				{#if error}
-					<p class="form__error" role="alert">{error}</p>
-				{/if}
-
-				<ButtonReveal type="submit" text="Login" class="submit" />
-
-				<p class="form__signup">
-					Don't have an account?
-					<LinkReveal href="/apply" text="Sign up" class="inline-link" />
-				</p>
-			</form>
+			<p class="form__signup">
+				Don't have an account?
+				<LinkReveal href="/apply" text="Sign up" class="inline-link" />
+			</p>
+		</form>
 	</div>
 </section>
 
@@ -276,5 +275,4 @@
 		font-size: $font-size-sm;
 		color: $color-white;
 	}
-
 </style>

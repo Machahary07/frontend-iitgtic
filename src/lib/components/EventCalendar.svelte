@@ -1,6 +1,8 @@
 <script lang="ts">
 	import LinkReveal from './LinkReveal.svelte';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
+
+	const content = getContent();
 
 	type Post = (typeof content.pages.events.posts)[number];
 

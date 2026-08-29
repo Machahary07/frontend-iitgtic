@@ -2,11 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import AdminShell from '$lib/components/AdminShell.svelte';
-	import {
-		getCurrentCompany,
-		logoutCompany,
-		type CompanyAccount
-	} from '$lib/utils/companyAuth';
+	import { getCurrentCompany, logoutCompany, type CompanyAccount } from '$lib/utils/companyAuth';
 	import {
 		createJob,
 		getMyJobById,
@@ -38,8 +34,8 @@
 	let applyLink = $state('');
 	let error = $state('');
 
-	onMount(() => {
-		account = getCurrentCompany();
+	onMount(async () => {
+		account = await getCurrentCompany();
 		if (!account) {
 			goto('/opportunities/job-posting-admin');
 			return;
@@ -49,7 +45,7 @@
 			return;
 		}
 		if (!isNew) {
-			existing = getMyJobById(id, account.id);
+			existing = await getMyJobById(id, account.id);
 			if (!existing) {
 				goto('/opportunities/job-posting-admin');
 				return;
@@ -67,7 +63,7 @@
 		mounted = true;
 	});
 
-	function handleSubmit(e: Event) {
+	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		if (!account) return;
 		const payload: JobInput = {
@@ -80,7 +76,9 @@
 			description,
 			applyLink
 		};
-		const result = isNew ? createJob(account.id, payload) : updateJob(id, account.id, payload);
+		const result = isNew
+			? await createJob(account.id, payload)
+			: await updateJob(id, account.id, payload);
 		if (!result.ok) {
 			error = result.error;
 			return;
@@ -89,8 +87,8 @@
 		goto('/opportunities/job-posting-admin');
 	}
 
-	function handleLogout() {
-		logoutCompany();
+	async function handleLogout() {
+		await logoutCompany();
 		goto('/opportunities/job-posting-admin');
 	}
 </script>
@@ -116,7 +114,12 @@
 
 			<label class="field">
 				<span>Role title</span>
-				<input type="text" bind:value={role} placeholder="e.g. Embedded Firmware Engineer" required />
+				<input
+					type="text"
+					bind:value={role}
+					placeholder="e.g. Embedded Firmware Engineer"
+					required
+				/>
 			</label>
 
 			<label class="field">

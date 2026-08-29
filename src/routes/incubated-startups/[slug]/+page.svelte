@@ -1,11 +1,13 @@
 <script lang="ts">
 	import CallToAction from '$lib/components/CallToAction.svelte';
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
 	import { loadGsap, prefersReducedMotion } from '$lib/utils/animation';
 	import Globe from '@lucide/svelte/icons/globe';
 	import BrandIcon from '$lib/components/BrandIcon.svelte';
 	import type { PageProps } from './$types';
+
+	const content = getContent();
 
 	let { data }: PageProps = $props();
 	const category = $derived(data.category);

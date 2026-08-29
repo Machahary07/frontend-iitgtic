@@ -119,7 +119,7 @@
 			name: 'TIC team admin · Login',
 			path: '/tic-admin/login',
 			status: 'done',
-			note: 'Server-verified password gate (env var) + Turnstile; localStorage session'
+			note: 'Individual admin accounts via Supabase Auth + Turnstile; first-run setup creates admin #1'
 		},
 		{
 			name: 'TIC team admin · Overview',
@@ -137,36 +137,54 @@
 			name: 'TIC team admin · Posted jobs',
 			path: '/tic-admin/jobs',
 			status: 'done',
-			note: 'Read-only table of all seed + company-posted jobs'
+			note: 'All seed + company-posted jobs; company-posted roles can be removed here'
 		},
 		{
-			name: 'TIC team admin · Home page editor',
-			path: '/tic-admin/home-page',
-			status: 'in-progress',
-			note: 'Edits home hero / association logos / CTA; save disabled pending Supabase wiring'
+			name: 'TIC team admin · Applications',
+			path: '/tic-admin/applications',
+			status: 'done',
+			note: 'Review queue with status tabs, full 8-step answers, signed document links, accept / reject / delete'
+		},
+		{
+			name: 'TIC team admin · Users',
+			path: '/tic-admin/users',
+			status: 'done',
+			note: 'All accounts with role, last sign-in and status; role changes, suspend, password reset, delete'
+		},
+		{
+			name: 'TIC team admin · Activity',
+			path: '/tic-admin/activity',
+			status: 'done',
+			note: 'Trigger-written audit log with before/after diffs, plus a per-page impressions grid (views / visitors / bots)'
+		},
+		{
+			name: 'TIC team admin · Content',
+			path: '/tic-admin/content',
+			status: 'done',
+			note: 'Every section of the public site editable from the console — nested objects, reorderable lists, reset to default'
 		},
 		{
 			name: 'TIC content editor (other pages)',
-			status: 'todo',
-			note: 'Deferred until Supabase wiring; content.json is static today'
+			status: 'done',
+			note: 'All 18 sections live in site_content; content.json is now only the fallback'
 		},
 		{
 			name: 'Apply',
 			path: '/apply',
 			status: 'done',
-			note: 'Full sign-up form with field validation + Turnstile; saves user session'
+			note: 'Full sign-up form with field validation + Turnstile; creates a Supabase Auth user + profiles row'
 		},
 		{
 			name: 'Application',
 			path: '/application',
 			status: 'done',
-			note: '8-step wizard with field validation and clickable progress bar'
+			note: '8-step wizard; submits to public.applications with documents in Supabase Storage, reviewable at /tic-admin/applications'
 		},
 		{
 			name: 'Login',
 			path: '/login',
-			status: 'in-progress',
-			note: 'Turnstile-gated, but auth is mock — any non-empty credentials succeed; needs real backend wiring'
+			status: 'done',
+			note: 'Turnstile-gated Supabase Auth sign-in'
 		}
 	];
 
@@ -215,19 +233,39 @@
 			note: '.claude/APPLICATION_FORM.md — all 38 questions + types + required flags'
 		},
 		{
-			name: 'Company auth (mock)',
+			name: 'Company auth',
 			status: 'done',
-			note: 'companyAuth.ts — signup / login / status workflow (pending → verified → rejected)'
+			note: 'companyAuth.ts — Supabase Auth + public.companies; status workflow (pending → verified → rejected)'
 		},
 		{
-			name: 'Job-posting storage (mock)',
+			name: 'Job-posting storage',
 			status: 'done',
-			note: 'jobPostings.ts — CRUD, applyLink scheme validation, hides jobs from unverified companies'
+			note: 'jobPostings.ts — public.jobs CRUD; RLS hides jobs from unverified companies and blocks them from posting'
+		},
+		{
+			name: 'Supabase schema + RLS',
+			status: 'done',
+			note: 'supabase/migrations — profiles, companies, jobs, applications, site_content, audit_log, page_views'
+		},
+		{
+			name: 'Content management',
+			status: 'done',
+			note: 'site_content table + schema-driven editor; the site reads it per request with content.json as fallback'
 		},
 		{
 			name: 'TIC admin auth',
 			status: 'done',
-			note: 'ticAdminAuth.ts + /api/tic-admin-login — server-verified password gate for /tic-admin'
+			note: 'Per-admin Supabase Auth accounts; the server verifies the role and issues a signed httpOnly session'
+		},
+		{
+			name: 'Audit trail',
+			status: 'done',
+			note: 'Postgres triggers on companies / jobs / applications / profiles record actor + before/after, service-role only'
+		},
+		{
+			name: 'Page-visit logging',
+			status: 'done',
+			note: 'hooks.server.ts writes one row per HTML page view; page_impressions() aggregates views, human visitors and bot hits'
 		},
 		{
 			name: 'Turnstile verification',
@@ -235,9 +273,14 @@
 			note: 'turnstile.ts + /api/turnstile — gates user login / apply, company login / signup, TIC admin login'
 		},
 		{
-			name: 'User session (mock)',
+			name: 'User session',
 			status: 'done',
-			note: 'userSession.ts — localStorage session saved by login / apply before the application wizard'
+			note: 'userSession.ts — Supabase Auth session + public.profiles, read by the application wizard'
+		},
+		{
+			name: 'Server-rendered admin',
+			status: 'done',
+			note: '+layout.server.ts gates every /tic-admin route and load functions supply the data, so navigation never flashes an empty screen'
 		},
 		{
 			name: 'Admin layout isolation',
@@ -246,13 +289,13 @@
 		},
 		{
 			name: 'Real auth backend',
-			status: 'todo',
-			note: 'Login, apply, and company-auth pages currently mock; plaintext passwords in localStorage'
+			status: 'done',
+			note: 'Supabase Auth for founders and companies; RLS on every table; TIC admin writes via service-role routes'
 		},
 		{
 			name: 'Form submit handlers',
-			status: 'todo',
-			note: 'Newsletter, login, application, contact — all preventDefault today'
+			status: 'in-progress',
+			note: 'Login, apply, application, job posting and content editing all persist; newsletter still preventDefault'
 		},
 		{
 			name: 'SEO metadata',
@@ -277,7 +320,7 @@
 		{
 			name: 'Application draft persistence',
 			status: 'todo',
-			note: 'Refresh loses progress; would need localStorage or backend drafts'
+			note: 'Refresh still loses progress; submitted applications persist, in-progress ones do not'
 		}
 	];
 

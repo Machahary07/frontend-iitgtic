@@ -3,7 +3,9 @@
 	import HomeAssociationMarquee from '$lib/components/HomeAssociationMarquee.svelte';
 	import CallToAction from '$lib/components/CallToAction.svelte';
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
+
+	const content = getContent();
 
 	const page = content.pages.whatHappens;
 	const ctaContent = content.cta.apply;
