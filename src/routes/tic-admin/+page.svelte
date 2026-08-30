@@ -1,41 +1,28 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
-	import { isTicAdminAuthed, logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import { getAllCompanies, type CompanyAccount } from '$lib/utils/companyAuth';
-	import { getAllJobs, type AnyJob } from '$lib/utils/jobPostings';
+	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
+	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
+	import type { PageData } from './$types';
 
-	const navItems = [
-		{ label: 'Overview', href: '/tic-admin' },
-		{ label: 'Companies', href: '/tic-admin/companies' },
-		{ label: 'Posted jobs', href: '/tic-admin/jobs' },
-		{ separator: true as const },
-		{ label: 'Home page', href: '/tic-admin/home-page' }
-	];
+	// Everything here arrives from +page.server.ts, so the section renders on the
+	// first paint instead of flashing empty while the browser fetches.
+	let { data }: { data: PageData } = $props();
 
-	let mounted = $state(false);
-	let companies = $state<CompanyAccount[]>([]);
-	let jobs = $state<AnyJob[]>([]);
-
-	onMount(() => {
-		if (!isTicAdminAuthed()) {
-			goto('/tic-admin/login');
-			return;
-		}
-		companies = getAllCompanies();
-		jobs = getAllJobs();
-		mounted = true;
-	});
+	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
+	const companies = $derived(data.companies);
+	const applications = $derived(data.applications);
 
 	const pending = $derived(companies.filter((c) => c.status === 'pending'));
 	const verified = $derived(companies.filter((c) => c.status === 'verified'));
 	const rejected = $derived(companies.filter((c) => c.status === 'rejected'));
-	const userJobs = $derived(jobs.filter((j) => j.source === 'user'));
+	const userJobs = $derived(data.jobs);
+	const newApplications = $derived(applications.filter((a) => a.status === 'submitted'));
 
-	function handleLogout() {
-		logoutTicAdmin();
-		goto('/tic-admin/login');
+	async function handleLogout() {
+		await logoutTicAdmin();
+		goto(resolve('/tic-admin/login'));
 	}
 </script>
 
@@ -43,14 +30,13 @@
 	<title>TIC Admin · Overview</title>
 </svelte:head>
 
-{#if mounted}
-	<AdminShell
+<AdminShell
 		brand="TIC Team Admin"
 		brandSub="Internal"
-		{navItems}
+		navItems={TIC_ADMIN_NAV}
 		title="Overview"
 		eyebrow="Dashboard"
-		user="TIC Team"
+		user={adminName}
 		onLogout={handleLogout}
 	>
 		<div class="stats">
@@ -72,6 +58,11 @@
 				<p class="stat__value">{userJobs.length}</p>
 				<a href="/tic-admin/jobs" class="stat__link">View all →</a>
 			</div>
+			<div class="stat">
+				<p class="stat__label">New applications</p>
+				<p class="stat__value">{newApplications.length}</p>
+				<a href={resolve('/tic-admin/applications')} class="stat__link">Review →</a>
+			</div>
 		</div>
 
 		<section class="panel">
@@ -87,7 +78,9 @@
 						<li class="row">
 							<div class="row__main">
 								<p class="row__title">{company.companyName}</p>
-								<p class="row__meta">{company.email} · {new Date(company.createdAt).toLocaleDateString()}</p>
+								<p class="row__meta">
+									{company.email} · {new Date(company.createdAt).toLocaleDateString()}
+								</p>
 							</div>
 							<a href="/tic-admin/companies" class="row__cta">Review</a>
 						</li>
@@ -95,8 +88,36 @@
 				</ul>
 			{/if}
 		</section>
-	</AdminShell>
-{/if}
+
+		<section class="panel">
+			<header class="panel__head">
+				<h2>New applications</h2>
+				<a href={resolve('/tic-admin/applications')} class="panel__more">All applications →</a>
+			</header>
+			{#if newApplications.length === 0}
+				<p class="empty">No applications waiting for review.</p>
+			{:else}
+				<ul class="rows">
+					{#each newApplications.slice(0, 5) as application (application.id)}
+						<li class="row">
+							<div class="row__main">
+								<p class="row__title">{application.startup_name || 'Untitled startup'}</p>
+								<p class="row__meta">
+									{application.full_name || application.email} · {new Date(
+										application.created_at
+									).toLocaleDateString()}
+								</p>
+							</div>
+							<a
+								href={resolve('/tic-admin/applications/[id]', { id: application.id })}
+								class="row__cta">Open</a
+							>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+</AdminShell>
 
 <style lang="scss">
 	@use '$styles/variables' as *;
@@ -104,9 +125,14 @@
 
 	.stats {
 		display: grid;
-		grid-template-columns: repeat(4, 1fr);
+		// Five tiles: an even five-up on wide screens beats 4 + 1 orphaned.
+		grid-template-columns: repeat(5, 1fr);
 		gap: 14px;
 		margin-bottom: 28px;
+
+		@include breakpoint-down($bp-lg) {
+			grid-template-columns: repeat(3, 1fr);
+		}
 
 		@include breakpoint-down($bp-md) {
 			grid-template-columns: repeat(2, 1fr);

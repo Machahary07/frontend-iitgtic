@@ -4,7 +4,9 @@
 	import LinkReveal from './LinkReveal.svelte';
 	import { loadGsap } from '$lib/utils/animation';
 	import { images } from '$lib/data/images';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
+
+	const content = getContent();
 
 	type RouteHref = Parameters<typeof resolve>[0];
 	type DropdownItem = { label: string; href: RouteHref };

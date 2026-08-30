@@ -1,8 +1,10 @@
 <script lang="ts">
 	import CallToAction from '$lib/components/CallToAction.svelte';
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
 	import type { PageProps } from './$types';
+
+	const content = getContent();
 
 	let { data }: PageProps = $props();
 	const post = $derived(data.post);

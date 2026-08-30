@@ -124,3 +124,176 @@
 	color: #111;
 	font-family: $font-family-base;
 }
+
+// --- list-screen primitives -------------------------------------------------
+// The Companies / Applications / Jobs / Users screens are all the same shape:
+// filter pills over a bordered panel holding one table. These were copied by
+// hand into each page before; new screens should pull them from here.
+
+@mixin admin-tabs {
+	display: flex;
+	gap: 4px;
+	margin-bottom: 16px;
+	flex-wrap: wrap;
+}
+
+@mixin admin-tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 14px;
+	font: inherit;
+	font-family: $font-family-base;
+	font-size: 13px;
+	font-weight: $font-weight-medium;
+	color: #555;
+	background: #fff;
+	border: 1px solid #e6e8ec;
+	border-radius: 999px;
+	cursor: pointer;
+
+	&:hover {
+		background: #f6f7f9;
+	}
+
+	&--active {
+		color: #fff;
+		background: #111;
+		border-color: #111;
+
+		&:hover {
+			background: #000;
+		}
+	}
+}
+
+@mixin admin-tab-count {
+	font-size: 11px;
+	opacity: 0.7;
+}
+
+@mixin admin-panel {
+	background: #fff;
+	border: 1px solid #e6e8ec;
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+@mixin admin-empty {
+	margin: 0;
+	padding: 40px 18px;
+	text-align: center;
+	font-size: 13px;
+	color: #777;
+}
+
+@mixin admin-table($min-width: 760px) {
+	width: 100%;
+	border-collapse: collapse;
+	font-family: $font-family-base;
+	font-size: 13px;
+	min-width: $min-width;
+}
+
+@mixin admin-thead {
+	text-align: left;
+	padding: 10px 14px;
+	font-size: 11px;
+	font-weight: $font-weight-semibold;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: #666;
+	background: #fafbfc;
+	border-bottom: 1px solid #eef0f3;
+}
+
+@mixin admin-td {
+	padding: 12px 14px;
+	border-bottom: 1px solid #f1f2f4;
+	vertical-align: top;
+}
+
+@mixin admin-cell-name {
+	margin: 0;
+	font-size: 13px;
+	font-weight: $font-weight-semibold;
+	color: #111;
+}
+
+@mixin admin-cell-sub {
+	margin: 2px 0 0;
+	font-size: 12px;
+	color: #777;
+}
+
+@mixin admin-badge {
+	display: inline-block;
+	padding: 3px 10px;
+	font-size: 11px;
+	font-weight: $font-weight-semibold;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	border-radius: 999px;
+	background: #eef0f3;
+	color: #444;
+}
+
+@mixin admin-badge-tone($tone) {
+	@if $tone == 'good' {
+		background: #d6f5e1;
+		color: #0e6b2c;
+	} @else if $tone == 'warn' {
+		background: #fff4d4;
+		color: #6a4f00;
+	} @else if $tone == 'bad' {
+		background: #fde0e0;
+		color: #9a1515;
+	} @else if $tone == 'info' {
+		background: #e2e8f5;
+		color: #24427e;
+	}
+}
+
+@mixin admin-btn-small {
+	padding: 6px 12px;
+	font: inherit;
+	font-family: $font-family-base;
+	font-size: 12px;
+	font-weight: $font-weight-semibold;
+	color: #111;
+	background: #fff;
+	border: 1px solid #d8dbe0;
+	border-radius: 6px;
+	cursor: pointer;
+	text-decoration: none;
+	display: inline-block;
+	text-align: center;
+
+	&:hover {
+		background: #f3f4f6;
+	}
+
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	&--primary {
+		color: #fff;
+		background: #111;
+		border-color: #111;
+
+		&:hover {
+			background: #000;
+		}
+	}
+
+	&--danger {
+		color: #a01515;
+		border-color: #f5c2c2;
+
+		&:hover {
+			background: #fdecec;
+		}
+	}
+}

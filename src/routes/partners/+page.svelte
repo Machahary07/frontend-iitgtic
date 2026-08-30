@@ -1,8 +1,10 @@
 <script lang="ts">
 	import CallToAction from '$lib/components/CallToAction.svelte';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
 	import { images } from '$lib/data/images';
 	import { loadGsap, prefersReducedMotion } from '$lib/utils/animation';
+
+	const content = getContent();
 
 	type AssociationLogoKey = keyof typeof images.associationLogos;
 

@@ -11,6 +11,7 @@
 	let confirm = $state('');
 	let error = $state('');
 	let submittedEmail = $state('');
+	let needsEmailConfirmation = $state(false);
 	let turnstileToken = $state('');
 	let captcha = $state<{ reset: () => void }>();
 
@@ -30,13 +31,14 @@
 			error = 'Verification failed. Please try again.';
 			return;
 		}
-		const result = signupCompany({ email, password, companyName, website, contactName });
+		const result = await signupCompany({ email, password, companyName, website, contactName });
 		if (!result.ok) {
 			error = result.error;
 			return;
 		}
 		error = '';
-		submittedEmail = result.account.email;
+		needsEmailConfirmation = result.needsEmailConfirmation;
+		submittedEmail = result.email;
 	}
 </script>
 
@@ -55,6 +57,9 @@
 					verify that you are affiliated with TIC before posting unlocks. You'll be notified once
 					approved.
 				</p>
+				{#if needsEmailConfirmation}
+					<p class="sub">Check your inbox first — confirm your email address before signing in.</p>
+				{/if}
 			</div>
 
 			<div class="actions">

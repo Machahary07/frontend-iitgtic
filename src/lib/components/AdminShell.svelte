@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/state';
+	import { navigating, page } from '$app/state';
 	import type { Snippet } from 'svelte';
 
 	type NavItem = { label: string; href: string } | { separator: true };
@@ -104,8 +104,16 @@
 			</div>
 		</header>
 
+		{#if navigating.to}
+			<div class="progress" role="status" aria-label="Loading page"></div>
+		{/if}
+
 		<div class="content">
-			{@render children()}
+			{#key page.url.pathname}
+				<div class="content__inner">
+					{@render children()}
+				</div>
+			{/key}
 		</div>
 	</div>
 
@@ -378,6 +386,61 @@
 
 		&:hover {
 			background: #f3f4f6;
+		}
+	}
+
+	// Server loads take a couple of hundred milliseconds, during which SvelteKit
+	// keeps the previous screen on show. This bar is what tells the reader the
+	// click registered, rather than leaving the old page looking unresponsive.
+	.progress {
+		position: relative;
+		height: 2px;
+		overflow: hidden;
+		background: #eef0f3;
+
+		&::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			width: 40%;
+			background: #111;
+			animation: progress-slide 0.9s ease-in-out infinite;
+		}
+	}
+
+	@keyframes progress-slide {
+		0% {
+			transform: translateX(-100%);
+		}
+		100% {
+			transform: translateX(350%);
+		}
+	}
+
+	.content__inner {
+		animation: content-in 0.18s ease-out;
+	}
+
+	@keyframes content-in {
+		from {
+			opacity: 0;
+			transform: translateY(3px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.progress::after {
+			animation: none;
+			width: 100%;
+			opacity: 0.35;
+		}
+
+		.content__inner {
+			animation: none;
 		}
 	}
 

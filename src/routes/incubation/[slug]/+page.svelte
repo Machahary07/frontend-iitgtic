@@ -2,8 +2,10 @@
 	import CallToAction from '$lib/components/CallToAction.svelte';
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import ScrollSpyNav from '$lib/components/ScrollSpyNav.svelte';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
 	import type { PageProps } from './$types';
+
+	const content = getContent();
 
 	let { data }: PageProps = $props();
 	const pillar = $derived(data.pillar);

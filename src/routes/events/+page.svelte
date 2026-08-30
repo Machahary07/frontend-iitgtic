@@ -1,8 +1,10 @@
 <script lang="ts">
 	import CallToAction from '$lib/components/CallToAction.svelte';
 	import EventCalendar from '$lib/components/EventCalendar.svelte';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
 	import { loadGsap, prefersReducedMotion } from '$lib/utils/animation';
+
+	const content = getContent();
 
 	const page = content.pages.events;
 	const ctaContent = content.cta.apply;

@@ -1,16 +1,20 @@
-// Mock company-auth backed by localStorage.
-// Plaintext passwords are obviously not for production — replace with a real
-// auth provider (Supabase / Lucia / Clerk) when wiring a real backend.
+// Company accounts for the job-posting portal, backed by Supabase Auth.
+//
+// A company signs up as a normal auth user carrying `role: 'company'` in its
+// metadata; the on_auth_user_created trigger then writes the matching row into
+// public.companies with status 'pending'. companies.id IS the auth user id, so
+// a company's id and its session user id are interchangeable.
+//
+// `status` is not writable by the authenticated role — only the TIC admin
+// routes (service role) can verify or reject an account.
 
-const ACCOUNTS_KEY = 'tic.companies';
-const SESSION_KEY = 'tic.companies.session';
+import { supabase } from '$lib/supabaseClient';
 
 export type CompanyStatus = 'pending' | 'verified' | 'rejected';
 
 export type CompanyAccount = {
 	id: string;
 	email: string;
-	password: string;
 	companyName: string;
 	companySlug: string;
 	website: string;
@@ -20,186 +24,213 @@ export type CompanyAccount = {
 	rejectionReason?: string;
 };
 
-export type CompanySession = {
-	companyId: string;
+type CompanyRow = {
+	id: string;
+	email: string;
+	company_name: string;
+	company_slug: string;
+	website: string;
+	contact_name: string;
+	status: CompanyStatus;
+	rejection_reason: string | null;
+	created_at: string;
 };
 
-function isBrowser() {
-	return typeof localStorage !== 'undefined';
+const COLUMNS =
+	'id, email, company_name, company_slug, website, contact_name, status, rejection_reason, created_at';
+
+function toAccount(row: CompanyRow): CompanyAccount {
+	return {
+		id: row.id,
+		email: row.email,
+		companyName: row.company_name,
+		companySlug: row.company_slug,
+		website: row.website,
+		contactName: row.contact_name,
+		status: row.status,
+		rejectionReason: row.rejection_reason ?? undefined,
+		createdAt: row.created_at
+	};
 }
 
-function slugify(s: string) {
-	return s
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, '-')
-		.replace(/^-+|-+$/g, '')
-		.slice(0, 64) || 'company';
+export function slugify(value: string): string {
+	return (
+		value
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-+|-+$/g, '')
+			.slice(0, 64) || 'company'
+	);
 }
 
-function readAccounts(): CompanyAccount[] {
-	if (!isBrowser()) return [];
-	const raw = localStorage.getItem(ACCOUNTS_KEY);
-	if (!raw) return [];
-	try {
-		const parsed = JSON.parse(raw) as CompanyAccount[];
-		return parsed.map((a) => ({ ...a, status: a.status ?? 'pending' }));
-	} catch {
-		return [];
-	}
-}
+export type SignupResult =
+	| { ok: true; account: CompanyAccount | null; needsEmailConfirmation: boolean; email: string }
+	| { ok: false; error: string };
 
-function writeAccounts(accounts: CompanyAccount[]) {
-	if (!isBrowser()) return;
-	localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
-}
-
-export function signupCompany(input: {
+export async function signupCompany(input: {
 	email: string;
 	password: string;
 	companyName: string;
 	website?: string;
 	contactName?: string;
-}): { ok: true; account: CompanyAccount } | { ok: false; error: string } {
+}): Promise<SignupResult> {
 	const email = input.email.trim().toLowerCase();
 	const companyName = input.companyName.trim();
+
 	if (!email || !input.password || !companyName) {
 		return { ok: false, error: 'Email, password and company name are all required.' };
 	}
 	if (input.password.length < 6) {
 		return { ok: false, error: 'Password must be at least 6 characters.' };
 	}
-	const accounts = readAccounts();
-	if (accounts.some((a) => a.email === email)) {
-		return { ok: false, error: 'An account with this email already exists.' };
-	}
-	const id = 'c_' + Math.random().toString(36).slice(2, 10);
-	const account: CompanyAccount = {
-		id,
+
+	const { data, error } = await supabase.auth.signUp({
 		email,
 		password: input.password,
-		companyName,
-		companySlug: slugify(companyName),
-		website: input.website?.trim() ?? '',
-		contactName: input.contactName?.trim() ?? '',
-		createdAt: new Date().toISOString(),
-		status: 'pending'
+		options: {
+			data: {
+				role: 'company',
+				company_name: companyName,
+				website: input.website?.trim() ?? '',
+				contact_name: input.contactName?.trim() ?? '',
+				full_name: input.contactName?.trim() ?? ''
+			}
+		}
+	});
+
+	if (error) {
+		return { ok: false, error: friendlyAuthError(error.message) };
+	}
+	// Supabase returns a user with an empty identities array when the address is
+	// already registered, rather than leaking that fact through an error.
+	if (data.user && data.user.identities && data.user.identities.length === 0) {
+		return { ok: false, error: 'An account with this email already exists.' };
+	}
+
+	// No session means the project still requires email confirmation.
+	if (!data.session) {
+		return { ok: true, account: null, needsEmailConfirmation: true, email };
+	}
+
+	return {
+		ok: true,
+		account: await getCurrentCompany(),
+		needsEmailConfirmation: false,
+		email
 	};
-	writeAccounts([...accounts, account]);
-	setSession({ companyId: id });
-	return { ok: true, account };
 }
 
-export function getAllCompanies(): CompanyAccount[] {
-	return readAccounts();
-}
-
-export function setCompanyStatus(
-	id: string,
-	status: CompanyStatus,
-	rejectionReason?: string
-): boolean {
-	const accounts = readAccounts();
-	const idx = accounts.findIndex((a) => a.id === id);
-	if (idx < 0) return false;
-	accounts[idx] = {
-		...accounts[idx],
-		status,
-		rejectionReason: status === 'rejected' ? rejectionReason ?? '' : undefined
-	};
-	writeAccounts(accounts);
-	return true;
-}
-
-export function deleteCompanyById(id: string): boolean {
-	const accounts = readAccounts();
-	const filtered = accounts.filter((a) => a.id !== id);
-	if (filtered.length === accounts.length) return false;
-	writeAccounts(filtered);
-	return true;
-}
-
-export function loginCompany(
+export async function loginCompany(
 	email: string,
 	password: string
-): { ok: true; account: CompanyAccount } | { ok: false; error: string } {
-	const normalized = email.trim().toLowerCase();
-	const account = readAccounts().find((a) => a.email === normalized);
-	if (!account || account.password !== password) {
-		return { ok: false, error: 'Invalid email or password.' };
+): Promise<{ ok: true; account: CompanyAccount } | { ok: false; error: string }> {
+	const { error } = await supabase.auth.signInWithPassword({
+		email: email.trim().toLowerCase(),
+		password
+	});
+	if (error) {
+		return { ok: false, error: friendlyAuthError(error.message) };
 	}
-	setSession({ companyId: account.id });
+
+	const account = await getCurrentCompany();
+	if (!account) {
+		await supabase.auth.signOut();
+		return { ok: false, error: 'This login is not a company account.' };
+	}
 	return { ok: true, account };
 }
 
-export function logoutCompany() {
-	if (!isBrowser()) return;
-	localStorage.removeItem(SESSION_KEY);
+export async function logoutCompany(): Promise<void> {
+	await supabase.auth.signOut();
 }
 
-export function getSession(): CompanySession | null {
-	if (!isBrowser()) return null;
-	const raw = localStorage.getItem(SESSION_KEY);
-	if (!raw) return null;
-	try {
-		return JSON.parse(raw) as CompanySession;
-	} catch {
-		return null;
+export async function getCurrentCompany(): Promise<CompanyAccount | null> {
+	const { data: sessionData } = await supabase.auth.getSession();
+	const userId = sessionData.session?.user.id;
+	if (!userId) return null;
+
+	const { data, error } = await supabase
+		.from('companies')
+		.select(COLUMNS)
+		.eq('id', userId)
+		.maybeSingle();
+
+	if (error || !data) return null;
+	return toAccount(data as CompanyRow);
+}
+
+export async function updateCurrentCompany(
+	patch: Partial<Pick<CompanyAccount, 'companyName' | 'website' | 'contactName'>>
+): Promise<CompanyAccount | null> {
+	const { data: sessionData } = await supabase.auth.getSession();
+	const userId = sessionData.session?.user.id;
+	if (!userId) return null;
+
+	const update: Record<string, string> = {};
+	if (patch.companyName !== undefined) {
+		update.company_name = patch.companyName.trim();
+		update.company_slug = slugify(patch.companyName);
 	}
+	if (patch.website !== undefined) update.website = patch.website.trim();
+	if (patch.contactName !== undefined) update.contact_name = patch.contactName.trim();
+
+	const { data, error } = await supabase
+		.from('companies')
+		.update(update)
+		.eq('id', userId)
+		.select(COLUMNS)
+		.maybeSingle();
+
+	if (error || !data) return null;
+	return toAccount(data as CompanyRow);
 }
 
-function setSession(session: CompanySession) {
-	if (!isBrowser()) return;
-	localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-}
-
-export function getCurrentCompany(): CompanyAccount | null {
-	const session = getSession();
-	if (!session) return null;
-	return readAccounts().find((a) => a.id === session.companyId) ?? null;
-}
-
-export function updateCurrentCompany(
-	patch: Partial<Omit<CompanyAccount, 'id' | 'createdAt' | 'email'>>
-): CompanyAccount | null {
-	const current = getCurrentCompany();
-	if (!current) return null;
-	const accounts = readAccounts();
-	const idx = accounts.findIndex((a) => a.id === current.id);
-	if (idx < 0) return null;
-	const updated: CompanyAccount = {
-		...accounts[idx],
-		...patch,
-		companySlug: patch.companyName ? slugify(patch.companyName) : accounts[idx].companySlug
-	};
-	accounts[idx] = updated;
-	writeAccounts(accounts);
-	return updated;
-}
-
-export function changePassword(
+export async function changePassword(
 	currentPassword: string,
 	newPassword: string
-): { ok: true } | { ok: false; error: string } {
-	const current = getCurrentCompany();
-	if (!current) return { ok: false, error: 'Not logged in.' };
-	if (current.password !== currentPassword) {
-		return { ok: false, error: 'Current password is incorrect.' };
-	}
+): Promise<{ ok: true } | { ok: false; error: string }> {
 	if (newPassword.length < 6) {
 		return { ok: false, error: 'New password must be at least 6 characters.' };
 	}
-	const accounts = readAccounts();
-	const idx = accounts.findIndex((a) => a.id === current.id);
-	if (idx < 0) return { ok: false, error: 'Account not found.' };
-	accounts[idx] = { ...accounts[idx], password: newPassword };
-	writeAccounts(accounts);
+
+	const { data: sessionData } = await supabase.auth.getSession();
+	const email = sessionData.session?.user.email;
+	if (!email) return { ok: false, error: 'Not logged in.' };
+
+	// Supabase lets a signed-in user change their password without re-stating the
+	// old one, so re-authenticate first to keep the "current password" check real.
+	const { error: reauthError } = await supabase.auth.signInWithPassword({
+		email,
+		password: currentPassword
+	});
+	if (reauthError) {
+		return { ok: false, error: 'Current password is incorrect.' };
+	}
+
+	const { error } = await supabase.auth.updateUser({ password: newPassword });
+	if (error) return { ok: false, error: friendlyAuthError(error.message) };
 	return { ok: true };
 }
 
-export function deleteCurrentCompany(): boolean {
-	const current = getCurrentCompany();
-	if (!current) return false;
-	writeAccounts(readAccounts().filter((a) => a.id !== current.id));
-	logoutCompany();
-	return true;
+export async function deleteCurrentCompany(): Promise<boolean> {
+	const { data: sessionData } = await supabase.auth.getSession();
+	const token = sessionData.session?.access_token;
+	if (!token) return false;
+
+	const res = await fetch('/api/company-account', {
+		method: 'DELETE',
+		headers: { authorization: `Bearer ${token}` }
+	});
+	await supabase.auth.signOut();
+	return res.ok;
+}
+
+function friendlyAuthError(message: string): string {
+	const m = message.toLowerCase();
+	if (m.includes('invalid login credentials')) return 'Invalid email or password.';
+	if (m.includes('already registered')) return 'An account with this email already exists.';
+	if (m.includes('email not confirmed')) {
+		return 'Please confirm your email address before signing in.';
+	}
+	return message;
 }

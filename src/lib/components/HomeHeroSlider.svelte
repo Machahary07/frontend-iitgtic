@@ -2,7 +2,9 @@
 	import { onMount, tick } from 'svelte';
 	import { loadGsap, prefersReducedMotion } from '$lib/utils/animation';
 	import LinkReveal from './LinkReveal.svelte';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
+
+	const content = getContent();
 
 	type Slide = { id: number; src: string };
 	type Direction = 'left' | 'right';

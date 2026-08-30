@@ -1,8 +1,8 @@
 import { error } from '@sveltejs/kit';
-import content from '$lib/data/content.json';
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = ({ params }) => {
+export const load: PageLoad = async ({ params, parent }) => {
+	const { content } = await parent();
 	const category = content.pages.incubatedStartups.categories.find((c) => c.slug === params.slug);
 	if (!category) error(404, 'Category not found');
 	return { category };

@@ -4,7 +4,7 @@
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
 	import Turnstile from '$lib/components/Turnstile.svelte';
-	import { saveUserSession } from '$lib/utils/userSession';
+	import { signUpFounder } from '$lib/utils/userSession';
 	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	let name = $state('');
@@ -28,6 +28,7 @@
 	};
 
 	let errors = $state<Errors>({});
+	let confirmationEmail = $state('');
 
 	const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -100,7 +101,21 @@
 			errors = { captcha: 'Verification failed. Please try again.' };
 			return;
 		}
-		saveUserSession({ name: name.trim(), email: email.trim(), phone: phone.trim() });
+		const signup = await signUpFounder({
+			name: name.trim(),
+			email: email.trim(),
+			phone: phone.trim(),
+			password
+		});
+		if (!signup.ok) {
+			errors = { email: signup.error };
+			return;
+		}
+		if (signup.needsEmailConfirmation) {
+			// The project requires email confirmation, so there is no session yet.
+			confirmationEmail = signup.session.email ?? email.trim();
+			return;
+		}
 		goto(resolve('/application'));
 	}
 </script>
@@ -112,28 +127,37 @@
 <section class="apply">
 	<div class="apply__inner">
 		<div class="apply__grid">
-				<!-- LEFT: Instructions -->
-				<aside class="info">
-					<h2 class="info__title">Instructions</h2>
-					<ol class="info__list">
-						<li>Sign up to create your IITG TIC account before submitting an application.</li>
-						<li>
-							Already registered? Log in to apply for Incubation or the TIC Equity and
-							Investment Summit.
-						</li>
-						<li>
-							Keep your supporting documents ready, such as Company Registration, GST and Trade
-							Licence.
-						</li>
-					</ol>
-				</aside>
+			<!-- LEFT: Instructions -->
+			<aside class="info">
+				<h2 class="info__title">Instructions</h2>
+				<ol class="info__list">
+					<li>Sign up to create your IITG TIC account before submitting an application.</li>
+					<li>
+						Already registered? Log in to apply for Incubation or the TIC Equity and Investment
+						Summit.
+					</li>
+					<li>
+						Keep your supporting documents ready, such as Company Registration, GST and Trade
+						Licence.
+					</li>
+				</ol>
+			</aside>
 
-				<!-- RIGHT: Form -->
-				<div class="form-wrap">
-					<header class="apply__header">
-						<h1>Sign up</h1>
-					</header>
+			<!-- RIGHT: Form -->
+			<div class="form-wrap">
+				<header class="apply__header">
+					<h1>{confirmationEmail ? 'Confirm your email' : 'Sign up'}</h1>
+				</header>
 
+				{#if confirmationEmail}
+					<div class="confirm" role="status">
+						<p>
+							We've sent a confirmation link to <strong>{confirmationEmail}</strong>. Open it to
+							activate your account, then log in to start your application.
+						</p>
+						<LinkReveal href="/login" text="Go to login" class="inline-link" />
+					</div>
+				{:else}
 					<form class="form" onsubmit={handleSubmit} novalidate>
 						<label class="field" class:has-error={errors.name}>
 							<span class="field__label">
@@ -256,8 +280,9 @@
 							<LinkReveal href="/login" text="Login" class="inline-link" />
 						</p>
 					</form>
-				</div>
+				{/if}
 			</div>
+		</div>
 	</div>
 </section>
 
@@ -357,6 +382,13 @@
 	}
 
 	// ---- Form (right) ----
+	.confirm {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		align-items: flex-start;
+	}
+
 	.form-wrap {
 		grid-column: 3;
 
@@ -534,7 +566,6 @@
 		transform: scale(1);
 	}
 
-
 	:global(button.button-reveal.submit) {
 		padding: 11px 28px;
 		border: 1px solid $color-black;
@@ -555,5 +586,4 @@
 		font-size: $font-size-sm;
 		color: $color-white;
 	}
-
 </style>

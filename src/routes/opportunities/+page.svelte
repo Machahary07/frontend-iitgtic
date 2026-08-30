@@ -1,35 +1,19 @@
 <script lang="ts">
 	import CallToAction from '$lib/components/CallToAction.svelte';
-	import content from '$lib/data/content.json';
+	import { getContent } from '$lib/content';
 	import { loadGsap, prefersReducedMotion } from '$lib/utils/animation';
-	import { getAllJobs, type AnyJob } from '$lib/utils/jobPostings';
+	import { getAllJobs, seedJobs, type AnyJob } from '$lib/utils/jobPostings';
 	import { onMount } from 'svelte';
+
+	const content = getContent();
 
 	const page = content.pages.opportunities;
 	const ctaContent = content.cta.apply;
 
-	let allPosts = $state<AnyJob[]>(
-		page.posts.map((p) => ({
-			id: `seed_${p.slug}`,
-			slug: p.slug,
-			companyId: '',
-			role: p.role,
-			company: p.company,
-			companySlug: p.companySlug,
-			location: p.location,
-			type: p.type,
-			sector: p.sector,
-			posted: p.posted,
-			description: p.description,
-			applyLink: p.applyLink,
-			createdAt: p.posted,
-			updatedAt: p.posted,
-			source: 'seed' as const
-		}))
-	);
+	let allPosts = $state<AnyJob[]>(seedJobs());
 
-	onMount(() => {
-		allPosts = getAllJobs();
+	onMount(async () => {
+		allPosts = await getAllJobs();
 	});
 
 	const types = $derived([
@@ -174,7 +158,9 @@
 							onblur={() => animate(i, 0)}
 						>
 							<div class="row__top">
-								<span class="row__type" class:row__type--intern={post.type.startsWith('Internship')}>{post.type}</span>
+								<span class="row__type" class:row__type--intern={post.type.startsWith('Internship')}
+									>{post.type}</span
+								>
 								<span class="row__date">{formatPosted(post.posted)}</span>
 							</div>
 
@@ -386,7 +372,10 @@
 		text-transform: uppercase;
 		border-radius: $radius-pill;
 		cursor: pointer;
-		transition: background $transition-base, color $transition-base, border-color $transition-base;
+		transition:
+			background $transition-base,
+			color $transition-base,
+			border-color $transition-base;
 
 		&.is-active {
 			background: $color-black;
