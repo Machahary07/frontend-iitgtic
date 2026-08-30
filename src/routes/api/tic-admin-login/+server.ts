@@ -13,21 +13,34 @@ import type { RequestHandler } from './$types';
 // POST    { bootstrapPassword, email, password } create the first admin, once
 // DELETE  sign out
 
+// Throws rather than returning 0 when the lookup fails. A database that cannot
+// be read must never look like "no admin exists yet" — that is what re-arms the
+// bootstrap path on a misconfigured environment.
 async function adminCount(): Promise<number> {
-	const { count } = await supabaseAdmin
+	const { count, error: countError } = await supabaseAdmin
 		.from('profiles')
 		.select('id', { count: 'exact', head: true })
 		.eq('role', 'admin');
+	if (countError) {
+		console.error('[tic-admin] admin lookup failed:', countError);
+		error(503, 'Could not reach the database to check for existing admins.');
+	}
 	return count ?? 0;
 }
 
 export const GET: RequestHandler = async ({ cookies }) => {
 	const session = readTicAdminSession(cookies);
-	return json({
-		ok: session !== null,
-		admin: session,
-		needsBootstrap: (await adminCount()) === 0
-	});
+	try {
+		return json({
+			ok: session !== null,
+			admin: session,
+			needsBootstrap: (await adminCount()) === 0
+		});
+	} catch {
+		// Reported as data so the caller can tell "database down" apart from
+		// "first run", which a bare needsBootstrap flag cannot express.
+		return json({ ok: false, admin: session, needsBootstrap: false, dbError: true });
+	}
 };
 
 export const POST: RequestHandler = async ({ request, cookies }) => {
@@ -58,7 +71,8 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			email_confirm: true,
 			user_metadata: { role: 'admin', full_name: body.fullName?.trim() ?? '' }
 		});
-		if (createError || !created.user) error(400, createError?.message ?? 'Could not create account.');
+		if (createError || !created.user)
+			error(400, createError?.message ?? 'Could not create account.');
 
 		// The signup trigger writes the profile with whatever role the metadata
 		// asked for, but only 'founder' and 'company' are honoured there — so the
@@ -96,10 +110,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		.maybeSingle();
 
 	if (profile?.role !== 'admin') {
-		return json(
-			{ ok: false, error: 'This account does not have admin access.' },
-			{ status: 403 }
-		);
+		return json({ ok: false, error: 'This account does not have admin access.' }, { status: 403 });
 	}
 
 	const session = {
