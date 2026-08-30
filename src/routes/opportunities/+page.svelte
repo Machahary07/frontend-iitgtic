@@ -396,9 +396,13 @@
 		list-style: none;
 		margin: 0;
 		padding: 0;
-		display: flex;
-		flex-direction: column;
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
 		gap: $space-5;
+
+		@include breakpoint-down($bp-sm) {
+			grid-template-columns: 1fr;
+		}
 	}
 
 	.row {
@@ -410,6 +414,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: $space-3;
+		height: 100%;
 		padding: $space-6;
 		color: $color-black;
 		text-decoration: none;
