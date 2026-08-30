@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 	import { bootstrapFirstAdmin, loginTicAdmin } from '$lib/utils/ticAdminAuth';
 	import type { PageData } from './$types';
 	import Turnstile from '$lib/components/Turnstile.svelte';
@@ -11,6 +12,10 @@
 	let { data }: { data: PageData } = $props();
 	let bootstrapped = $state(false);
 	const needsBootstrap = $derived(data.needsBootstrap && !bootstrapped);
+	// A database that cannot be read is not a first run. Showing the setup form in
+	// that case sends people hunting for a password that was never the problem.
+	const dbError = $derived(data.dbError);
+	const configuredHost = PUBLIC_SUPABASE_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
 	let email = $state('');
 	let password = $state('');
@@ -101,7 +106,36 @@
 
 <section class="login">
 	<div class="card">
-		{#if needsBootstrap}
+		{#if dbError}
+			<div class="card__head">
+				<p class="eyebrow">IITG TIC · Cannot start</p>
+				<h1>Database unreachable</h1>
+				<p class="sub">
+					The console could not read the admin list, so it cannot tell whether an account exists.
+					This is an environment problem, not a sign-in problem.
+				</p>
+			</div>
+
+			<p class="error" role="alert">{dbError}</p>
+
+			<div class="checklist">
+				<p class="checklist__head">In <code>.env.local</code>, check that:</p>
+				<ul>
+					<li>
+						<code>PUBLIC_SUPABASE_URL</code> points at the shared project. It is currently
+						<code>{configuredHost}</code> — compare that against the project ref the rest of the team
+						is using.
+					</li>
+					<li>
+						<code>SUPABASE_SERVICE_ROLE_KEY</code> is the <em>secret</em> key (<code
+							>sb_secret_…</code
+						>), not the publishable one.
+					</li>
+					<li>The dev server was restarted after editing the file.</li>
+				</ul>
+				<p class="checklist__foot">Run <code>pnpm run doctor</code> to test each of these.</p>
+			</div>
+		{:else if needsBootstrap}
 			<div class="card__head">
 				<p class="eyebrow">IITG TIC · First run</p>
 				<h1>Create the first admin</h1>
@@ -165,12 +199,7 @@
 
 				<label class="field">
 					<span>Password</span>
-					<input
-						type="password"
-						bind:value={password}
-						autocomplete="current-password"
-						required
-					/>
+					<input type="password" bind:value={password} autocomplete="current-password" required />
 				</label>
 
 				<Turnstile bind:token={turnstileToken} bind:this={captcha} />
@@ -184,9 +213,7 @@
 				</button>
 			</form>
 
-			<p class="hint">
-				For TIC team members only. Ask an existing admin to create your account.
-			</p>
+			<p class="hint">For TIC team members only. Ask an existing admin to create your account.</p>
 		{/if}
 	</div>
 </section>
@@ -289,6 +316,48 @@
 		border-radius: 6px;
 	}
 
+	.checklist {
+		margin-top: 16px;
+		padding: 12px 14px;
+		font-size: 13px;
+		line-height: 1.55;
+		color: #3f4652;
+		background: #f6f7f9;
+		border: 1px solid #e6e8ec;
+		border-radius: 6px;
+
+		p {
+			margin: 0;
+		}
+
+		ul {
+			margin: 8px 0;
+			padding-left: 18px;
+		}
+
+		li + li {
+			margin-top: 6px;
+		}
+
+		code {
+			padding: 1px 4px;
+			font-size: 12px;
+			background: #eceef2;
+			border-radius: 4px;
+			word-break: break-all;
+		}
+	}
+
+	.checklist__head {
+		font-weight: 600;
+		color: #1c2027;
+	}
+
+	.checklist__foot {
+		padding-top: 8px;
+		border-top: 1px solid #e6e8ec;
+	}
+
 	button {
 		padding: 11px 16px;
 		font: inherit;
@@ -304,7 +373,6 @@
 			background: #000;
 		}
 	}
-
 
 	.notice {
 		margin: 0 0 16px;

@@ -27,14 +27,15 @@ Open http://localhost:5173.
 
 ## Scripts
 
-| Script         | What it does                         |
-| -------------- | ------------------------------------ |
-| `pnpm dev`     | Start the dev server                 |
-| `pnpm build`   | Build for production                 |
-| `pnpm preview` | Preview the production build locally |
-| `pnpm check`   | Type-check with `svelte-check`       |
-| `pnpm lint`    | Prettier + ESLint check              |
-| `pnpm format`  | Format with Prettier                 |
+| Script         | What it does                          |
+| -------------- | ------------------------------------- |
+| `pnpm dev`     | Start the dev server                  |
+| `pnpm build`   | Build for production                  |
+| `pnpm preview` | Preview the production build locally  |
+| `pnpm check`   | Type-check with `svelte-check`        |
+| `pnpm lint`    | Prettier + ESLint check               |
+| `pnpm format`  | Format with Prettier                  |
+| `pnpm doctor`  | Check `.env.local` can reach Supabase |
 
 ## Supabase
 
@@ -47,15 +48,15 @@ supabase db push
 
 Six tables, all with RLS enabled:
 
-| Table          | Holds                                                     | Who can read/write                                                       |
-| -------------- | --------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `profiles`     | One row per auth user (`founder`, `company` or `admin`)   | Own row; `role` is service-role only                                     |
-| `companies`    | Job-portal accounts + verification status                 | Own row; `status` is service-role only                                   |
-| `jobs`         | Company job postings                                      | Public read once the company is verified; write only by a verified owner |
-| `applications` | Submitted incubation applications                         | Own rows; `status` is service-role only                                  |
-| `audit_log`    | Every row change, with actor and before/after             | Service role only — RLS on, zero policies                                |
-| `page_views`   | One row per page view, admin routes included              | Service role only — RLS on, zero policies                                |
-| `site_content` | Editable copy for every public page                       | Service role only; read on the server, written from the console          |
+| Table          | Holds                                                   | Who can read/write                                                       |
+| -------------- | ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `profiles`     | One row per auth user (`founder`, `company` or `admin`) | Own row; `role` is service-role only                                     |
+| `companies`    | Job-portal accounts + verification status               | Own row; `status` is service-role only                                   |
+| `jobs`         | Company job postings                                    | Public read once the company is verified; write only by a verified owner |
+| `applications` | Submitted incubation applications                       | Own rows; `status` is service-role only                                  |
+| `audit_log`    | Every row change, with actor and before/after           | Service role only — RLS on, zero policies                                |
+| `page_views`   | One row per page view, admin routes included            | Service role only — RLS on, zero policies                                |
+| `site_content` | Editable copy for every public page                     | Service role only; read on the server, written from the console          |
 
 Two things are deliberately outside RLS's reach:
 
@@ -88,6 +89,22 @@ The console starts with no admin. Visit `/tic-admin/login` and it offers a one-t
 form: enter `TIC_ADMIN_PASSWORD` from the environment and it creates the first admin
 account. From then on that password stops granting access, and further admins are created
 from **Users → New admin**.
+
+**If that setup form appears on a machine where an admin already exists, the environment is
+wrong — not the database.** The screen is chosen by counting admin rows, so anything that
+stops the count from succeeding used to look identical to a first run: a service role key
+from a different project, the publishable key pasted into `SUPABASE_SERVICE_ROLE_KEY`, a
+typo in `PUBLIC_SUPABASE_URL`, or an unreachable host. The console now shows what actually
+failed instead, and refuses to bootstrap while it cannot read the table. Run:
+
+```sh
+pnpm doctor
+```
+
+It checks every required key, flags a publishable-for-secret mix-up, connects to the
+project and reports how many admins and content sections it can see. Note that
+`$env/static/*` is read once at startup — **restart the dev server after editing
+`.env.local`**, or you are still running the old values.
 
 ### Audit trail
 
