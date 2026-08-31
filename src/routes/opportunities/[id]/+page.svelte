@@ -15,6 +15,7 @@
 		resumeExtension,
 		submitJobApplication
 	} from '$lib/utils/jobApplications';
+	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	const content = getContent();
 
@@ -406,6 +407,7 @@
 							<p class="form__hint">
 								{job.company} replies to the email above. Nothing else is shared.
 							</p>
+							<p class="form__hint">You'll get a copy at the email above.</p>
 						</form>
 					{/if}
 				{/if}
