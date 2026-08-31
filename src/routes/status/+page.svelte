@@ -3,6 +3,66 @@
 
 	type Item = { name: string; path?: string; status: Status; note?: string };
 
+	type Milestone = { date: string; title: string; status: Status; note: string };
+
+	// Dated from the repository's own history, newest first. Add new entries at
+	// the top; the sort below keeps the order right if one lands out of place.
+	const milestones: Milestone[] = [
+		{
+			date: '2026-08-31',
+			title: 'Opportunities · apply form',
+			status: 'in-progress',
+			note: 'Two-column detail page. Turnstile form, UI only — nothing stored yet.'
+		},
+		{
+			date: '2026-08-30',
+			title: 'Opportunities page refresh',
+			status: 'done',
+			note: 'New hero wording. Roles in a two-column grid. Deploys pinned to main.'
+		},
+		{
+			date: '2026-08-30',
+			title: 'TIC admin v2',
+			status: 'done',
+			note: 'Server-side login, per-admin sessions, route guard, doctor script.'
+		},
+		{
+			date: '2026-08-29',
+			title: 'TIC admin v1',
+			status: 'done',
+			note: 'Admin console, Supabase schema, audit triggers, page-view logging.'
+		},
+		{
+			date: '2026-08-28',
+			title: 'Status page',
+			status: 'done',
+			note: 'Build checklist across routes, components and infrastructure.'
+		},
+		{
+			date: '2026-07-13',
+			title: 'Turnstile verification',
+			status: 'done',
+			note: 'Bot checks on signup, login and admin. Admin auth moved server-side.'
+		},
+		{
+			date: '2026-07-13',
+			title: 'Initial build',
+			status: 'done',
+			note: 'SvelteKit app, design system, components, all public routes.'
+		}
+	];
+
+	// Stable sort: entries sharing a date keep the order they are written in.
+	const timeline = [...milestones].sort((a, b) => b.date.localeCompare(a.date));
+
+	function formatDate(iso: string) {
+		return new Date(iso).toLocaleDateString('en-GB', {
+			day: 'numeric',
+			month: 'short',
+			year: 'numeric'
+		});
+	}
+
 	const routes: Item[] = [
 		{
 			name: 'Home',
@@ -328,6 +388,53 @@
 	const done = all.filter((i) => i.status === 'done').length;
 	const total = all.length;
 	const pct = Math.round((done / total) * 100);
+
+	// Right-hand rail. Placeholder shape only — titles and dates are stand-ins so
+	// the layout can be judged before the real backend history is written.
+	const backend: Milestone[] = [
+		{
+			date: '2026-08-31',
+			title: 'Backend milestone one',
+			status: 'in-progress',
+			note: 'Placeholder note. Replace with real detail.'
+		},
+		{
+			date: '2026-08-30',
+			title: 'Backend milestone two',
+			status: 'done',
+			note: 'Placeholder note. Replace with real detail.'
+		},
+		{
+			date: '2026-08-29',
+			title: 'Backend milestone three',
+			status: 'done',
+			note: 'Placeholder note. Replace with real detail.'
+		},
+		{
+			date: '2026-08-28',
+			title: 'Backend milestone four',
+			status: 'todo',
+			note: 'Placeholder note. Replace with real detail.'
+		},
+		{
+			date: '2026-07-13',
+			title: 'Backend milestone five',
+			status: 'done',
+			note: 'Placeholder note. Replace with real detail.'
+		}
+	];
+
+	const backendTimeline = [...backend].sort((a, b) => b.date.localeCompare(a.date));
+
+	// The checklist hangs off the same rail as the milestones, one node per group.
+	const groups = [
+		{ title: 'Routes', items: routes },
+		{ title: 'Components', items: components },
+		{ title: 'Infrastructure & remaining', items: infra }
+	].map((g) => {
+		const done = g.items.filter((i) => i.status === 'done').length;
+		return { ...g, done, state: done === g.items.length ? 'done' : 'pending' };
+	});
 </script>
 
 <svelte:head>
@@ -340,47 +447,119 @@
 		<p class="progress">{done} / {total} done · {pct}%</p>
 	</header>
 
-	<div class="columns">
-		<div class="column">
-			<h2>Routes</h2>
-			<ul>
-				{#each routes as item}
-					<li class={item.status}>
-						<span class="badge">{item.status}</span>
-						{#if item.path}
-							<a href={item.path}>{item.name}</a>
-						{:else}
-							<span>{item.name}</span>
-						{/if}
-						{#if item.note}<span class="note">— {item.note}</span>{/if}
-					</li>
-				{/each}
-			</ul>
-		</div>
+	<div class="rails">
+		<section class="rail">
+			<h2 class="rail__title">Frontend</h2>
+			<p class="section-sub">Newest first. Open a node for detail.</p>
 
-		<div class="column">
-			<h2>Components</h2>
-			<ul>
-				{#each components as item}
-					<li class={item.status}>
-						<span class="badge">{item.status}</span>
-						<span>{item.name}</span>
-						{#if item.note}<span class="note">— {item.note}</span>{/if}
+			<ol class="timeline">
+				{#each timeline as m (m.date + m.title)}
+					<li class="node {m.status}">
+						<span class="node__dot" aria-hidden="true"></span>
+						<details class="drop">
+							<summary>
+								<time class="node__date" datetime={m.date}>{formatDate(m.date)}</time>
+								<span class="node__title">{m.title}</span>
+								<span class="badge">{m.status}</span>
+								<svg
+									class="chev"
+									xmlns="http://www.w3.org/2000/svg"
+									width="14"
+									height="14"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<path d="m6 9 6 6 6-6" />
+								</svg>
+							</summary>
+							<p class="node__note">{m.note}</p>
+						</details>
 					</li>
 				{/each}
-			</ul>
 
-			<h2 class="infra-heading">Infrastructure &amp; remaining</h2>
-			<ul>
-				{#each infra as item}
-					<li class={item.status}>
-						<span class="badge">{item.status}</span>
-						<span>{item.name}</span>
-						{#if item.note}<span class="note">— {item.note}</span>{/if}
+				{#each groups as g (g.title)}
+					<li class="node group {g.state}">
+						<span class="node__dot" aria-hidden="true"></span>
+						<details class="drop">
+							<summary>
+								<span class="node__title">{g.title}</span>
+								<span class="badge">{g.state}</span>
+								<span class="node__count">{g.done}/{g.items.length}</span>
+								<svg
+									class="chev"
+									xmlns="http://www.w3.org/2000/svg"
+									width="14"
+									height="14"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<path d="m6 9 6 6 6-6" />
+								</svg>
+							</summary>
+							<ul class="items">
+								{#each g.items as item (item.name)}
+									<li class="item {item.status}">
+										<span class="item__dot" aria-hidden="true"></span>
+										{#if item.path}
+											<a href={item.path}>{item.name}</a>
+										{:else}
+											<span>{item.name}</span>
+										{/if}
+										{#if item.note}<span class="item__note">{item.note}</span>{/if}
+									</li>
+								{/each}
+							</ul>
+						</details>
 					</li>
 				{/each}
-			</ul>
-		</div>
+			</ol>
+		</section>
+
+		<section class="rail">
+			<h2 class="rail__title">Backend</h2>
+			<p class="section-sub">Placeholder — structure only, content to follow.</p>
+
+			<ol class="timeline">
+				{#each backendTimeline as m (m.date + m.title)}
+					<li class="node {m.status}">
+						<span class="node__dot" aria-hidden="true"></span>
+						<details class="drop">
+							<summary>
+								<time class="node__date" datetime={m.date}>{formatDate(m.date)}</time>
+								<span class="node__title">{m.title}</span>
+								<span class="badge">{m.status}</span>
+								<svg
+									class="chev"
+									xmlns="http://www.w3.org/2000/svg"
+									width="14"
+									height="14"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2.5"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<path d="m6 9 6 6 6-6" />
+								</svg>
+							</summary>
+							<p class="node__note">{m.note}</p>
+						</details>
+					</li>
+				{/each}
+			</ol>
+		</section>
 	</div>
 </section>
 
@@ -408,86 +587,209 @@
 		margin: 0 0 $space-2;
 	}
 
-	h2 {
-		font-size: $font-size-xl;
-		margin: 0 0 $space-4;
-		border-bottom: 1px solid #ddd;
-		padding-bottom: $space-2;
-	}
-
-	.infra-heading {
-		margin-top: $space-7;
-	}
-
 	.progress {
 		opacity: 0.7;
 		margin: 0;
 	}
 
-	.columns {
+	.rails {
 		display: grid;
 		grid-template-columns: 1fr;
 		gap: $space-8;
 
-		@media (min-width: $bp-sm) {
+		@media (min-width: $bp-md) {
 			grid-template-columns: 1fr 1fr;
+			gap: $space-7;
 		}
 	}
 
-	.column {
+	.rail {
 		min-width: 0;
 	}
 
-	ul {
+	.rail__title {
+		margin: 0 0 $space-1;
+		font-size: $font-size-lg;
+	}
+
+	.section-sub {
+		margin: 0 0 $space-5;
+		opacity: 0.55;
+		font-size: 0.85em;
+	}
+
+	ul,
+	ol {
 		list-style: none;
 		padding: 0;
 		margin: 0;
 	}
 
-	li {
+	.node {
+		position: relative;
+		padding: 0 0 $space-3 $space-5;
+		border-left: 1px solid #e4e4e4;
+
+		&:last-child {
+			padding-bottom: 0;
+			border-left-color: transparent;
+		}
+	}
+
+	.node__dot {
+		position: absolute;
+		left: -5px;
+		top: 8px;
+		width: 9px;
+		height: 9px;
+		border-radius: 50%;
+		background: #fff;
+		border: 2px solid #c4c4c4;
+	}
+
+	.node.done .node__dot {
+		background: #1a6b2f;
+		border-color: #1a6b2f;
+	}
+
+	.node.in-progress .node__dot {
+		background: #fff4cc;
+		border-color: #b8860b;
+	}
+
+	.node.group .node__dot {
+		border-radius: 2px;
+	}
+
+	.node.pending .node__dot {
+		background: #fff4cc;
+		border-color: #b8860b;
+	}
+
+	summary {
 		display: flex;
 		align-items: baseline;
 		flex-wrap: wrap;
 		gap: $space-3;
-		padding: $space-2 0;
-		border-bottom: 1px solid #f0f0f0;
+		padding: 2px 0;
+		cursor: pointer;
+		list-style: none;
+
+		&::-webkit-details-marker {
+			display: none;
+		}
+
+		&:hover .node__title {
+			text-decoration: underline;
+		}
+	}
+
+	.chev {
+		flex: none;
+		margin-left: -4px;
+		align-self: center;
+		color: #9a9a9a;
+		transition: transform $transition-fast;
+	}
+
+	details[open] > summary .chev {
+		transform: rotate(180deg);
+	}
+
+	.node__date {
+		font-family: monospace;
+		font-size: 0.72rem;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		opacity: 0.5;
+		flex: none;
+		min-width: 82px;
+	}
+
+	.node__title {
+		font-size: 1rem;
+	}
+
+	.node__note {
+		margin: $space-1 0 $space-2;
+		max-width: 68ch;
+		opacity: 0.65;
+		font-size: 0.9em;
+		line-height: 1.55;
 	}
 
 	.badge {
-		font-size: 0.7rem;
+		font-size: 0.65rem;
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
-		padding: 2px 8px;
+		padding: 2px 7px;
 		border-radius: 3px;
 		font-family: monospace;
 		flex-shrink: 0;
-		min-width: 90px;
-		text-align: center;
 	}
 
-	li.done .badge {
+	.done .badge {
 		background: #d4f4dd;
 		color: #1a6b2f;
 	}
 
-	li.in-progress .badge {
+	.in-progress .badge {
 		background: #fff4cc;
 		color: #7a5a00;
 	}
 
-	li.todo .badge {
+	.todo .badge {
 		background: #f0f0f0;
 		color: #555;
 	}
 
-	.note {
-		opacity: 0.6;
-		font-size: 0.9em;
-		flex-basis: 100%;
-		padding-left: calc(90px + #{$space-3});
+	.pending .badge {
+		background: #fff4cc;
+		color: #7a5a00;
+	}
 
-		@media (max-width: $bp-xs) {
-			padding-left: 0;
+	.node__count {
+		font-family: monospace;
+		font-size: 0.7rem;
+		opacity: 0.5;
+		flex: none;
+	}
+
+	.items {
+		margin: $space-2 0 $space-3;
+	}
+
+	.item {
+		position: relative;
+		padding: 3px 0 3px $space-4;
+		font-size: 0.9em;
+		line-height: 1.5;
+	}
+
+	.item__dot {
+		position: absolute;
+		left: 2px;
+		top: 10px;
+		width: 5px;
+		height: 5px;
+		border-radius: 50%;
+		background: #c4c4c4;
+	}
+
+	.item.done .item__dot {
+		background: #1a6b2f;
+	}
+
+	.item.in-progress .item__dot {
+		background: #b8860b;
+	}
+
+	.item__note {
+		opacity: 0.5;
+		font-size: 0.9em;
+
+		&::before {
+			content: ' — ';
 		}
 	}
 
