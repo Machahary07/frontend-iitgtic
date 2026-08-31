@@ -80,6 +80,18 @@ if (service === env.PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
 	pass('service role key looks like a secret key');
 }
 
+// Email is optional, so a missing key is a note rather than a failure — the app
+// degrades to recording every message as blocked.
+if (!env.RESEND_API_KEY) {
+	warn('RESEND_API_KEY is not set — mail is rendered and logged, but never delivered');
+} else if (!env.RESEND_API_KEY.startsWith('re_')) {
+	warn('RESEND_API_KEY is in an unfamiliar format — expected re_…');
+} else if (!env.RESEND_FROM || env.RESEND_FROM.includes('resend.dev')) {
+	warn('RESEND_FROM is the Resend sandbox sender — it only reaches the API key owner');
+} else {
+	pass('Resend key and From address are set');
+}
+
 let host;
 try {
 	host = new URL(url).host;

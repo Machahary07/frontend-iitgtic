@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { signupCompany } from '$lib/utils/companyAuth';
+	import { sendCompanySignupEmail, signupCompany } from '$lib/utils/companyAuth';
 	import Turnstile from '$lib/components/Turnstile.svelte';
 	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
@@ -39,6 +39,7 @@
 		error = '';
 		needsEmailConfirmation = result.needsEmailConfirmation;
 		submittedEmail = result.email;
+		await sendCompanySignupEmail(result.email);
 	}
 </script>
 

@@ -10,9 +10,21 @@
 	const milestones: Milestone[] = [
 		{
 			date: '2026-08-31',
+			title: 'Transactional email',
+			status: 'done',
+			note: 'Email section in the console — usage against the Resend plan, delivery log with previews, and a block editor for every template.'
+		},
+		{
+			date: '2026-08-31',
+			title: 'Role applicants console',
+			status: 'done',
+			note: 'Applicant queue in the TIC admin — status tabs, per-role filter, signed resume links.'
+		},
+		{
+			date: '2026-08-31',
 			title: 'Opportunities · apply form',
-			status: 'in-progress',
-			note: 'Two-column detail page. Turnstile form, UI only — nothing stored yet.'
+			status: 'done',
+			note: 'Two-column detail page. The Turnstile form now posts to /api/job-applications.'
 		},
 		{
 			date: '2026-08-30',
@@ -149,7 +161,7 @@
 			name: 'Opportunities · Role detail',
 			path: '/opportunities/[id]',
 			status: 'done',
-			note: 'Public detail page for both seed and user-posted roles'
+			note: 'Public detail page for both seed and user-posted roles; apply panel writes to job_applications with the resume in a private bucket'
 		},
 		{
 			name: 'Job-posting admin',
@@ -206,6 +218,12 @@
 			note: 'Review queue with status tabs, full 8-step answers, signed document links, accept / reject / delete'
 		},
 		{
+			name: 'TIC team admin · Role applicants',
+			path: '/tic-admin/job-applications',
+			status: 'done',
+			note: 'Everyone who applied to a role: status tabs, per-role filter, full answers, 10-minute signed resume link, shortlist / sent on / decline'
+		},
+		{
 			name: 'TIC team admin · Users',
 			path: '/tic-admin/users',
 			status: 'done',
@@ -222,6 +240,18 @@
 			path: '/tic-admin/content',
 			status: 'done',
 			note: 'Every section of the public site editable from the console — nested objects, reorderable lists, reset to default'
+		},
+		{
+			name: 'TIC team admin · Email',
+			path: '/tic-admin/email',
+			status: 'done',
+			note: 'Usage against the plan allowance, a 30-day trend, and the delivery log with a preview of the exact body each recipient got'
+		},
+		{
+			name: 'TIC team admin · Email templates',
+			path: '/tic-admin/email/templates',
+			status: 'done',
+			note: 'Block editor — fifteen components behind a + palette, live preview, variable insertion, per-template on/off, test send, reset to bundled copy'
 		},
 		{
 			name: 'TIC content editor (other pages)',
@@ -355,7 +385,7 @@
 		{
 			name: 'Form submit handlers',
 			status: 'in-progress',
-			note: 'Login, apply, application, job posting and content editing all persist; newsletter still preventDefault'
+			note: 'Login, apply, application, job posting, role applications and content editing all persist; the footer newsletter is still preventDefault'
 		},
 		{
 			name: 'SEO metadata',
@@ -384,62 +414,341 @@
 		}
 	];
 
-	const all = [...routes, ...components, ...infra];
-	const done = all.filter((i) => i.status === 'done').length;
-	const total = all.length;
-	const pct = Math.round((done / total) * 100);
-
-	// Right-hand rail. Placeholder shape only — titles and dates are stand-ins so
-	// the layout can be judged before the real backend history is written.
+	// Right-hand rail. Dated from supabase/migrations and the server routes they
+	// belong to, so a migration landing is what moves a node here.
 	const backend: Milestone[] = [
 		{
 			date: '2026-08-31',
-			title: 'Backend milestone one',
-			status: 'in-progress',
-			note: 'Placeholder note. Replace with real detail.'
+			title: 'Transactional email',
+			status: 'done',
+			note: 'email_templates and email_log, both service-role only. A message is stored as blocks and its HTML compiled on save, so nobody edits markup to change a sentence. Sends go through Resend over its REST API; every attempt is logged with the rendered body, including one blocked by a missing key or a spent plan allowance.'
+		},
+		{
+			date: '2026-08-31',
+			title: 'Role applications',
+			status: 'done',
+			note: 'job_applications + a private resume bucket. /api/job-applications re-verifies Turnstile, resolves the role server-side and writes the row; the TIC console reviews the queue.'
 		},
 		{
 			date: '2026-08-30',
-			title: 'Backend milestone two',
+			title: 'Server-side admin session',
 			status: 'done',
-			note: 'Placeholder note. Replace with real detail.'
+			note: 'Admins sign in with their own credentials; the server checks the role and issues a signed httpOnly cookie. +layout.server.ts guards every console route, and pnpm doctor checks the environment.'
 		},
 		{
 			date: '2026-08-29',
-			title: 'Backend milestone three',
+			title: 'Editable site content',
 			status: 'done',
-			note: 'Placeholder note. Replace with real detail.'
+			note: 'site_content is read per request with content.json as the fallback, so a bad edit cannot take the site down. value is json rather than jsonb — jsonb sorted the keys and reordered the editor.'
 		},
 		{
-			date: '2026-08-28',
-			title: 'Backend milestone four',
-			status: 'todo',
-			note: 'Placeholder note. Replace with real detail.'
+			date: '2026-08-29',
+			title: 'Audit trail + traffic',
+			status: 'done',
+			note: 'Triggers on companies / jobs / applications / profiles record the actor and a before/after, whatever the client. hooks.server.ts writes one page_views row per HTML GET; page_impressions() splits humans from crawlers.'
+		},
+		{
+			date: '2026-08-29',
+			title: 'Admin accounts',
+			status: 'done',
+			note: "profiles.role gained 'admin', with is_admin() and admin_count() as the gate. The first account bootstraps once from TIC_ADMIN_PASSWORD, after which that password stops working."
+		},
+		{
+			date: '2026-08-29',
+			title: 'Schema + RLS',
+			status: 'done',
+			note: 'profiles, companies, jobs and applications, every one behind RLS. Signup is an on_auth_user_created trigger, so the client never inserts a profile, and a job is only public once its company is verified.'
 		},
 		{
 			date: '2026-07-13',
-			title: 'Backend milestone five',
+			title: 'Turnstile verification',
 			status: 'done',
-			note: 'Placeholder note. Replace with real detail.'
+			note: 'The secret key never leaves the server. Every gated form checks its token against Cloudflare through /api/turnstile or, for a write, inside the submit route itself.'
 		}
 	];
 
 	const backendTimeline = [...backend].sort((a, b) => b.date.localeCompare(a.date));
 
+	// Postgres side: every table is RLS-on, and the note says who may read it.
+	const data: Item[] = [
+		{
+			name: 'profiles',
+			status: 'done',
+			note: 'One row per auth user, written by the signup trigger; role is founder / company / admin and only the service role can change it'
+		},
+		{
+			name: 'companies',
+			status: 'done',
+			note: 'Job-portal accounts; status (pending / verified / rejected) is outside the authenticated grants, so only the console moves it'
+		},
+		{
+			name: 'jobs',
+			status: 'done',
+			note: 'Company postings; public read only while the company is verified, insert and update only by the owner'
+		},
+		{
+			name: 'applications',
+			status: 'done',
+			note: 'The 8-step incubation application; own rows only, with status / review_note reserved for the reviewer'
+		},
+		{
+			name: 'job_applications',
+			status: 'done',
+			note: 'Applications to a role. The applicant has no account, so RLS carries zero policies — every read and write is service-role, one row per email per role'
+		},
+		{
+			name: 'site_content',
+			status: 'done',
+			note: 'Editable copy for every public page, read on the server and merged over content.json'
+		},
+		{
+			name: 'email_templates',
+			status: 'done',
+			note: 'Subject, block list and compiled body per message, overriding the copy bundled in emailTemplates.ts; service-role only and audited'
+		},
+		{
+			name: 'email_log',
+			status: 'done',
+			note: 'One row per send attempt with the rendered subject and body — sent / failed / blocked; it is also what the usage meter counts against the plan'
+		},
+		{
+			name: 'audit_log',
+			status: 'done',
+			note: 'Trigger-written history with actor and before/after; RLS on with no policies, so nothing but the service role sees it'
+		},
+		{
+			name: 'page_views',
+			status: 'done',
+			note: 'One row per HTML page view, admin routes flagged; aggregated by the page_impressions(since) function'
+		},
+		{
+			name: 'Storage · application-documents',
+			status: 'done',
+			note: 'Private bucket, one folder per user; the console reads it through 10-minute signed URLs'
+		},
+		{
+			name: 'Storage · job-applications',
+			status: 'done',
+			note: 'Private bucket of resumes, one folder per role; uploaded by the submit route, deleted with the row'
+		},
+		{
+			name: 'Storage · email-assets',
+			status: 'done',
+			note: 'Public bucket for pictures and documents inside an email — mail clients fetch an image unauthenticated, so a signed URL would break after delivery; admin-only to write'
+		},
+		{
+			name: 'Helper functions',
+			status: 'done',
+			note: 'slugify, touch_updated_at, is_company_verified, is_admin, admin_count, audit_actor, page_impressions'
+		}
+	];
+
+	// Everything the browser is allowed to ask the server to do.
+	const endpoints: Item[] = [
+		{
+			name: 'POST /api/turnstile',
+			status: 'done',
+			note: 'Verifies a widget token against Cloudflare with the secret key'
+		},
+		{
+			name: 'POST /api/job-applications',
+			status: 'done',
+			note: 'Public role application: Turnstile, server-side role lookup, resume upload, insert; a repeat email returns 409 rather than a second row'
+		},
+		{
+			name: 'DELETE /api/company-account',
+			status: 'done',
+			note: 'A company closing its own account — RLS can drop the row, but only the service role can delete the auth user behind it'
+		},
+		{
+			name: 'GET / POST / DELETE /api/tic-admin-login',
+			status: 'done',
+			note: 'Session state, sign-in, first-admin bootstrap and sign-out; refuses to bootstrap while the admin count cannot be read'
+		},
+		{
+			name: 'PATCH / DELETE /api/tic-admin/companies',
+			status: 'done',
+			note: 'Verify, reject with a reason, or delete an account and its auth user'
+		},
+		{
+			name: 'PATCH / DELETE /api/tic-admin/applications',
+			status: 'done',
+			note: 'Move an incubation application through review; delete removes its documents first'
+		},
+		{
+			name: 'PATCH / DELETE /api/tic-admin/job-applications',
+			status: 'done',
+			note: 'Shortlist, mark sent on, decline; delete removes the resume from the bucket first'
+		},
+		{
+			name: 'DELETE /api/tic-admin/jobs',
+			status: 'done',
+			note: 'Take down a company-posted role'
+		},
+		{
+			name: 'PATCH / PUT / POST / DELETE /api/tic-admin/users',
+			status: 'done',
+			note: 'Role changes, suspend, password-reset mail, delete, and creating a further admin'
+		},
+		{
+			name: 'GET /api/tic-admin/activity',
+			status: 'done',
+			note: 'Paged audit entries and page impressions over a 7d / 30d / all window'
+		},
+		{
+			name: 'PUT / DELETE /api/tic-admin/content',
+			status: 'done',
+			note: 'Save a content section, or reset it to the bundled default; both are audited with a before and after'
+		},
+		{
+			name: 'GET / PUT / POST / DELETE /api/tic-admin/email',
+			status: 'done',
+			note: 'Page the delivery log or read one rendered message, save a template, send a test, reset a template to the bundled copy'
+		},
+		{
+			name: 'POST /api/tic-admin/email/assets',
+			status: 'done',
+			note: 'Uploads a picture or document for an image or file block; the body is compiled from blocks server-side, never taken from the browser'
+		},
+		{
+			name: 'hooks.server.ts',
+			status: 'done',
+			note: 'Visitor cookie + page-view logging, handed to waitUntil so the write never delays a response'
+		},
+		{
+			name: 'requireAdmin() guard',
+			status: 'done',
+			note: 'Reads the session cookie and returns a service-role client tagged x-actor-id, which is how an audit row names a person'
+		}
+	];
+
+	const backendTodo: Item[] = [
+		{
+			name: 'Transactional email',
+			status: 'todo',
+			note: 'Nothing is sent yet — no applicant receipt, no nudge to the company, no notice when an account is verified. The console is the only place a submission is seen'
+		},
+		{
+			name: 'Company-side applicant inbox',
+			status: 'todo',
+			note: 'job_applications already records job_id and company_id, so a verified company could read its own applicants behind an RLS policy; today only the TIC team can'
+		},
+		{
+			name: 'Rate limiting on public writes',
+			status: 'todo',
+			note: 'Turnstile plus one-application-per-email is the only brake on /api/job-applications; there is no per-IP limit'
+		},
+		{
+			name: 'Resume retention',
+			status: 'todo',
+			note: 'Resumes stay in the bucket until an admin deletes the row — no expiry, and no bulk export for a closed role'
+		},
+		{
+			name: 'Backups + restore drill',
+			status: 'todo',
+			note: 'Running on Supabase defaults; the restore has never been rehearsed'
+		}
+	];
+
+	const all = [...routes, ...components, ...infra, ...data, ...endpoints, ...backendTodo];
+	const done = all.filter((i) => i.status === 'done').length;
+	const total = all.length;
+	const pct = Math.round((done / total) * 100);
+
 	// The checklist hangs off the same rail as the milestones, one node per group.
-	const groups = [
+	type Group = { title: string; items: Item[]; done: number; state: Status | 'pending' };
+
+	function toGroups(entries: { title: string; items: Item[] }[]): Group[] {
+		return entries.map((g) => {
+			const done = g.items.filter((i) => i.status === 'done').length;
+			return { ...g, done, state: done === g.items.length ? 'done' : 'pending' };
+		});
+	}
+
+	const groups = toGroups([
 		{ title: 'Routes', items: routes },
 		{ title: 'Components', items: components },
 		{ title: 'Infrastructure & remaining', items: infra }
-	].map((g) => {
-		const done = g.items.filter((i) => i.status === 'done').length;
-		return { ...g, done, state: done === g.items.length ? 'done' : 'pending' };
-	});
+	]);
+
+	const backendGroups = toGroups([
+		{ title: 'Tables, storage & functions', items: data },
+		{ title: 'Server routes', items: endpoints },
+		{ title: 'Remaining', items: backendTodo }
+	]);
+
+	function tally(items: Item[]) {
+		const done = items.filter((i) => i.status === 'done').length;
+		return `${done} / ${items.length} done`;
+	}
+
+	const frontendTally = tally([...routes, ...components, ...infra]);
+	const backendTally = tally([...data, ...endpoints, ...backendTodo]);
 </script>
 
 <svelte:head>
 	<title>Project Status</title>
 </svelte:head>
+
+{#snippet chevron()}
+	<svg
+		class="chev"
+		xmlns="http://www.w3.org/2000/svg"
+		width="14"
+		height="14"
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2.5"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+		aria-hidden="true"
+	>
+		<path d="m6 9 6 6 6-6" />
+	</svg>
+{/snippet}
+
+{#snippet milestoneNode(m: Milestone)}
+	<li class="node {m.status}">
+		<span class="node__dot" aria-hidden="true"></span>
+		<details class="drop">
+			<summary>
+				<time class="node__date" datetime={m.date}>{formatDate(m.date)}</time>
+				<span class="node__title">{m.title}</span>
+				<span class="badge">{m.status}</span>
+				{@render chevron()}
+			</summary>
+			<p class="node__note">{m.note}</p>
+		</details>
+	</li>
+{/snippet}
+
+{#snippet groupNode(g: Group)}
+	<li class="node group {g.state}">
+		<span class="node__dot" aria-hidden="true"></span>
+		<details class="drop">
+			<summary>
+				<span class="node__title">{g.title}</span>
+				<span class="badge">{g.state}</span>
+				<span class="node__count">{g.done}/{g.items.length}</span>
+				{@render chevron()}
+			</summary>
+			<ul class="items">
+				{#each g.items as item (item.name)}
+					<li class="item {item.status}">
+						<span class="item__dot" aria-hidden="true"></span>
+						{#if item.path}
+							<a href={item.path}>{item.name}</a>
+						{:else}
+							<span>{item.name}</span>
+						{/if}
+						{#if item.note}<span class="item__note">{item.note}</span>{/if}
+					</li>
+				{/each}
+			</ul>
+		</details>
+	</li>
+{/snippet}
 
 <section class="status">
 	<header>
@@ -450,113 +759,30 @@
 	<div class="rails">
 		<section class="rail">
 			<h2 class="rail__title">Frontend</h2>
-			<p class="section-sub">Newest first. Open a node for detail.</p>
+			<p class="section-sub">{frontendTally} · newest first. Open a node for detail.</p>
 
 			<ol class="timeline">
 				{#each timeline as m (m.date + m.title)}
-					<li class="node {m.status}">
-						<span class="node__dot" aria-hidden="true"></span>
-						<details class="drop">
-							<summary>
-								<time class="node__date" datetime={m.date}>{formatDate(m.date)}</time>
-								<span class="node__title">{m.title}</span>
-								<span class="badge">{m.status}</span>
-								<svg
-									class="chev"
-									xmlns="http://www.w3.org/2000/svg"
-									width="14"
-									height="14"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2.5"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									aria-hidden="true"
-								>
-									<path d="m6 9 6 6 6-6" />
-								</svg>
-							</summary>
-							<p class="node__note">{m.note}</p>
-						</details>
-					</li>
+					{@render milestoneNode(m)}
 				{/each}
 
 				{#each groups as g (g.title)}
-					<li class="node group {g.state}">
-						<span class="node__dot" aria-hidden="true"></span>
-						<details class="drop">
-							<summary>
-								<span class="node__title">{g.title}</span>
-								<span class="badge">{g.state}</span>
-								<span class="node__count">{g.done}/{g.items.length}</span>
-								<svg
-									class="chev"
-									xmlns="http://www.w3.org/2000/svg"
-									width="14"
-									height="14"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2.5"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									aria-hidden="true"
-								>
-									<path d="m6 9 6 6 6-6" />
-								</svg>
-							</summary>
-							<ul class="items">
-								{#each g.items as item (item.name)}
-									<li class="item {item.status}">
-										<span class="item__dot" aria-hidden="true"></span>
-										{#if item.path}
-											<a href={item.path}>{item.name}</a>
-										{:else}
-											<span>{item.name}</span>
-										{/if}
-										{#if item.note}<span class="item__note">{item.note}</span>{/if}
-									</li>
-								{/each}
-							</ul>
-						</details>
-					</li>
+					{@render groupNode(g)}
 				{/each}
 			</ol>
 		</section>
 
 		<section class="rail">
 			<h2 class="rail__title">Backend</h2>
-			<p class="section-sub">Placeholder — structure only, content to follow.</p>
+			<p class="section-sub">{backendTally} · dated from the migration that landed it.</p>
 
 			<ol class="timeline">
 				{#each backendTimeline as m (m.date + m.title)}
-					<li class="node {m.status}">
-						<span class="node__dot" aria-hidden="true"></span>
-						<details class="drop">
-							<summary>
-								<time class="node__date" datetime={m.date}>{formatDate(m.date)}</time>
-								<span class="node__title">{m.title}</span>
-								<span class="badge">{m.status}</span>
-								<svg
-									class="chev"
-									xmlns="http://www.w3.org/2000/svg"
-									width="14"
-									height="14"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2.5"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									aria-hidden="true"
-								>
-									<path d="m6 9 6 6 6-6" />
-								</svg>
-							</summary>
-							<p class="node__note">{m.note}</p>
-						</details>
-					</li>
+					{@render milestoneNode(m)}
+				{/each}
+
+				{#each backendGroups as g (g.title)}
+					{@render groupNode(g)}
 				{/each}
 			</ol>
 		</section>

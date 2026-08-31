@@ -19,6 +19,8 @@
 	const rejected = $derived(companies.filter((c) => c.status === 'rejected'));
 	const userJobs = $derived(data.jobs);
 	const newApplications = $derived(applications.filter((a) => a.status === 'submitted'));
+	const jobApplicants = $derived(data.jobApplications);
+	const newApplicants = $derived(jobApplicants.filter((a) => a.status === 'new'));
 
 	async function handleLogout() {
 		await logoutTicAdmin();
@@ -63,6 +65,11 @@
 				<p class="stat__value">{newApplications.length}</p>
 				<a href={resolve('/tic-admin/applications')} class="stat__link">Review →</a>
 			</div>
+			<div class="stat">
+				<p class="stat__label">New role applicants</p>
+				<p class="stat__value">{newApplicants.length}</p>
+				<a href={resolve('/tic-admin/job-applications')} class="stat__link">Review →</a>
+			</div>
 		</div>
 
 		<section class="panel">
@@ -83,6 +90,35 @@
 								</p>
 							</div>
 							<a href="/tic-admin/companies" class="row__cta">Review</a>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+
+		<section class="panel">
+			<header class="panel__head">
+				<h2>New role applicants</h2>
+				<a href={resolve('/tic-admin/job-applications')} class="panel__more">All applicants →</a>
+			</header>
+			{#if newApplicants.length === 0}
+				<p class="empty">No one is waiting on a role application.</p>
+			{:else}
+				<ul class="rows">
+					{#each newApplicants.slice(0, 5) as applicant (applicant.id)}
+						<li class="row">
+							<div class="row__main">
+								<p class="row__title">{applicant.full_name}</p>
+								<p class="row__meta">
+									{applicant.job_role} · {applicant.job_company} · {new Date(
+										applicant.created_at
+									).toLocaleDateString()}
+								</p>
+							</div>
+							<a
+								href={resolve('/tic-admin/job-applications/[id]', { id: applicant.id })}
+								class="row__cta">Open</a
+							>
 						</li>
 					{/each}
 				</ul>
