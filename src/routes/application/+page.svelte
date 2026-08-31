@@ -970,7 +970,7 @@
 								type="submit"
 								text={submitting ? 'Submitting…' : 'Submit application'}
 								class="btn btn--primary nav__next"
-								disabled={submitting}
+								loading={submitting}
 							/>
 						{/if}
 					</div>
@@ -1499,6 +1499,7 @@
 	:global(.btn--primary) {
 		background: $color-black;
 		color: $color-white;
+		--reveal-ray: #{$color-black};
 	}
 
 	:global(.btn--ghost) {

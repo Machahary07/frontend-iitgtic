@@ -29,6 +29,7 @@
 
 	let errors = $state<Errors>({});
 	let confirmationEmail = $state('');
+	let submitting = $state(false);
 
 	const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -91,32 +92,38 @@
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
+		if (submitting) return;
 		attempted = true;
 		const result = validate();
 		errors = result;
 		if (Object.keys(result).length > 0) return;
-		const human = await verifyTurnstileToken(turnstileToken);
-		captcha?.reset();
-		if (!human) {
-			errors = { captcha: 'Verification failed. Please try again.' };
-			return;
+		submitting = true;
+		try {
+			const human = await verifyTurnstileToken(turnstileToken);
+			captcha?.reset();
+			if (!human) {
+				errors = { captcha: 'Verification failed. Please try again.' };
+				return;
+			}
+			const signup = await signUpFounder({
+				name: name.trim(),
+				email: email.trim(),
+				phone: phone.trim(),
+				password
+			});
+			if (!signup.ok) {
+				errors = { email: signup.error };
+				return;
+			}
+			if (signup.needsEmailConfirmation) {
+				// The project requires email confirmation, so there is no session yet.
+				confirmationEmail = signup.session.email ?? email.trim();
+				return;
+			}
+			goto(resolve('/application'));
+		} finally {
+			submitting = false;
 		}
-		const signup = await signUpFounder({
-			name: name.trim(),
-			email: email.trim(),
-			phone: phone.trim(),
-			password
-		});
-		if (!signup.ok) {
-			errors = { email: signup.error };
-			return;
-		}
-		if (signup.needsEmailConfirmation) {
-			// The project requires email confirmation, so there is no session yet.
-			confirmationEmail = signup.session.email ?? email.trim();
-			return;
-		}
-		goto(resolve('/application'));
 	}
 </script>
 
@@ -273,7 +280,12 @@
 							{/if}
 						</div>
 
-						<ButtonReveal type="submit" text="Sign up" class="submit" />
+						<ButtonReveal
+							type="submit"
+							text={submitting ? 'Signing up…' : 'Sign up'}
+							class="submit"
+							loading={submitting}
+						/>
 
 						<p class="form__login">
 							Already have an account?

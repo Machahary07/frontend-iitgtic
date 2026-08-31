@@ -13,9 +13,11 @@
 	let error = $state('');
 	let turnstileToken = $state('');
 	let captcha = $state<{ reset: () => void }>();
+	let submitting = $state(false);
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
+		if (submitting) return;
 		if (!email || !password) {
 			error = 'Please enter both your email and password.';
 			return;
@@ -24,19 +26,24 @@
 			error = 'Please complete the verification below.';
 			return;
 		}
-		const human = await verifyTurnstileToken(turnstileToken);
-		captcha?.reset();
-		if (!human) {
-			error = 'Verification failed. Please try again.';
-			return;
+		submitting = true;
+		try {
+			const human = await verifyTurnstileToken(turnstileToken);
+			captcha?.reset();
+			if (!human) {
+				error = 'Verification failed. Please try again.';
+				return;
+			}
+			const result = await signInFounder(email, password);
+			if (!result.ok) {
+				error = result.error;
+				return;
+			}
+			error = '';
+			goto(resolve('/application'));
+		} finally {
+			submitting = false;
 		}
-		const result = await signInFounder(email, password);
-		if (!result.ok) {
-			error = result.error;
-			return;
-		}
-		error = '';
-		goto(resolve('/application'));
 	}
 </script>
 
@@ -77,7 +84,12 @@
 				<p class="form__error" role="alert">{error}</p>
 			{/if}
 
-			<ButtonReveal type="submit" text="Login" class="submit" />
+			<ButtonReveal
+				type="submit"
+				text={submitting ? 'Logging in…' : 'Login'}
+				class="submit"
+				loading={submitting}
+			/>
 
 			<p class="form__signup">
 				Don't have an account?

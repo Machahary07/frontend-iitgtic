@@ -379,7 +379,7 @@
 								type="submit"
 								text={submitting ? 'Sending…' : 'Send application'}
 								class="submit"
-								disabled={submitting}
+								loading={submitting}
 							/>
 
 							<p class="form__hint">
@@ -809,6 +809,7 @@
 		font-weight: $font-weight-bold;
 		letter-spacing: $letter-spacing-wide;
 		text-transform: uppercase;
+		--reveal-ray: #{$color-black};
 	}
 
 	// Inverted panel on phone: flip the submit button to white-on-black's opposite
@@ -817,6 +818,7 @@
 			border-color: $color-white;
 			background: $color-white;
 			color: $color-black;
+			--reveal-ray: #{$color-white};
 		}
 	}
 
