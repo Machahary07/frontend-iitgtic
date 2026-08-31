@@ -245,9 +245,9 @@ export type Impression = {
 	last_seen: string;
 };
 
-export async function adminListAudit(options: { table?: string; before?: number } = {}): Promise<
-	AuditEntry[]
-> {
+export async function adminListAudit(
+	options: { table?: string; before?: number } = {}
+): Promise<AuditEntry[]> {
 	const params = new URLSearchParams({ view: 'audit' });
 	if (options.table && options.table !== 'all') params.set('table', options.table);
 	if (options.before) params.set('before', String(options.before));
@@ -263,4 +263,107 @@ export async function adminGetImpressions(range: '7d' | '30d' | 'all'): Promise<
 	const res = await fetch(`/api/tic-admin/activity?view=impressions&range=${range}`);
 	if (!res.ok) return [];
 	return ((await res.json()) as { impressions: Impression[] }).impressions ?? [];
+}
+
+// --- email -----------------------------------------------------------------
+
+import type { EmailBlock } from '$lib/utils/emailBlocks';
+
+export type EmailStatus = 'sent' | 'failed' | 'blocked';
+
+export type EmailLogEntry = {
+	id: string;
+	template_key: string;
+	to_email: string;
+	to_name: string;
+	subject: string;
+	status: EmailStatus;
+	provider_id: string | null;
+	error: string | null;
+	is_test: boolean;
+	context: Record<string, unknown>;
+	created_at: string;
+};
+
+// The rendered body is only fetched when a message is actually opened — the log
+// list would otherwise carry a few KB of HTML per row.
+export type EmailMessage = {
+	id: string;
+	subject: string;
+	body: string;
+	to_email: string;
+	to_name: string;
+	status: EmailStatus;
+	created_at: string;
+};
+
+export async function adminListEmailLog(
+	options: { before?: string } = {}
+): Promise<EmailLogEntry[]> {
+	const params = new URLSearchParams();
+	if (options.before) params.set('before', options.before);
+
+	const res = await fetch(`/api/tic-admin/email?${params}`);
+	if (!res.ok) return [];
+	return ((await res.json()) as { entries: EmailLogEntry[] }).entries ?? [];
+}
+
+export async function adminGetEmailMessage(id: string): Promise<EmailMessage | null> {
+	const res = await fetch(`/api/tic-admin/email?id=${encodeURIComponent(id)}`);
+	if (!res.ok) return null;
+	return ((await res.json()) as { message: EmailMessage }).message ?? null;
+}
+
+// `blocks` is the composed version; the server compiles the body from it. Pass
+// `body` instead only when the template is being hand-edited as HTML.
+export async function adminSaveEmailTemplate(input: {
+	key: string;
+	subject: string;
+	enabled: boolean;
+	blocks?: EmailBlock[];
+	body?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+	const res = await fetch('/api/tic-admin/email', {
+		method: 'PUT',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify(input)
+	});
+	return res.ok ? { ok: true } : { ok: false, error: await readError(res) };
+}
+
+export async function adminResetEmailTemplate(
+	key: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+	const res = await fetch(`/api/tic-admin/email?key=${encodeURIComponent(key)}`, {
+		method: 'DELETE'
+	});
+	return res.ok ? { ok: true } : { ok: false, error: await readError(res) };
+}
+
+export async function adminSendTestEmail(
+	key: string,
+	to?: string
+): Promise<{ ok: true; to: string } | { ok: false; error: string }> {
+	const res = await fetch('/api/tic-admin/email', {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify({ key, to })
+	});
+	if (!res.ok) return { ok: false, error: await readError(res) };
+	return { ok: true, to: ((await res.json()) as { to: string }).to };
+}
+
+export type UploadedAsset = { url: string; name: string; size: string };
+
+// Pictures and documents for the image and file blocks. Uploaded one at a time
+// from the editor, straight into the public email-assets bucket.
+export async function adminUploadEmailAsset(
+	file: File
+): Promise<{ ok: true; asset: UploadedAsset } | { ok: false; error: string }> {
+	const form = new FormData();
+	form.set('file', file);
+
+	const res = await fetch('/api/tic-admin/email/assets', { method: 'POST', body: form });
+	if (!res.ok) return { ok: false, error: await readError(res) };
+	return { ok: true, asset: (await res.json()) as UploadedAsset };
 }

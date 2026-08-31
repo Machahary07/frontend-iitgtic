@@ -33,14 +33,14 @@ The public website, the company job portal, the incubation application, and the 
 
 ## Contents
 
-| Section                                                                                                       | What you will find                           |
-| ------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| [Overview](#overview) · [Stack](#stack) · [Architecture](#architecture)                                       | What the app is and how it fits together     |
-| [Getting started](#getting-started) · [Environment](#environment) · [Scripts](#scripts)                       | Running it locally                           |
-| [Project structure](#project-structure) · [Routes](#routes) · [API surface](#api-surface)                     | Finding your way around the code             |
-| [Data model](#data-model) · [Permissions](#permissions-at-a-glance) · [Role applications](#role-applications) | Postgres, RLS and the flows that write to it |
-| [Operations](#operations) · [Content model](#content-model) · [SEO](#seo) · [Deploy](#deploy)                 | Running it in production                     |
-| [Roadmap](#roadmap)                                                                                           | What is deliberately not built yet           |
+| Section                                                                                                                                     | What you will find                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| [Overview](#overview) · [Stack](#stack) · [Architecture](#architecture)                                                                     | What the app is and how it fits together     |
+| [Getting started](#getting-started) · [Environment](#environment) · [Scripts](#scripts)                                                     | Running it locally                           |
+| [Project structure](#project-structure) · [Routes](#routes) · [API surface](#api-surface)                                                   | Finding your way around the code             |
+| [Data model](#data-model) · [Permissions](#permissions-at-a-glance) · [Role applications](#role-applications)                               | Postgres, RLS and the flows that write to it |
+| [Operations](#operations) · [Transactional email](#transactional-email) · [Content model](#content-model) · [SEO](#seo) · [Deploy](#deploy) | Running it in production                     |
+| [Roadmap](#roadmap)                                                                                                                         | What is deliberately not built yet           |
 
 ---
 
@@ -55,6 +55,7 @@ The public website, the company job portal, the incubation application, and the 
 | **Incubation application** | Eight-step wizard, 38 questions, four document uploads                                                                                     | `/application`                     |
 | **TIC admin console**      | Companies, incubation applications, role applicants, posted jobs, users, activity, content                                                 | `/tic-admin`                       |
 | **Content editing**        | Every public page's copy, edited from the console and versioned in the audit log                                                           | `/tic-admin/content`               |
+| **Transactional email**    | Resend-backed mail with editable templates, a delivery log you can preview, and usage against the plan allowance                           | `/tic-admin/email`                 |
 | **Analytics & audit**      | Page impressions with bot separation, plus a trigger-written audit trail                                                                   | `/tic-admin/activity`              |
 | **Build status**           | Self-hosted checklist of every route, component and backend piece                                                                          | `/status`                          |
 
@@ -143,16 +144,27 @@ Open http://localhost:5173.
 Copy `.env.example` to `.env.local`. Everything without the `PUBLIC_` prefix is server-only
 and must never reach the browser.
 
-| Variable                          | Scope           | What it is                                                         |
-| --------------------------------- | --------------- | ------------------------------------------------------------------ |
-| `PUBLIC_SUPABASE_URL`             | client + server | Supabase project URL                                               |
-| `PUBLIC_SUPABASE_PUBLISHABLE_KEY` | client + server | Browser-safe key; RLS still applies to everything it does          |
-| `SUPABASE_SERVICE_ROLE_KEY`       | **server only** | Bypasses RLS. Used by the admin routes and the public submit route |
-| `ADMIN_SESSION_SECRET`            | **server only** | Signs the admin session cookie. Rotating it signs every admin out  |
-| `TIC_ADMIN_PASSWORD`              | **server only** | Bootstrap password; works only while no admin account exists       |
-| `IITG_SUPABASE_PASSWORD`          | CLI only        | Postgres password for `supabase db push`; the app never reads it   |
-| `PUBLIC_TURNSTILE_SITE_KEY`       | client          | Cloudflare Turnstile widget key                                    |
-| `TURNSTILE_SECRET_KEY`            | **server only** | Verifies tokens against Cloudflare                                 |
+| Variable                                     | Scope           | What it is                                                                    |
+| -------------------------------------------- | --------------- | ----------------------------------------------------------------------------- |
+| `PUBLIC_SUPABASE_URL`                        | client + server | Supabase project URL                                                          |
+| `PUBLIC_SUPABASE_PUBLISHABLE_KEY`            | client + server | Browser-safe key; RLS still applies to everything it does                     |
+| `SUPABASE_SERVICE_ROLE_KEY`                  | **server only** | Bypasses RLS. Used by the admin routes and the public submit route            |
+| `ADMIN_SESSION_SECRET`                       | **server only** | Signs the admin session cookie. Rotating it signs every admin out             |
+| `TIC_ADMIN_PASSWORD`                         | **server only** | Bootstrap password; works only while no admin account exists                  |
+| `IITG_SUPABASE_PASSWORD`                     | CLI only        | Postgres password for `supabase db push`; the app never reads it              |
+| `PUBLIC_TURNSTILE_SITE_KEY`                  | client          | Cloudflare Turnstile widget key                                               |
+| `TURNSTILE_SECRET_KEY`                       | **server only** | Verifies tokens against Cloudflare                                            |
+| `RESEND_API_KEY`                             | **server only** | Sends transactional mail. Absent, nothing is delivered                        |
+| `RESEND_FROM`                                | **server only** | From address; must be on a domain verified in Resend                          |
+| `RESEND_REPLY_TO`                            | **server only** | Optional reply-to                                                             |
+| `RESEND_PLAN`                                | **server only** | `free` / `pro` / `scale` / `enterprise` — what the usage meter counts against |
+| `RESEND_MONTHLY_LIMIT`, `RESEND_DAILY_LIMIT` | **server only** | Override the plan caps for a custom allowance                                 |
+| `PUBLIC_SITE_URL`                            | client + server | Absolute origin for links inside emails                                       |
+| `EMAIL_SITE_NAME`                            | **server only** | Name used in the email copy and the From display name                         |
+
+Everything under `RESEND_*` is optional. Without `RESEND_API_KEY` the app still renders
+every message and records it in the console as **blocked**, so nothing breaks — it simply
+does not deliver.
 
 Generate a session secret with:
 
@@ -256,6 +268,8 @@ static/
 | `/tic-admin/users`                      | All accounts — role, last sign-in, suspend, password reset, delete, new admin |
 | `/tic-admin/activity`                   | Audit log with before/after diffs, plus per-page impressions                  |
 | `/tic-admin/content` + `/[...key]`      | Schema-driven editor for every content section                                |
+| `/tic-admin/email`                      | Usage against the plan, a 30-day trend, and the delivery log with previews    |
+| `/tic-admin/email/templates` + `/[key]` | Every template — live preview, test send, on/off, reset to the bundled copy   |
 
 </details>
 
@@ -265,19 +279,20 @@ Everything the browser is allowed to ask the server to do. The `/api/tic-admin/*
 guarded by `requireAdmin()`, which returns a service-role client tagged with the acting
 admin's id.
 
-| Endpoint                          | Methods                       | Purpose                                                                     |
-| --------------------------------- | ----------------------------- | --------------------------------------------------------------------------- |
-| `/api/turnstile`                  | `POST`                        | Verify a widget token against Cloudflare                                    |
-| `/api/job-applications`           | `POST`                        | **Public** role application — Turnstile, role lookup, resume upload, insert |
-| `/api/company-account`            | `DELETE`                      | A company closing its own account, auth user included                       |
-| `/api/tic-admin-login`            | `GET` `POST` `DELETE`         | Session state, sign-in, first-admin bootstrap, sign-out                     |
-| `/api/tic-admin/companies`        | `PATCH` `DELETE`              | Verify / reject / delete an account                                         |
-| `/api/tic-admin/applications`     | `PATCH` `DELETE`              | Move an incubation application through review                               |
-| `/api/tic-admin/job-applications` | `PATCH` `DELETE`              | Shortlist, mark sent on, decline, delete                                    |
-| `/api/tic-admin/jobs`             | `DELETE`                      | Take down a company-posted role                                             |
-| `/api/tic-admin/users`            | `PATCH` `PUT` `POST` `DELETE` | Roles, suspend, reset mail, delete, create admin                            |
-| `/api/tic-admin/activity`         | `GET`                         | Paged audit entries and impressions over 7d / 30d / all                     |
-| `/api/tic-admin/content`          | `PUT` `DELETE`                | Save a section, or reset it to the bundled default                          |
+| Endpoint                          | Methods                       | Purpose                                                                                 |
+| --------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------- |
+| `/api/turnstile`                  | `POST`                        | Verify a widget token against Cloudflare                                                |
+| `/api/job-applications`           | `POST`                        | **Public** role application — Turnstile, role lookup, resume upload, insert             |
+| `/api/company-account`            | `POST` `DELETE`               | Signup receipt for a just-created account; a company closing its own account            |
+| `/api/tic-admin-login`            | `GET` `POST` `DELETE`         | Session state, sign-in, first-admin bootstrap, sign-out                                 |
+| `/api/tic-admin/companies`        | `PATCH` `DELETE`              | Verify / reject / delete an account                                                     |
+| `/api/tic-admin/applications`     | `PATCH` `DELETE`              | Move an incubation application through review                                           |
+| `/api/tic-admin/job-applications` | `PATCH` `DELETE`              | Shortlist, mark sent on, decline, delete                                                |
+| `/api/tic-admin/jobs`             | `DELETE`                      | Take down a company-posted role                                                         |
+| `/api/tic-admin/users`            | `PATCH` `PUT` `POST` `DELETE` | Roles, suspend, reset mail, delete, create admin                                        |
+| `/api/tic-admin/activity`         | `GET`                         | Paged audit entries and impressions over 7d / 30d / all                                 |
+| `/api/tic-admin/content`          | `PUT` `DELETE`                | Save a section, or reset it to the bundled default                                      |
+| `/api/tic-admin/email`            | `GET` `PUT` `POST` `DELETE`   | Page the log, read one rendered message, save a template, send a test, reset a template |
 
 ## Data model
 
@@ -288,18 +303,20 @@ supabase link --project-ref <project-ref>
 supabase db push
 ```
 
-Eight tables, all with RLS enabled:
+Ten tables, all with RLS enabled:
 
-| Table              | Holds                                                   | Who can read/write                                                       |
-| ------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `profiles`         | One row per auth user (`founder`, `company` or `admin`) | Own row; `role` is service-role only                                     |
-| `companies`        | Job-portal accounts + verification status               | Own row; `status` is service-role only                                   |
-| `jobs`             | Company job postings                                    | Public read once the company is verified; write only by a verified owner |
-| `applications`     | Submitted incubation applications                       | Own rows; `status` is service-role only                                  |
-| `job_applications` | Applications to a role on the Opportunities board       | Service role only — RLS on, zero policies                                |
-| `audit_log`        | Every row change, with actor and before/after           | Service role only — RLS on, zero policies                                |
-| `page_views`       | One row per page view, admin routes included            | Service role only — RLS on, zero policies                                |
-| `site_content`     | Editable copy for every public page                     | Service role only; read on the server, written from the console          |
+| Table              | Holds                                                        | Who can read/write                                                       |
+| ------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| `profiles`         | One row per auth user (`founder`, `company` or `admin`)      | Own row; `role` is service-role only                                     |
+| `companies`        | Job-portal accounts + verification status                    | Own row; `status` is service-role only                                   |
+| `jobs`             | Company job postings                                         | Public read once the company is verified; write only by a verified owner |
+| `applications`     | Submitted incubation applications                            | Own rows; `status` is service-role only                                  |
+| `job_applications` | Applications to a role on the Opportunities board            | Service role only — RLS on, zero policies                                |
+| `email_templates`  | Subject + HTML body per message, overriding the bundled copy | Service role only — RLS on, zero policies                                |
+| `email_log`        | One row per send attempt, with the rendered body             | Service role only — RLS on, zero policies                                |
+| `audit_log`        | Every row change, with actor and before/after                | Service role only — RLS on, zero policies                                |
+| `page_views`       | One row per page view, admin routes included                 | Service role only — RLS on, zero policies                                |
+| `site_content`     | Editable copy for every public page                          | Service role only; read on the server, written from the console          |
 
 ```mermaid
 erDiagram
@@ -346,18 +363,22 @@ erDiagram
     companies ||--o{ job_applications : "will read — planned"
 ```
 
-`audit_log`, `page_views` and `site_content` carry no foreign keys — they sit beside the
-domain tables and are readable only by the service role.
+`audit_log`, `page_views`, `site_content`, `email_templates` and `email_log` carry no
+foreign keys — they sit beside the domain tables and are readable only by the service role.
 
 ### Storage
 
-| Bucket                  | Public? | Holds                                                         | Layout                   |
-| ----------------------- | ------- | ------------------------------------------------------------- | ------------------------ |
-| `application-documents` | No      | Pitch deck, founder CV, financials, incorporation certificate | One folder per user      |
-| `job-applications`      | No      | Resumes attached to a role application                        | One folder per role slug |
+| Bucket                  | Public? | Holds                                                         | Layout                    |
+| ----------------------- | ------- | ------------------------------------------------------------- | ------------------------- |
+| `application-documents` | No      | Pitch deck, founder CV, financials, incorporation certificate | One folder per user       |
+| `job-applications`      | No      | Resumes attached to a role application                        | One folder per role slug  |
+| `email-assets`          | **Yes** | Pictures and documents used inside an email                   | Flat, time-prefixed names |
 
-Neither bucket is ever exposed directly. The admin review screens hand out **10-minute
-signed URLs** instead, and deleting a row deletes its objects first so nothing is orphaned.
+The two application buckets are never exposed directly. The admin review screens hand out
+**10-minute signed URLs** instead, and deleting a row deletes its objects first so nothing
+is orphaned. `email-assets` is the deliberate exception — an email client fetches an image
+unauthenticated, so anything shown inside a message has to be reachable without
+credentials. Writing to it is admin-only.
 
 ### Permissions at a glance
 
@@ -502,6 +523,92 @@ client-side fetch before it can render, so moving between sections keeps the cur
 on show until the next one is ready instead of blanking. Mutations still go through the
 audited `/api/tic-admin/*` routes and call `invalidateAll()` to re-run the load.
 
+### Transactional email
+
+Mail goes out through [Resend](https://resend.com), and everything about it is visible at
+**/tic-admin/email**.
+
+**What gets sent, and when**
+
+| Template                                                        | Trigger                                        |
+| --------------------------------------------------------------- | ---------------------------------------------- |
+| Company signup received                                         | A company creates an account in the job portal |
+| Company verified / not verified                                 | An admin moves a company in **Companies**      |
+| Application under review / accepted / declined                  | An admin moves an incubation application       |
+| Role application received                                       | Someone submits the apply form on a role       |
+| Applicant shortlisted / sent to the company / not taken forward | An admin moves a role applicant                |
+
+Moving a record _back_ to its opening state (`pending`, `submitted`, `new`) sends nothing —
+that is an internal correction, not news for the recipient.
+
+**Templates.** The copy bundled in `src/lib/utils/emailTemplates.ts` is what runs until a
+template is edited in the console, exactly as `content.json` backs `site_content`. Editing
+one writes a row to `email_templates`; **Reset** deletes the row and the bundled copy is
+live again. A template can also be switched off, which stops that message being sent while
+still recording the attempt.
+
+**Writing one.** Nobody should have to hand-edit inline-styled table markup to change a
+sentence, so a message is composed from blocks rather than written as HTML. Every bundled
+template ships as a block list — the blocks can be reordered, duplicated, deleted, or the
+whole thing cleared out and rebuilt. A **+** between any two blocks opens the component
+palette:
+
+| Group    | Components                                                                                       |
+| -------- | ------------------------------------------------------------------------------------------------ |
+| Text     | Heading · Subheading · Paragraph · Bullet list · Numbered list · Quote · Small print · Signature |
+| Emphasis | Highlight (neutral / positive / negative) · Button · Link                                        |
+| Media    | Image · File                                                                                     |
+| Spacing  | Divider · Spacer                                                                                 |
+
+Inside a text field, `*bold*` and `[label](https://…)` are the only markup; everything else
+is written as it will be read. Each block carries one **Only show** rule — _always_, _when
+`reason` is filled in_, or _when `reason` is empty_ — which is what makes the optional
+rejection reason and reviewer note disappear rather than leave a blank panel.
+
+`renderBlocks()` in `emailBlocks.ts` compiles the blocks to the markup email clients need,
+and it is the only place that markup is written. The save route compiles the body itself
+rather than storing the HTML the browser posted, so the body is always derived from blocks
+a client cannot forge.
+
+**HTML, if you want it.** The editor's HTML tab still hands over the raw body. Saving there
+stores `blocks = null`, and the template stays hand-edited until it is reset — which is how
+the editor knows which mode a template is in.
+
+**Images and files.** Both blocks upload through `/api/tic-admin/email/assets` into the
+`email-assets` bucket. That bucket is public, unlike every other one here: an email client
+fetches an `<img>` with no cookies and no `Authorization` header, so a signed URL would
+break inside an already-delivered message. Only admins can write to it. A file block can
+also tick **attach it to the email**, which passes it to Resend as a real attachment
+alongside the download link.
+
+Templates render `{{name}}` (HTML-escaped), `{{{name}}}` (raw) and
+`{{#if name}}…{{else}}…{{/if}}`; the block editor writes those conditionals for you. Every
+message is rendered into the shared **layout** template — the one template that is still
+HTML, because it is scaffolding rather than copy — so the branding is changed in one place.
+
+**The log.** `email_log` holds one row per attempt with the rendered subject and body, so
+the console can show the exact message a given applicant received. Three outcomes:
+
+| Status    | Means                                                                             |
+| --------- | --------------------------------------------------------------------------------- |
+| `sent`    | Resend accepted it and returned a message id                                      |
+| `failed`  | Resend rejected it, or the request never completed                                |
+| `blocked` | Never attempted — no API key, the template is off, or the plan allowance is spent |
+
+**Usage.** Resend exposes no quota endpoint, so the meter counts `sent` rows in `email_log`
+inside the current UTC month and day and compares them against the plan named by
+`RESEND_PLAN` (free is 3,000 a month and 100 a day). The same check runs before each send,
+so a message that would bounce off the cap is recorded as `blocked` rather than spending an
+API call on a 429.
+
+**Before real mail goes out:** verify a domain in Resend and point `RESEND_FROM` at an
+address on it. The default `onboarding@resend.dev` is a sandbox sender that only delivers to
+the address owning the API key — the console shows a banner while it is in use.
+
+A send never fails a request. `sendTemplateEmail()` resolves whatever happens, so a company
+verification or an application submit completes even when mail is down; what went wrong is
+in the log.
+
 ### Email confirmation
 
 The project currently has **email confirmation enabled**, so `signUp` returns no session
@@ -578,17 +685,17 @@ Deployed to Vercel via `@sveltejs/adapter-auto`. Pushes to `main` deploy automat
 The live checklist is at **[/status](https://iitgtic.vercel.app/status)** — every route,
 component and backend piece, with a frontend and a backend rail. The open items today:
 
-| Area                         | Gap                                                                                                                   |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Transactional email          | Nothing is sent — no applicant receipt, no nudge to a company, no notice when an account is verified                  |
-| Company-side applicant inbox | `job_applications` already records `job_id` and `company_id`; a verified company still cannot read its own applicants |
-| Rate limiting                | Turnstile plus one-application-per-email is the only brake on the public submit route                                 |
-| Resume retention             | Resumes stay in the bucket until an admin deletes the row — no expiry, no bulk export                                 |
-| Backups                      | Running on Supabase defaults; the restore has never been rehearsed                                                    |
-| Per-page SEO                 | Only `<title>` per page — descriptions, OG and canonicals are global                                                  |
-| Prerender flags              | Static pages still SSR; `export const prerender = true` where it is safe                                              |
-| Real content                 | Partner logos, event and people photos, startup logos are placeholders                                                |
-| Application drafts           | A refresh still loses progress on the eight-step form                                                                 |
+| Area                         | Gap                                                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Company-side applicant inbox | `job_applications` already records `job_id` and `company_id`; a verified company still cannot read its own applicants   |
+| Email deliverability         | Sending works, but the domain is not verified in Resend yet, and bounces and complaints are not read back from webhooks |
+| Rate limiting                | Turnstile plus one-application-per-email is the only brake on the public submit route                                   |
+| Resume retention             | Resumes stay in the bucket until an admin deletes the row — no expiry, no bulk export                                   |
+| Backups                      | Running on Supabase defaults; the restore has never been rehearsed                                                      |
+| Per-page SEO                 | Only `<title>` per page — descriptions, OG and canonicals are global                                                    |
+| Prerender flags              | Static pages still SSR; `export const prerender = true` where it is safe                                                |
+| Real content                 | Partner logos, event and people photos, startup logos are placeholders                                                  |
+| Application drafts           | A refresh still loses progress on the eight-step form                                                                   |
 
 <div align="center">
 <br>

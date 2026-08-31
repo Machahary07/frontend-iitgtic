@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
+import { sendTemplateEmail } from '$lib/server/email';
 import type { RequestHandler } from './$types';
 
 // Company moderation. `status` and `rejection_reason` are not granted to the
@@ -20,21 +21,66 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 	if (!body.id) error(400, 'Missing company id.');
 	if (!STATUSES.includes(body.status as Status)) error(400, 'Unknown status.');
 
-	const { error: dbError } = await ctx.db
+	// Selected back rather than looked up first: the update is the source of
+	// truth for what the company is told, and one round trip covers both.
+	const { data: company, error: dbError } = await ctx.db
 		.from('companies')
 		.update({
 			status: body.status,
 			rejection_reason: body.status === 'rejected' ? (body.rejectionReason ?? '') : null
 		})
-		.eq('id', body.id);
+		.eq('id', body.id)
+		.select('email, company_name, contact_name, rejection_reason')
+		.maybeSingle();
 	if (dbError) error(500, dbError.message);
 
 	await logAdminAction(ctx, `set company status to ${body.status}`, {
 		table: 'companies',
 		recordId: body.id
 	});
-	return json({ ok: true });
+
+	// A decision is only useful to the company once it knows about it. The send
+	// is awaited so the log row exists before the console refetches, and its
+	// result is not checked: sendTemplateEmail() never throws, and a moderation
+	// action must not be reported as failed because mail was.
+	const email = await notifyCompany(ctx.admin.userId, body.id, body.status as Status, company);
+
+	return json({ ok: true, email });
 };
+
+type CompanyRow = {
+	email: string;
+	company_name: string;
+	contact_name: string;
+	rejection_reason: string | null;
+} | null;
+
+// 'pending' is a revert — putting an account back in the queue is an internal
+// correction, and telling the company its verification has been undone would
+// raise more questions than it answers.
+async function notifyCompany(
+	adminId: string,
+	companyId: string,
+	status: Status,
+	company: CompanyRow
+): Promise<{ status: string; error: string | null } | null> {
+	if (!company?.email || status === 'pending') return null;
+
+	const result = await sendTemplateEmail({
+		templateKey: status === 'verified' ? 'company-verified' : 'company-rejected',
+		to: company.email,
+		toName: company.contact_name || company.company_name,
+		variables: {
+			companyName: company.company_name ?? '',
+			contactName: company.contact_name ?? '',
+			reason: company.rejection_reason ?? ''
+		},
+		context: { table: 'companies', recordId: companyId, status },
+		sentBy: adminId
+	});
+
+	return { status: result.status, error: result.error };
+}
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
 	const ctx = requireAdmin(cookies);

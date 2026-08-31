@@ -10,6 +10,12 @@
 	const milestones: Milestone[] = [
 		{
 			date: '2026-08-31',
+			title: 'Transactional email',
+			status: 'done',
+			note: 'Email section in the console — usage against the Resend plan, delivery log with previews, and a block editor for every template.'
+		},
+		{
+			date: '2026-08-31',
 			title: 'Role applicants console',
 			status: 'done',
 			note: 'Applicant queue in the TIC admin — status tabs, per-role filter, signed resume links.'
@@ -236,6 +242,18 @@
 			note: 'Every section of the public site editable from the console — nested objects, reorderable lists, reset to default'
 		},
 		{
+			name: 'TIC team admin · Email',
+			path: '/tic-admin/email',
+			status: 'done',
+			note: 'Usage against the plan allowance, a 30-day trend, and the delivery log with a preview of the exact body each recipient got'
+		},
+		{
+			name: 'TIC team admin · Email templates',
+			path: '/tic-admin/email/templates',
+			status: 'done',
+			note: 'Block editor — fifteen components behind a + palette, live preview, variable insertion, per-template on/off, test send, reset to bundled copy'
+		},
+		{
 			name: 'TIC content editor (other pages)',
 			status: 'done',
 			note: 'All 18 sections live in site_content; content.json is now only the fallback'
@@ -401,6 +419,12 @@
 	const backend: Milestone[] = [
 		{
 			date: '2026-08-31',
+			title: 'Transactional email',
+			status: 'done',
+			note: 'email_templates and email_log, both service-role only. A message is stored as blocks and its HTML compiled on save, so nobody edits markup to change a sentence. Sends go through Resend over its REST API; every attempt is logged with the rendered body, including one blocked by a missing key or a spent plan allowance.'
+		},
+		{
+			date: '2026-08-31',
 			title: 'Role applications',
 			status: 'done',
 			note: 'job_applications + a private resume bucket. /api/job-applications re-verifies Turnstile, resolves the role server-side and writes the row; the TIC console reviews the queue.'
@@ -478,6 +502,16 @@
 			note: 'Editable copy for every public page, read on the server and merged over content.json'
 		},
 		{
+			name: 'email_templates',
+			status: 'done',
+			note: 'Subject, block list and compiled body per message, overriding the copy bundled in emailTemplates.ts; service-role only and audited'
+		},
+		{
+			name: 'email_log',
+			status: 'done',
+			note: 'One row per send attempt with the rendered subject and body — sent / failed / blocked; it is also what the usage meter counts against the plan'
+		},
+		{
 			name: 'audit_log',
 			status: 'done',
 			note: 'Trigger-written history with actor and before/after; RLS on with no policies, so nothing but the service role sees it'
@@ -496,6 +530,11 @@
 			name: 'Storage · job-applications',
 			status: 'done',
 			note: 'Private bucket of resumes, one folder per role; uploaded by the submit route, deleted with the row'
+		},
+		{
+			name: 'Storage · email-assets',
+			status: 'done',
+			note: 'Public bucket for pictures and documents inside an email — mail clients fetch an image unauthenticated, so a signed URL would break after delivery; admin-only to write'
 		},
 		{
 			name: 'Helper functions',
@@ -560,6 +599,16 @@
 			name: 'PUT / DELETE /api/tic-admin/content',
 			status: 'done',
 			note: 'Save a content section, or reset it to the bundled default; both are audited with a before and after'
+		},
+		{
+			name: 'GET / PUT / POST / DELETE /api/tic-admin/email',
+			status: 'done',
+			note: 'Page the delivery log or read one rendered message, save a template, send a test, reset a template to the bundled copy'
+		},
+		{
+			name: 'POST /api/tic-admin/email/assets',
+			status: 'done',
+			note: 'Uploads a picture or document for an image or file block; the body is compiled from blocks server-side, never taken from the browser'
 		},
 		{
 			name: 'hooks.server.ts',

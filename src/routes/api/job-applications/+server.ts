@@ -1,5 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import { sendTemplateEmail } from '$lib/server/email';
 import { getSiteContent } from '$lib/server/siteContent';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import {
@@ -74,7 +75,7 @@ function text(form: FormData, key: string): string {
 	return typeof value === 'string' ? value.trim() : '';
 }
 
-export const POST: RequestHandler = async ({ request, getClientAddress }) => {
+export const POST: RequestHandler = async ({ request, url, getClientAddress }) => {
 	const form = await request.formData().catch(() => null);
 	if (!form) error(400, 'Malformed submission.');
 
@@ -148,6 +149,24 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		}
 		error(500, 'Could not save your application. Please try again.');
 	}
+
+	// The receipt is the only acknowledgement an applicant gets — they have no
+	// account to check a status in. Awaited rather than left to run after the
+	// response: on a serverless host the function can be frozen the moment the
+	// response is returned, and the send would simply be lost. It cannot fail the
+	// request either, because the application is already saved by this point.
+	await sendTemplateEmail({
+		templateKey: 'job-application-received',
+		to: email,
+		toName: fullName,
+		variables: {
+			fullName,
+			role: job.role,
+			company: job.company,
+			jobUrl: `${url.origin}/opportunities/${job.slug}`
+		},
+		context: { table: 'job_applications', jobSlug: job.slug }
+	});
 
 	return json({ ok: true }, { status: 201 });
 };

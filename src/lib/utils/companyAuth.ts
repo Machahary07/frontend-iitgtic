@@ -63,6 +63,17 @@ export function slugify(value: string): string {
 	);
 }
 
+// Fired after a successful signup. The server checks the address really does
+// belong to a just-created account before it sends anything, so a failure here
+// is not worth surfacing — the account exists either way.
+export async function sendCompanySignupEmail(email: string): Promise<void> {
+	await fetch('/api/company-account', {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify({ email })
+	}).catch(() => undefined);
+}
+
 export type SignupResult =
 	| { ok: true; account: CompanyAccount | null; needsEmailConfirmation: boolean; email: string }
 	| { ok: false; error: string };
