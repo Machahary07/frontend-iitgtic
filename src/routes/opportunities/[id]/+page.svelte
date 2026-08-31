@@ -810,6 +810,7 @@
 		letter-spacing: $letter-spacing-wide;
 		text-transform: uppercase;
 		--reveal-ray: #{$color-black};
+<<<<<<< HEAD
 	}
 
 	// Inverted panel on phone: flip the submit button to white-on-black's opposite
@@ -820,6 +821,8 @@
 			color: $color-black;
 			--reveal-ray: #{$color-white};
 		}
+=======
+>>>>>>> d9735b4 (Add loading state to ButtonReveal component and update usages)
 	}
 
 	// Inverted panel on phone: flip the submit button to white-on-black's opposite
@@ -828,6 +831,7 @@
 			border-color: $color-white;
 			background: $color-white;
 			color: $color-black;
+			--reveal-ray: #{$color-white};
 		}
 	}
 
