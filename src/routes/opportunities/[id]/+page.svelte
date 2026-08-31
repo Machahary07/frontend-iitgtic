@@ -58,9 +58,6 @@
 		return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 	}
 
-	const applyHref = $derived(job?.applyLink ?? '');
-	const isExternal = $derived(applyHref.startsWith('http'));
-
 	// Application panel. A submission posts to /api/job-applications, which
 	// re-runs the human check server-side, stores the resume in the private
 	// job-applications bucket and writes the row the TIC console reviews.
@@ -212,26 +209,7 @@
 						<p>{job.description}</p>
 					</div>
 
-					{#if applyHref}
-						<div class="apply">
-							<a
-								class="apply__btn"
-								href={applyHref}
-								target={isExternal ? '_blank' : undefined}
-								rel={isExternal ? 'noopener noreferrer' : undefined}
-							>
-								Apply to {job.company}
-							</a>
-							<p class="apply__hint">
-								{applyHref.startsWith('mailto:')
-									? 'Opens your mail client'
-									: isExternal
-										? 'Opens the company application page'
-										: ''}
-							</p>
-						</div>
 					{/if}
-				{/if}
 			</article>
 
 			<aside class="panel">
@@ -556,34 +534,6 @@
 		}
 	}
 
-	.apply {
-		display: flex;
-		flex-direction: column;
-		gap: $space-2;
-		padding-top: $space-4;
-		border-top: 1px solid rgba($color-black, 0.12);
-	}
-
-	.apply__btn {
-		align-self: flex-start;
-		padding: 11px 28px;
-		background: $color-black;
-		color: $color-white;
-		font-family: $font-family-base;
-		font-size: $font-size-sm;
-		font-weight: $font-weight-bold;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		text-decoration: none;
-		border: 1px solid $color-black;
-	}
-
-	.apply__hint {
-		margin: 0;
-		font-family: $font-family-base;
-		font-size: $font-size-xs;
-		color: rgba($color-black, 0.55);
-	}
 	/* ---------------------------------------------------------------- panel */
 
 	$color-error: #d62828;
@@ -602,10 +552,72 @@
 			position: static;
 		}
 
+		// On phone the panel becomes an inverted card: black ground, white
+		// text, and every control below flips so it reads on the dark ground.
 		@include breakpoint-down($bp-sm) {
-			border-left: 0;
-			border-right: 0;
-			padding: $space-6 0;
+			background: $color-black;
+			color: $color-white;
+			border-color: $color-black;
+			border-radius: $radius-md;
+			padding: $space-6 $space-5;
+
+			.panel__note {
+				border-bottom-color: rgba($color-white, 0.18);
+				color: rgba($color-white, 0.72);
+			}
+
+			.field__name {
+				color: rgba($color-white, 0.8);
+			}
+
+			.opt {
+				color: rgba($color-white, 0.45);
+			}
+
+			.field input,
+			.field textarea {
+				color: $color-white;
+				border-bottom-color: rgba($color-white, 0.3);
+
+				&::placeholder {
+					color: rgba($color-white, 0.35);
+				}
+
+				&:focus {
+					border-bottom-color: $color-white;
+				}
+			}
+
+			// date pickers render a dark glyph that vanishes on black
+			.field input[type='date']::-webkit-calendar-picker-indicator {
+				filter: invert(1);
+			}
+
+			.field__count,
+			.file__name,
+			.form__hint {
+				color: rgba($color-white, 0.55);
+			}
+
+			.file__btn {
+				border-color: $color-white;
+			}
+
+			.check__text {
+				color: rgba($color-white, 0.8);
+			}
+
+			.check input {
+				accent-color: $color-white;
+			}
+
+			.sent {
+				border-top-color: rgba($color-white, 0.18);
+			}
+
+			.sent__note {
+				color: rgba($color-white, 0.72);
+			}
 		}
 	}
 
@@ -797,6 +809,15 @@
 		font-weight: $font-weight-bold;
 		letter-spacing: $letter-spacing-wide;
 		text-transform: uppercase;
+	}
+
+	// Inverted panel on phone: flip the submit button to white-on-black's opposite
+	@include breakpoint-down($bp-sm) {
+		:global(button.button-reveal.submit) {
+			border-color: $color-white;
+			background: $color-white;
+			color: $color-black;
+		}
 	}
 
 	.form__hint {
