@@ -822,6 +822,15 @@
 		}
 	}
 
+	// Inverted panel on phone: flip the submit button to white-on-black's opposite
+	@include breakpoint-down($bp-sm) {
+		:global(button.button-reveal.submit) {
+			border-color: $color-white;
+			background: $color-white;
+			color: $color-black;
+		}
+	}
+
 	.form__hint {
 		margin: 0;
 		font-size: $font-size-xs;
