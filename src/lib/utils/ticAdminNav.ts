@@ -6,6 +6,7 @@ export const TIC_ADMIN_NAV = [
 	{ label: 'Companies', href: '/tic-admin/companies' },
 	{ label: 'Applications', href: '/tic-admin/applications' },
 	{ label: 'Posted jobs', href: '/tic-admin/jobs' },
+	{ label: 'Role applicants', href: '/tic-admin/job-applications' },
 	{ separator: true as const },
 	{ label: 'Users', href: '/tic-admin/users' },
 	{ label: 'Activity', href: '/tic-admin/activity' },

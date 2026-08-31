@@ -75,6 +75,58 @@ export async function adminDeleteApplication(id: string): Promise<boolean> {
 	return res.ok;
 }
 
+// --- role applications -----------------------------------------------------
+
+export type JobApplicationStatus = 'new' | 'shortlisted' | 'forwarded' | 'rejected';
+
+export type JobApplicationSummary = {
+	id: string;
+	job_slug: string;
+	job_role: string;
+	job_company: string;
+	job_source: 'seed' | 'user';
+	company_id: string | null;
+	full_name: string;
+	email: string;
+	applicant_role: string;
+	status: JobApplicationStatus;
+	review_note: string | null;
+	reviewed_at: string | null;
+	created_at: string;
+};
+
+export type JobApplicationDetail = JobApplicationSummary & {
+	job_id: string | null;
+	phone: string;
+	portfolio_link: string;
+	why: string;
+	start_date: string | null;
+	onsite_ok: boolean;
+	consent: boolean;
+	resume: { path?: string; name?: string; size?: number; type?: string };
+	updated_at: string;
+};
+
+export async function adminSetJobApplicationStatus(
+	id: string,
+	status: JobApplicationStatus,
+	reviewNote?: string
+): Promise<boolean> {
+	const res = await fetch('/api/tic-admin/job-applications', {
+		method: 'PATCH',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify({ id, status, reviewNote })
+	});
+	return res.ok;
+}
+
+export async function adminDeleteJobApplication(id: string): Promise<boolean> {
+	const res = await fetch(`/api/tic-admin/job-applications?id=${encodeURIComponent(id)}`, {
+		method: 'DELETE'
+	});
+	return res.ok;
+}
+
 // --- users -----------------------------------------------------------------
 
 export type UserRole = 'founder' | 'company' | 'admin';

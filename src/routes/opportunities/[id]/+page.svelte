@@ -6,7 +6,15 @@
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
 	import Turnstile from '$lib/components/Turnstile.svelte';
-	import { verifyTurnstileToken } from '$lib/utils/turnstile';
+	import {
+		EMAIL_RE,
+		RESUME_ACCEPT,
+		RESUME_MAX_BYTES,
+		WHY_MAX,
+		WHY_MIN,
+		resumeExtension,
+		submitJobApplication
+	} from '$lib/utils/jobApplications';
 
 	const content = getContent();
 
@@ -52,8 +60,9 @@
 	const applyHref = $derived(job?.applyLink ?? '');
 	const isExternal = $derived(applyHref.startsWith('http'));
 
-	// Application panel. UI only for now — a submission is validated and the
-	// human check runs, but nothing is persisted and no one is notified yet.
+	// Application panel. A submission posts to /api/job-applications, which
+	// re-runs the human check server-side, stores the resume in the private
+	// job-applications bucket and writes the row the TIC console reviews.
 	const requiresOnsite = $derived(/in-person|on-site|onsite/i.test(job?.location ?? ''));
 
 	let fullName = $state('');
@@ -85,9 +94,7 @@
 	let attempted = $state(false);
 	let submitting = $state(false);
 	let sent = $state(false);
-
-	const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-	const WHY_MAX = 800;
+	let submitError = $state('');
 
 	function validate(): Errors {
 		const e: Errors = {};
@@ -101,9 +108,11 @@
 		if (!currentRole.trim()) e.currentRole = 'Tell us what you do right now.';
 
 		if (!resume) e.resume = 'Attach your resume.';
+		else if (!resumeExtension(resume.name)) e.resume = 'PDF or Word documents only.';
+		else if (resume.size > RESUME_MAX_BYTES) e.resume = 'Your resume must be 5 MB or smaller.';
 
 		if (!why.trim()) e.why = 'A short note is required.';
-		else if (why.trim().length < 40) e.why = 'A little more detail, please.';
+		else if (why.trim().length < WHY_MIN) e.why = 'A little more detail, please.';
 
 		if (!startDate.trim()) e.startDate = 'Earliest start date is required.';
 
@@ -129,18 +138,35 @@
 	async function handleSubmit(ev: Event) {
 		ev.preventDefault();
 		attempted = true;
+		submitError = '';
 		const result = validate();
 		errors = result;
 		if (Object.keys(result).length > 0) return;
 
 		submitting = true;
-		const human = await verifyTurnstileToken(turnstileToken);
-		captcha?.reset();
-		turnstileToken = '';
+		const outcome = await submitJobApplication({
+			jobSlug: slug,
+			fullName: fullName.trim(),
+			email: email.trim(),
+			phone: phone.trim(),
+			applicantRole: currentRole.trim(),
+			portfolioLink: link.trim(),
+			why: why.trim(),
+			startDate,
+			onsiteOk: onsite,
+			consent,
+			resume: resume!,
+			turnstileToken
+		});
 		submitting = false;
 
-		if (!human) {
-			errors = { captcha: 'Verification failed. Please try again.' };
+		// A Turnstile token is single-use, so a failed attempt needs a fresh one
+		// before the applicant can try again.
+		captcha?.reset();
+		turnstileToken = '';
+
+		if (!outcome.ok) {
+			submitError = outcome.error;
 			return;
 		}
 
@@ -214,15 +240,16 @@
 
 					{#if sent}
 						<div class="sent">
-							<p class="sent__line">Application sent.</p>
+							<p class="sent__line">Application received.</p>
 							<p class="sent__note">
-								{job.company} will be in touch by email. A copy has gone to {email}.
+								It is with the IITG-TIC team, who pass it to {job.company}. If they want to take it
+								further they will write to {email} themselves.
 							</p>
 						</div>
 					{:else}
 						<p class="panel__note">
-							Your application goes directly to {job.company}. They review and reply themselves —
-							IITG-TIC does not screen candidates.
+							Your application reaches {job.company} through IITG-TIC, who pass it on as sent.
+							{job.company} reviews and replies themselves — IITG-TIC does not screen candidates.
 						</p>
 
 						<form class="form" onsubmit={handleSubmit} novalidate>
@@ -286,7 +313,7 @@
 									<input
 										type="file"
 										class="file__input"
-										accept=".pdf,.doc,.docx"
+										accept={RESUME_ACCEPT}
 										onchange={onResume}
 									/>
 									<span class="file__btn">Choose file</span>
@@ -365,6 +392,10 @@
 									>{/if}
 							</div>
 
+							{#if submitError}
+								<p class="form__error" role="alert">{submitError}</p>
+							{/if}
+
 							<ButtonReveal
 								type="submit"
 								text={submitting ? 'Sending…' : 'Send application'}
@@ -372,7 +403,9 @@
 								disabled={submitting}
 							/>
 
-							<p class="form__hint">You'll get a copy at the email above.</p>
+							<p class="form__hint">
+								{job.company} replies to the email above. Nothing else is shared.
+							</p>
 						</form>
 					{/if}
 				{/if}
@@ -768,6 +801,16 @@
 		margin: 0;
 		font-size: $font-size-xs;
 		color: rgba($color-black, 0.55);
+	}
+
+	.form__error {
+		margin: 0;
+		padding: $space-3;
+		border: 1px solid rgba($color-error, 0.4);
+		background: rgba($color-error, 0.06);
+		font-size: $font-size-sm;
+		line-height: $line-height-relaxed;
+		color: $color-error;
 	}
 
 	.sent {

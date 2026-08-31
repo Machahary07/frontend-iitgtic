@@ -61,6 +61,16 @@ export async function loadJobs(db: SupabaseClient) {
 	return data ?? [];
 }
 
+export async function loadJobApplications(db: SupabaseClient) {
+	const { data } = await db
+		.from('job_applications')
+		.select(
+			'id, job_slug, job_role, job_company, job_source, company_id, full_name, email, applicant_role, status, review_note, reviewed_at, created_at'
+		)
+		.order('created_at', { ascending: false });
+	return data ?? [];
+}
+
 export async function loadApplications(db: SupabaseClient) {
 	const { data } = await db
 		.from('applications')

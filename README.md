@@ -1,17 +1,125 @@
-# IIT Guwahati Technology Incubation Centre
+<div align="center">
 
-Website for **IIT Guwahati Technology Incubation Centre (IITG TIC)** — incubation, mentorship, infrastructure, and funding support for deep-tech startups.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="src/lib/assets/logo.webp">
+  <img src="src/lib/assets/TIC-Text-Logo.webp" alt="IIT Guwahati Technology Incubation Centre" width="440">
+</picture>
 
-Live: https://iitgtic.vercel.app
+<h1>IIT Guwahati Technology Incubation Centre</h1>
+
+<p><strong>Incubation, mentorship, infrastructure and funding support for deep-tech startups.</strong><br>
+The public website, the company job portal, the incubation application, and the internal admin console — one SvelteKit app.</p>
+
+<p>
+  <img alt="SvelteKit 2" src="https://img.shields.io/badge/SvelteKit-2-FF3E00?logo=svelte&logoColor=white">
+  <img alt="Svelte 5 runes" src="https://img.shields.io/badge/Svelte-5%20runes-FF3E00?logo=svelte&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white">
+  <img alt="Sass" src="https://img.shields.io/badge/Sass-CC6699?logo=sass&logoColor=white">
+  <img alt="Supabase" src="https://img.shields.io/badge/Supabase-Postgres%20%C2%B7%20Auth%20%C2%B7%20RLS-3FCF8E?logo=supabase&logoColor=white">
+  <img alt="Vercel" src="https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white">
+  <img alt="pnpm" src="https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=white">
+</p>
+
+<p>
+  <a href="https://iitgtic.vercel.app"><b>Live site</b></a> ·
+  <a href="https://iitgtic.vercel.app/status">Project status</a> ·
+  <a href="https://iitgtic.vercel.app/opportunities">Opportunities</a> ·
+  <a href="https://iitgtic.vercel.app/application">Apply for incubation</a>
+</p>
+
+</div>
+
+---
+
+## Contents
+
+| Section                                                                                                       | What you will find                           |
+| ------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| [Overview](#overview) · [Stack](#stack) · [Architecture](#architecture)                                       | What the app is and how it fits together     |
+| [Getting started](#getting-started) · [Environment](#environment) · [Scripts](#scripts)                       | Running it locally                           |
+| [Project structure](#project-structure) · [Routes](#routes) · [API surface](#api-surface)                     | Finding your way around the code             |
+| [Data model](#data-model) · [Permissions](#permissions-at-a-glance) · [Role applications](#role-applications) | Postgres, RLS and the flows that write to it |
+| [Operations](#operations) · [Content model](#content-model) · [SEO](#seo) · [Deploy](#deploy)                 | Running it in production                     |
+| [Roadmap](#roadmap)                                                                                           | What is deliberately not built yet           |
+
+---
+
+## Overview
+
+| Area                       | What it does                                                                                                                               | Lives at                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- |
+| **Public site**            | Editorial pages for the centre — about, team, mentors, governing body, FAQ, blog, incubation pillars, incubated startups, events, partners | `/`                                |
+| **Opportunities board**    | Roles at incubated startups, filterable by type; merges seed posts with live company postings                                              | `/opportunities`                   |
+| **Role applications**      | Public apply form per role — resume upload, Turnstile-gated, no account needed                                                             | `/opportunities/[id]`              |
+| **Job-posting portal**     | Company signs up → TIC verifies → company posts and edits roles                                                                            | `/opportunities/job-posting-admin` |
+| **Incubation application** | Eight-step wizard, 38 questions, four document uploads                                                                                     | `/application`                     |
+| **TIC admin console**      | Companies, incubation applications, role applicants, posted jobs, users, activity, content                                                 | `/tic-admin`                       |
+| **Content editing**        | Every public page's copy, edited from the console and versioned in the audit log                                                           | `/tic-admin/content`               |
+| **Analytics & audit**      | Page impressions with bot separation, plus a trigger-written audit trail                                                                   | `/tic-admin/activity`              |
+| **Build status**           | Self-hosted checklist of every route, component and backend piece                                                                          | `/status`                          |
 
 ## Stack
 
-- **SvelteKit 2** + **Svelte 5** (runes)
-- **TypeScript**
-- **Sass / SCSS**
-- **Supabase** — Postgres, Auth, RLS, and Storage
-- **GSAP** — page/section animations
-- **Vercel** — hosting + analytics
+| Layer           | Choice                         | Notes                                                       |
+| --------------- | ------------------------------ | ----------------------------------------------------------- |
+| Framework       | **SvelteKit 2** + **Svelte 5** | Runes throughout; server-rendered by default                |
+| Language        | **TypeScript**                 | `svelte-check` in `pnpm check`                              |
+| Styling         | **Sass / SCSS**                | Shared variables and mixins in `src/lib/styles`             |
+| Data            | **Supabase**                   | Postgres, Auth, Row Level Security, Storage                 |
+| Bot defence     | **Cloudflare Turnstile**       | Secret key stays server-side; every gated write re-verifies |
+| Motion          | **GSAP**                       | Page and section animations                                 |
+| Icons           | **@lucide/svelte**             | One icon set                                                |
+| Hosting         | **Vercel**                     | `@sveltejs/adapter-auto` + Vercel Analytics                 |
+| Package manager | **pnpm**                       | `.npmrc` pinned; do not use npm here                        |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph CLIENT["Browser"]
+        direction TB
+        V["Visitor"]
+        C["Company account"]
+        T["TIC admin"]
+    end
+
+    subgraph VERCEL["Vercel · SvelteKit 2 · server-rendered"]
+        direction TB
+        H["hooks.server.ts<br/>visitor cookie + page-view log"]
+        P["Pages<br/>+layout.server.ts / +page.server.ts"]
+        R["Route handlers<br/>/api/*"]
+        H --> P --> R
+    end
+
+    subgraph SUPA["Supabase"]
+        direction TB
+        DB[("Postgres<br/>8 tables · RLS on every one")]
+        AU["Auth"]
+        ST["Storage<br/>2 private buckets"]
+    end
+
+    CF["Cloudflare<br/>Turnstile"]
+
+    CLIENT ==> H
+    CLIENT -.->|"publishable key · RLS applies"| DB
+    CLIENT -.->|"sign in / sign up"| AU
+    P -->|"service role · admin console"| DB
+    R -->|"service role"| DB
+    R --> ST
+    R -->|"siteverify"| CF
+```
+
+Three things follow from that shape:
+
+- **The browser only ever holds the publishable key.** Anything it can read, RLS has already
+  decided it may read. The service-role key exists solely inside `src/lib/server` and
+  `+server.ts` files — SvelteKit fails the build if it is ever pulled into a client bundle.
+- **Writes that RLS cannot express go through a route handler.** Verifying a company,
+  moving an application through review, or accepting an application from someone with no
+  account are all "there is no `auth.uid()` to check" problems, so they are server routes
+  guarded by the admin session cookie or by Turnstile.
+- **Nothing in the admin console waits on a client-side fetch.** Every section is loaded by
+  `+page.server.ts`, so navigation never flashes an empty screen.
 
 ## Getting started
 
@@ -25,19 +133,153 @@ pnpm dev
 
 Open http://localhost:5173.
 
+> [!TIP]
+> `$env/static/*` is read once at startup — **restart the dev server after editing
+> `.env.local`**, or you are still running the old values. `pnpm doctor` tells you whether
+> the file can actually reach Supabase.
+
+### Environment
+
+Copy `.env.example` to `.env.local`. Everything without the `PUBLIC_` prefix is server-only
+and must never reach the browser.
+
+| Variable                          | Scope           | What it is                                                         |
+| --------------------------------- | --------------- | ------------------------------------------------------------------ |
+| `PUBLIC_SUPABASE_URL`             | client + server | Supabase project URL                                               |
+| `PUBLIC_SUPABASE_PUBLISHABLE_KEY` | client + server | Browser-safe key; RLS still applies to everything it does          |
+| `SUPABASE_SERVICE_ROLE_KEY`       | **server only** | Bypasses RLS. Used by the admin routes and the public submit route |
+| `ADMIN_SESSION_SECRET`            | **server only** | Signs the admin session cookie. Rotating it signs every admin out  |
+| `TIC_ADMIN_PASSWORD`              | **server only** | Bootstrap password; works only while no admin account exists       |
+| `IITG_SUPABASE_PASSWORD`          | CLI only        | Postgres password for `supabase db push`; the app never reads it   |
+| `PUBLIC_TURNSTILE_SITE_KEY`       | client          | Cloudflare Turnstile widget key                                    |
+| `TURNSTILE_SECRET_KEY`            | **server only** | Verifies tokens against Cloudflare                                 |
+
+Generate a session secret with:
+
+```sh
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
 ## Scripts
 
-| Script         | What it does                          |
-| -------------- | ------------------------------------- |
-| `pnpm dev`     | Start the dev server                  |
-| `pnpm build`   | Build for production                  |
-| `pnpm preview` | Preview the production build locally  |
-| `pnpm check`   | Type-check with `svelte-check`        |
-| `pnpm lint`    | Prettier + ESLint check               |
-| `pnpm format`  | Format with Prettier                  |
-| `pnpm doctor`  | Check `.env.local` can reach Supabase |
+| Script                           | What it does                                                             |
+| -------------------------------- | ------------------------------------------------------------------------ |
+| `pnpm dev`                       | Start the dev server                                                     |
+| `pnpm build`                     | Build for production                                                     |
+| `pnpm preview`                   | Preview the production build locally                                     |
+| `pnpm check`                     | Type-check with `svelte-check`                                           |
+| `pnpm lint`                      | Prettier + ESLint check                                                  |
+| `pnpm format`                    | Format with Prettier                                                     |
+| `pnpm doctor`                    | Check `.env.local` can reach Supabase                                    |
+| `node scripts/seed-content.js`   | Import `content.json` sections into `site_content`                       |
+| `node scripts/demo-data.js seed` | Two applications + one pending company, for working on the admin screens |
 
-## Supabase
+## Project structure
+
+```
+src/
+├── app.html                # Document shell + global SEO meta
+├── hooks.server.ts         # Visitor cookie + one page_views row per HTML GET
+├── lib/
+│   ├── assets/             # Bundled assets (imported into components)
+│   ├── components/         # Reusable UI components
+│   ├── data/
+│   │   └── content.json    # Content for static pages + dynamic [slug] routes
+│   ├── server/             # Service-role client, admin session + guard (never bundled)
+│   └── utils/
+├── routes/
+│   ├── +layout.svelte
+│   ├── +page.svelte        # Home
+│   ├── about/              # About, team, mentors, blog, FAQ, governing body
+│   ├── events/             # Events index + [slug] detail
+│   ├── incubation/         # Incubation pillars + [slug] detail
+│   ├── incubated-startups/ # Categories + [slug]/[startupSlug]
+│   ├── opportunities/      # Job postings (seed + Supabase) + apply form
+│   ├── partners/
+│   ├── status/             # Public build checklist
+│   ├── tic-admin/          # Admin dashboard (protected, noindex)
+│   ├── api/                # Turnstile, admin login, public + service-role routes
+│   └── sitemap.xml/        # Dynamic sitemap endpoint
+└── styles/
+supabase/
+└── migrations/             # Schema + RLS, applied with `supabase db push`
+static/
+├── banner-iitgtic.webp     # Open Graph share image
+├── favicon.svg
+└── robots.txt
+```
+
+## Routes
+
+<details open>
+<summary><b>Public</b></summary>
+
+| Route                                                                                                     | Page                                                         |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `/`                                                                                                       | Home — intro hero, association marquee, events-driven slider |
+| `/about` + `/about/what-happens`, `/governing-body`, `/team`, `/mentors`, `/faq`, `/blog`, `/blog/[slug]` | The centre, its people and its writing                       |
+| `/incubation` + `/incubation/[slug]`                                                                      | Five support pillars, scrollspy detail pages                 |
+| `/incubated-startups` + `/[slug]/[startupSlug]`                                                           | Current / virtual / graduated cohorts                        |
+| `/events` + `/events/[slug]`                                                                              | Upcoming and past events                                     |
+| `/partners`                                                                                               | Partner grid                                                 |
+| `/opportunities` + `/opportunities/[id]`                                                                  | Hiring board and role detail with the apply form             |
+| `/apply` · `/login`                                                                                       | Account sign-up and sign-in, both Turnstile-gated            |
+| `/application`                                                                                            | Eight-step incubation application                            |
+| `/status`                                                                                                 | Build checklist — frontend and backend rails                 |
+| `/sitemap.xml`                                                                                            | Generated from the route list + content slugs                |
+
+</details>
+
+<details>
+<summary><b>Company job portal</b> — <code>/opportunities/job-posting-admin</code></summary>
+
+| Route                               | Page                                                               |
+| ----------------------------------- | ------------------------------------------------------------------ |
+| `/job-posting-admin`                | Dashboard, gated by account status (pending / verified / rejected) |
+| `/job-posting-admin/signup`         | Creates a pending account; TIC verifies it before roles go live    |
+| `/job-posting-admin/edit/[id]`      | Create or edit a role — verified accounts only                     |
+| `/job-posting-admin/admin-settings` | Profile, password change, delete account                           |
+
+</details>
+
+<details>
+<summary><b>TIC admin console</b> — <code>/tic-admin</code></summary>
+
+| Route                                   | Page                                                                          |
+| --------------------------------------- | ----------------------------------------------------------------------------- |
+| `/tic-admin/login`                      | Per-admin sign-in; offers first-admin setup while none exists                 |
+| `/tic-admin`                            | Overview — stat tiles and the queues that need attention                      |
+| `/tic-admin/companies`                  | Verify, reject with a reason, revert or delete an account                     |
+| `/tic-admin/applications` + `/[id]`     | Incubation review queue; full answers and signed document links               |
+| `/tic-admin/job-applications` + `/[id]` | Role applicants; status tabs, per-role filter, signed resume link             |
+| `/tic-admin/jobs`                       | Every seed and company-posted role; take one down                             |
+| `/tic-admin/users`                      | All accounts — role, last sign-in, suspend, password reset, delete, new admin |
+| `/tic-admin/activity`                   | Audit log with before/after diffs, plus per-page impressions                  |
+| `/tic-admin/content` + `/[...key]`      | Schema-driven editor for every content section                                |
+
+</details>
+
+## API surface
+
+Everything the browser is allowed to ask the server to do. The `/api/tic-admin/*` group is
+guarded by `requireAdmin()`, which returns a service-role client tagged with the acting
+admin's id.
+
+| Endpoint                          | Methods                       | Purpose                                                                     |
+| --------------------------------- | ----------------------------- | --------------------------------------------------------------------------- |
+| `/api/turnstile`                  | `POST`                        | Verify a widget token against Cloudflare                                    |
+| `/api/job-applications`           | `POST`                        | **Public** role application — Turnstile, role lookup, resume upload, insert |
+| `/api/company-account`            | `DELETE`                      | A company closing its own account, auth user included                       |
+| `/api/tic-admin-login`            | `GET` `POST` `DELETE`         | Session state, sign-in, first-admin bootstrap, sign-out                     |
+| `/api/tic-admin/companies`        | `PATCH` `DELETE`              | Verify / reject / delete an account                                         |
+| `/api/tic-admin/applications`     | `PATCH` `DELETE`              | Move an incubation application through review                               |
+| `/api/tic-admin/job-applications` | `PATCH` `DELETE`              | Shortlist, mark sent on, decline, delete                                    |
+| `/api/tic-admin/jobs`             | `DELETE`                      | Take down a company-posted role                                             |
+| `/api/tic-admin/users`            | `PATCH` `PUT` `POST` `DELETE` | Roles, suspend, reset mail, delete, create admin                            |
+| `/api/tic-admin/activity`         | `GET`                         | Paged audit entries and impressions over 7d / 30d / all                     |
+| `/api/tic-admin/content`          | `PUT` `DELETE`                | Save a section, or reset it to the bundled default                          |
+
+## Data model
 
 Schema lives in `supabase/migrations/` and is applied with the Supabase CLI:
 
@@ -46,17 +288,85 @@ supabase link --project-ref <project-ref>
 supabase db push
 ```
 
-Six tables, all with RLS enabled:
+Eight tables, all with RLS enabled:
 
-| Table          | Holds                                                   | Who can read/write                                                       |
-| -------------- | ------------------------------------------------------- | ------------------------------------------------------------------------ |
-| `profiles`     | One row per auth user (`founder`, `company` or `admin`) | Own row; `role` is service-role only                                     |
-| `companies`    | Job-portal accounts + verification status               | Own row; `status` is service-role only                                   |
-| `jobs`         | Company job postings                                    | Public read once the company is verified; write only by a verified owner |
-| `applications` | Submitted incubation applications                       | Own rows; `status` is service-role only                                  |
-| `audit_log`    | Every row change, with actor and before/after           | Service role only — RLS on, zero policies                                |
-| `page_views`   | One row per page view, admin routes included            | Service role only — RLS on, zero policies                                |
-| `site_content` | Editable copy for every public page                     | Service role only; read on the server, written from the console          |
+| Table              | Holds                                                   | Who can read/write                                                       |
+| ------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `profiles`         | One row per auth user (`founder`, `company` or `admin`) | Own row; `role` is service-role only                                     |
+| `companies`        | Job-portal accounts + verification status               | Own row; `status` is service-role only                                   |
+| `jobs`             | Company job postings                                    | Public read once the company is verified; write only by a verified owner |
+| `applications`     | Submitted incubation applications                       | Own rows; `status` is service-role only                                  |
+| `job_applications` | Applications to a role on the Opportunities board       | Service role only — RLS on, zero policies                                |
+| `audit_log`        | Every row change, with actor and before/after           | Service role only — RLS on, zero policies                                |
+| `page_views`       | One row per page view, admin routes included            | Service role only — RLS on, zero policies                                |
+| `site_content`     | Editable copy for every public page                     | Service role only; read on the server, written from the console          |
+
+```mermaid
+erDiagram
+    profiles {
+        uuid id PK "= auth.users.id"
+        text role "founder / company / admin"
+        text full_name
+        text email
+    }
+    companies {
+        uuid id PK "= auth.users.id"
+        text company_name
+        text status "pending / verified / rejected"
+        text rejection_reason "service role only"
+    }
+    jobs {
+        uuid id PK
+        uuid company_id FK
+        text slug "job-no-N, unique"
+        text role
+        date posted
+    }
+    applications {
+        uuid id PK
+        uuid user_id FK
+        text status "submitted / under-review / accepted / rejected"
+        jsonb answers "the 38 questions"
+        jsonb documents "paths into the private bucket"
+    }
+    job_applications {
+        uuid id PK
+        uuid job_id FK "null for seed posts"
+        uuid company_id FK "null for seed posts"
+        text job_slug "plus a role and company snapshot"
+        text email "unique per role"
+        jsonb resume "path, name, size, type"
+        text status "new / shortlisted / forwarded / rejected"
+    }
+
+    profiles ||--o| companies : "same auth user"
+    companies ||--o{ jobs : "posts"
+    profiles ||--o{ applications : "submits"
+    jobs ||--o{ job_applications : "receives"
+    companies ||--o{ job_applications : "will read — planned"
+```
+
+`audit_log`, `page_views` and `site_content` carry no foreign keys — they sit beside the
+domain tables and are readable only by the service role.
+
+### Storage
+
+| Bucket                  | Public? | Holds                                                         | Layout                   |
+| ----------------------- | ------- | ------------------------------------------------------------- | ------------------------ |
+| `application-documents` | No      | Pitch deck, founder CV, financials, incorporation certificate | One folder per user      |
+| `job-applications`      | No      | Resumes attached to a role application                        | One folder per role slug |
+
+Neither bucket is ever exposed directly. The admin review screens hand out **10-minute
+signed URLs** instead, and deleting a row deletes its objects first so nothing is orphaned.
+
+### Permissions at a glance
+
+| Actor                 | Authenticates as              | Reads                                        | Writes                                         | Enforced by                                                 |
+| --------------------- | ----------------------------- | -------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------- |
+| **Anonymous visitor** | nobody                        | Jobs from verified companies; public content | One role application, through the submit route | RLS for reads; Turnstile + service-role route for the write |
+| **Founder**           | Supabase Auth                 | Own profile, own applications                | Own application and its documents              | RLS                                                         |
+| **Company**           | Supabase Auth                 | Own row, own jobs                            | Own jobs — once TIC has verified the account   | RLS                                                         |
+| **TIC admin**         | Supabase Auth + signed cookie | Everything                                   | Everything, every change audited               | `requireAdmin()` → service role                             |
 
 Two things are deliberately outside RLS's reach:
 
@@ -68,9 +378,71 @@ Two things are deliberately outside RLS's reach:
   httpOnly session cookie. Admin writes still go through `/api/tic-admin/*` with the
   service-role key, because RLS has no notion of "admin".
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant L as /api/tic-admin-login
+    participant SB as Supabase
+
+    B->>SB: signInWithPassword + Turnstile
+    SB-->>B: access token
+    B->>L: POST accessToken
+    L->>SB: getUser, then read profiles.role
+    SB-->>L: role is admin
+    L-->>B: Set-Cookie tic_admin_session — signed, httpOnly, 8h
+    Note over B,L: every /tic-admin load re-reads the cookie —<br/>service-role writes carry x-actor-id so the audit names a person
+```
+
 Application attachments go to the private `application-documents` storage bucket, one
 folder per user. The admin review screen never exposes those objects publicly — it hands
 out 10-minute signed URLs instead.
+
+### Role applications
+
+Applying to a role on the Opportunities board does not need an account, so there is no
+`auth.uid()` for a policy to hang off: `job_applications` carries RLS with **zero
+policies** and every write arrives through `POST /api/job-applications`. That route
+re-verifies the Turnstile token against Cloudflare — a form that only asks the browser to
+verify can be posted straight to the endpoint with the check skipped — looks the role up
+server-side so an application cannot be filed against a slug that is not on the board, and
+uploads the resume to the private `job-applications` bucket before writing the row. A
+second application from the same email to the same role hits a unique index and comes back
+as "you have already applied" rather than a duplicate.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant R as POST /api/job-applications
+    participant CF as Cloudflare Turnstile
+    participant S as Supabase — service role
+
+    B->>R: form fields + resume + Turnstile token
+    R->>CF: siteverify with token and client IP
+    CF-->>R: pass or fail
+    R->>S: resolve the role — seed post, or a job whose company is verified
+    S-->>R: role and company snapshot
+    R->>S: upload resume to the job-applications bucket
+    R->>S: insert job_applications row
+    alt same email, same role
+        S-->>R: unique violation
+        R-->>B: 409 you have already applied
+    else new application
+        S-->>R: row created
+        R-->>B: 201 created
+    end
+```
+
+The TIC team works the queue at **/tic-admin/job-applications**: status tabs
+(new → shortlisted → sent on / declined), a per-role filter, and a 10-minute signed link
+to each resume. Deleting an applicant removes the file from the bucket first, so nothing
+is orphaned.
+
+Nothing is emailed yet — neither the applicant nor the company — so the console is
+currently the only place an application is seen. `job_applications` records `job_id` and
+`company_id`, so letting a verified company read its own applicants is a policy and a page
+away.
 
 ### Demo data
 
@@ -83,6 +455,8 @@ node scripts/demo-data.js clear   # removes exactly what seed created
 
 Every account it creates uses the `@demo-tic.co` domain, and `clear` deletes only those.
 
+## Operations
+
 ### First run
 
 The console starts with no admin. Visit `/tic-admin/login` and it offers a one-time setup
@@ -90,12 +464,13 @@ form: enter `TIC_ADMIN_PASSWORD` from the environment and it creates the first a
 account. From then on that password stops granting access, and further admins are created
 from **Users → New admin**.
 
-**If that setup form appears on a machine where an admin already exists, the environment is
-wrong — not the database.** The screen is chosen by counting admin rows, so anything that
-stops the count from succeeding used to look identical to a first run: a service role key
-from a different project, the publishable key pasted into `SUPABASE_SERVICE_ROLE_KEY`, a
-typo in `PUBLIC_SUPABASE_URL`, or an unreachable host. The console now shows what actually
-failed instead, and refuses to bootstrap while it cannot read the table. Run:
+> [!IMPORTANT]
+> **If that setup form appears on a machine where an admin already exists, the environment is
+> wrong — not the database.** The screen is chosen by counting admin rows, so anything that
+> stops the count from succeeding used to look identical to a first run: a service role key
+> from a different project, the publishable key pasted into `SUPABASE_SERVICE_ROLE_KEY`, a
+> typo in `PUBLIC_SUPABASE_URL`, or an unreachable host. The console now shows what actually
+> failed instead, and refuses to bootstrap while it cannot read the table.
 
 ```sh
 pnpm doctor
@@ -134,39 +509,6 @@ and the sign-up screens tell the user to check their inbox. To let people in imm
 instead, turn off _Confirm email_ under **Authentication → Sign In / Providers → Email**
 in the Supabase dashboard — the code already handles both cases.
 
-## Project structure
-
-```
-src/
-├── app.html                # Document shell + global SEO meta
-├── lib/
-│   ├── assets/             # Bundled assets (imported into components)
-│   ├── components/         # Reusable UI components
-│   ├── data/
-│   │   └── content.json    # Content for static pages + dynamic [slug] routes
-│   ├── server/             # Service-role client + admin session (never bundled)
-│   └── utils/
-├── routes/
-│   ├── +layout.svelte
-│   ├── +page.svelte        # Home
-│   ├── about/              # About, team, mentors, blog, FAQ, governing body
-│   ├── events/             # Events index + [slug] detail
-│   ├── incubation/         # Incubation pillars + [slug] detail
-│   ├── incubated-startups/ # Categories + [slug]/[startupSlug]
-│   ├── opportunities/      # Job postings (seed + Supabase)
-│   ├── partners/
-│   ├── tic-admin/          # Admin dashboard (protected, noindex)
-│   ├── api/                # Turnstile, admin login, service-role admin routes
-│   └── sitemap.xml/        # Dynamic sitemap endpoint
-└── styles/
-supabase/
-└── migrations/             # Schema + RLS, applied with `supabase db push`
-static/
-├── banner-iitgtic.webp     # Open Graph share image
-├── favicon.svg
-└── robots.txt
-```
-
 ## Content model
 
 Every public page renders from the `site_content` table, edited at
@@ -175,6 +517,15 @@ fallback: the root layout loads the stored sections, merges them over the bundle
 and hands the result to every page through `getContent()` in `$lib/content`. A section that
 has never been saved — or a database that cannot be reached — falls through to the JSON, so
 the site cannot be taken down by a bad content deploy.
+
+```mermaid
+flowchart LR
+    J["content.json<br/>bundled fallback"] --> M
+    S[("site_content<br/>stored sections")] --> M["Root layout<br/>merge stored over bundled"]
+    M --> G["getContent()"]
+    G --> PG["Every public page"]
+    E["/tic-admin/content editor"] -->|"audited save"| S
+```
 
 Seed the table once per environment:
 
@@ -189,13 +540,16 @@ lists with add and remove. Adding a page to `content.json` and re-running the se
 editable without touching the admin code. Every save is audited with a before and after, and
 each section has a **Reset to default copy** button.
 
-The `value` column is `json` rather than `jsonb` on purpose — `jsonb` sorts object keys, which
-reordered the fields in the editor (an FAQ showed its answer above its question).
+> [!NOTE]
+> The `value` column is `json` rather than `jsonb` on purpose — `jsonb` sorts object keys, which
+> reordered the fields in the editor (an FAQ showed its answer above its question).
 
 Historically most pages rendered straight from `src/lib/data/content.json`. Dynamic routes (`events/[slug]`, `about/blog/[slug]`, `incubation/[slug]`, `incubated-startups/[slug]/[startupSlug]`, `opportunities/[id]`) look up entries by slug from the same file. Adding a new event/post means adding an entry — no new files needed.
 
 Job postings are the union of the eight seed posts in `content.json` and live rows from
-`public.jobs`, so the Opportunities page still renders if Supabase is unreachable.
+`public.jobs`, so the Opportunities page still renders if Supabase is unreachable. Both
+kinds accept applications: an application records the role's slug plus a snapshot of its
+role and company names, so it still reads correctly after the posting is taken down.
 
 ## SEO
 
@@ -218,3 +572,25 @@ Submit `https://iitgtic.vercel.app/sitemap.xml` to:
 ## Deploy
 
 Deployed to Vercel via `@sveltejs/adapter-auto`. Pushes to `main` deploy automatically.
+
+## Roadmap
+
+The live checklist is at **[/status](https://iitgtic.vercel.app/status)** — every route,
+component and backend piece, with a frontend and a backend rail. The open items today:
+
+| Area                         | Gap                                                                                                                   |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Transactional email          | Nothing is sent — no applicant receipt, no nudge to a company, no notice when an account is verified                  |
+| Company-side applicant inbox | `job_applications` already records `job_id` and `company_id`; a verified company still cannot read its own applicants |
+| Rate limiting                | Turnstile plus one-application-per-email is the only brake on the public submit route                                 |
+| Resume retention             | Resumes stay in the bucket until an admin deletes the row — no expiry, no bulk export                                 |
+| Backups                      | Running on Supabase defaults; the restore has never been rehearsed                                                    |
+| Per-page SEO                 | Only `<title>` per page — descriptions, OG and canonicals are global                                                  |
+| Prerender flags              | Static pages still SSR; `export const prerender = true` where it is safe                                              |
+| Real content                 | Partner logos, event and people photos, startup logos are placeholders                                                |
+| Application drafts           | A refresh still loses progress on the eight-step form                                                                 |
+
+<div align="center">
+<br>
+<sub>IIT Guwahati Technology Incubation Centre · <a href="https://iitgtic.vercel.app">iitgtic.vercel.app</a></sub>
+</div>
