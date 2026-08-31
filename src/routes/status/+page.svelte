@@ -404,7 +404,7 @@
 		},
 		{
 			name: 'Real content (logos, photos, bios)',
-			status: 'todo',
+			status: 'in-progress',
 			note: 'Partner logos, event photos, people photos, startup logos — placeholders today'
 		},
 		{
