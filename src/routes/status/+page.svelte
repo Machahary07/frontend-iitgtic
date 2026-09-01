@@ -11,8 +11,8 @@
 		{
 			date: '2026-08-31',
 			title: 'Transactional email',
-			status: 'done',
-			note: 'Email section in the console — usage against the Resend plan, delivery log with previews, and a block editor for every template.'
+			status: 'in-progress',
+			note: 'Console side is built — usage against the Resend plan, delivery log with previews, and a block editor for every template. Still to finish: the Supabase Auth confirmation email points at localhost instead of the live site, and deliverability (verified domain, webhooks) is not done.'
 		},
 		{
 			date: '2026-08-31',
@@ -420,8 +420,8 @@
 		{
 			date: '2026-08-31',
 			title: 'Transactional email',
-			status: 'done',
-			note: 'email_templates and email_log, both service-role only. A message is stored as blocks and its HTML compiled on save, so nobody edits markup to change a sentence. Sends go through Resend over its REST API; every attempt is logged with the rendered body, including one blocked by a missing key or a spent plan allowance.'
+			status: 'in-progress',
+			note: 'email_templates and email_log, both service-role only. A message is stored as blocks and its HTML compiled on save, so nobody edits markup to change a sentence. Sends go through Resend over its REST API; every attempt is logged with the rendered body, including one blocked by a missing key or a spent plan allowance. Not finished: the auth confirmation email links to localhost (Supabase Site URL / redirect config), and the sending domain is not verified.'
 		},
 		{
 			date: '2026-08-31',
