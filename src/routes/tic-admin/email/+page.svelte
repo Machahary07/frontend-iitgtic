@@ -8,10 +8,12 @@
 		adminGetEmailMessage,
 		adminLiftSuppression,
 		adminListEmailLog,
+		adminListNewsletter,
 		type EmailLogEntry,
 		type EmailMessage,
 		type EmailStatus
 	} from '$lib/utils/ticAdmin';
+	import { downloadCsv, stampedFileName, toCsv } from '$lib/utils/csv';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -28,6 +30,27 @@
 	let showTests = $state(false);
 	let loadingMore = $state(false);
 	let lifting = $state('');
+	let exportingList = $state(false);
+
+	// Pulled on demand rather than shipped with the page: the console shows a
+	// count, and only the export needs the addresses themselves.
+	async function exportNewsletter() {
+		exportingList = true;
+		try {
+			const subscribers = await adminListNewsletter();
+			if (subscribers.length === 0) return;
+
+			downloadCsv(
+				stampedFileName('newsletter'),
+				toCsv(
+					['Email', 'Source', 'Subscribed'],
+					subscribers.map((sub) => [sub.email, sub.source, fmtWhen(sub.created_at)])
+				)
+			);
+		} finally {
+			exportingList = false;
+		}
+	}
 
 	// Suppression is the right default — mailing a hard bounce again is what gets
 	// a sending domain blocked — but it is not permanent. A mailbox that was full
@@ -159,14 +182,48 @@
 				environment, then restart.
 			</p>
 		</div>
-	{:else if config.usingTestSender}
+	{:else if data.sendingDomain.state === 'sandbox'}
 		<div class="banner banner--info">
 			<p class="banner__title">Sending from Resend's sandbox address</p>
 			<p class="banner__body">
 				<code>{config.from}</code> only delivers to the address that owns the API key — real
-				applicants will not receive anything. Verify your domain in Resend, then set
-				<code>RESEND_FROM</code> to an address on it.
+				applicants will not receive anything. Add your domain in Resend, publish the DNS records it
+				gives you, then set <code>RESEND_FROM</code> to an address on it.
 			</p>
+		</div>
+	{:else if data.sendingDomain.state !== 'verified'}
+		<div
+			class="banner banner--info"
+			class:banner--warn={data.sendingDomain.state === 'failed' ||
+				data.sendingDomain.state === 'not-added'}
+		>
+			<p class="banner__title">
+				{data.sendingDomain.state === 'unknown'
+					? 'Could not check the sending domain'
+					: `${data.sendingDomain.domain} is not verified`}
+			</p>
+			<p class="banner__body">{data.sendingDomain.description}</p>
+
+			{#if 'records' in data.sendingDomain && data.sendingDomain.records.length > 0}
+				<p class="banner__body">Publish these at your DNS provider, then press Verify in Resend:</p>
+				<div class="dns">
+					<table>
+						<thead>
+							<tr><th>Type</th><th>Name</th><th>Value</th><th>Status</th></tr>
+						</thead>
+						<tbody>
+							{#each data.sendingDomain.records as record (record.name + record.type)}
+								<tr>
+									<td>{record.type}</td>
+									<td><code>{record.name}</code></td>
+									<td><code class="dns__value">{record.value}</code></td>
+									<td>{record.status ?? '—'}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
 		</div>
 	{/if}
 
@@ -289,6 +346,28 @@
 			<span>Peak {trendPeak} a day</span>
 			<span>{fmtDay(data.trend.at(-1)!.day)}</span>
 		</div>
+	</section>
+
+	<section class="panel">
+		<header class="panel__head">
+			<h2>Newsletter list</h2>
+			<button
+				class="btn"
+				onclick={exportNewsletter}
+				disabled={exportingList || data.newsletterCount === 0}
+			>
+				{exportingList ? 'Exporting…' : 'Export CSV'}
+			</button>
+		</header>
+		<p class="panel__body">
+			{#if data.newsletterCount === 0}
+				Nobody has subscribed from the footer form yet.
+			{:else}
+				<strong>{fmtNumber(data.newsletterCount)}</strong>
+				{data.newsletterCount === 1 ? 'person has' : 'people have'} subscribed from the footer form. Nothing
+				is sent to them automatically — this is a list to export, not a campaign.
+			{/if}
+		</p>
 	</section>
 
 	{#if data.suppressions.length > 0}
@@ -916,6 +995,51 @@
 		&--manual {
 			@include admin-badge-tone('warn');
 		}
+	}
+
+	.dns {
+		overflow-x: auto;
+		margin-top: 10px;
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 12px;
+		}
+
+		th {
+			text-align: left;
+			padding: 6px 10px 6px 0;
+			font-weight: $font-weight-semibold;
+			color: #555;
+			border-bottom: 1px solid #e6e8ec;
+			white-space: nowrap;
+		}
+
+		td {
+			padding: 6px 10px 6px 0;
+			border-bottom: 1px solid #f2f3f5;
+			vertical-align: top;
+		}
+
+		code {
+			font-size: 11px;
+			overflow-wrap: anywhere;
+		}
+	}
+
+	// A DKIM value is a long base64 key; it must wrap rather than stretch the row.
+	.dns__value {
+		display: inline-block;
+		max-width: 46ch;
+	}
+
+	.panel__body {
+		margin: 0;
+		padding: 14px 18px;
+		font-size: 13px;
+		line-height: 1.6;
+		color: #444;
 	}
 
 	.panel__note {

@@ -24,7 +24,10 @@ export const AFTER_PASSWORD_RESET = '/auth/reset-password';
 
 function siteOrigin(): string {
 	if (browser) return window.location.origin;
-	return (publicEnv.PUBLIC_SITE_URL?.trim() || 'https://iitgtic.in').replace(/\/$/, '');
+	return (publicEnv.PUBLIC_SITE_URL?.trim() || 'https://frontend-iitgtic.vercel.app').replace(
+		/\/$/,
+		''
+	);
 }
 
 export function authCallbackUrl(next: string): string {

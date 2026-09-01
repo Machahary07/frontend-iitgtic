@@ -24,7 +24,9 @@ export const LIMITS = {
 	// Per IP. The widget verifies once per form; a retry or two is normal.
 	turnstile: { windowSeconds: 600, max: 30 } satisfies Limit,
 	// Per IP. Guards the bootstrap password, which is a plain shared secret.
-	adminLogin: { windowSeconds: 900, max: 10 } satisfies Limit
+	adminLogin: { windowSeconds: 900, max: 10 } satisfies Limit,
+	// Per IP. Subscribing is one action; this only stops a script filling the list.
+	newsletter: { windowSeconds: 3600, max: 15 } satisfies Limit
 } as const;
 
 let lastSweep = 0;

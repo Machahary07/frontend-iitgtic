@@ -37,21 +37,22 @@ The backend is built on **Supabase** (Postgres + Auth + Row Level Security + Sto
 
 Postgres schema applied via Supabase migrations. **Ten tables, RLS enabled on every one:**
 
-| Table                | Holds                                                         |
-| -------------------- | ------------------------------------------------------------- |
-| `profiles`           | One row per auth user (founder / company / admin)             |
-| `companies`          | Job-portal accounts + verification status                     |
-| `jobs`               | Company job postings                                          |
-| `applications`       | Submitted incubation applications                             |
-| `job_applications`   | Applications to a role on the Opportunities board             |
-| `email_templates`    | Subject + HTML body per message                               |
-| `email_log`          | One row per send attempt                                      |
-| `audit_log`          | Every row change, with actor and before/after                 |
-| `page_views`         | One row per page view                                         |
-| `site_content`       | Editable copy for every public page                           |
-| `rate_limits`        | Fixed-window request counters for the public write routes     |
-| `email_events`       | Delivery feedback from Resend — what happened after a send    |
-| `email_suppressions` | Addresses that hard-bounced or complained; never mailed again |
+| Table                    | Holds                                                         |
+| ------------------------ | ------------------------------------------------------------- |
+| `profiles`               | One row per auth user (founder / company / admin)             |
+| `companies`              | Job-portal accounts + verification status                     |
+| `jobs`                   | Company job postings                                          |
+| `applications`           | Submitted incubation applications                             |
+| `job_applications`       | Applications to a role on the Opportunities board             |
+| `email_templates`        | Subject + HTML body per message                               |
+| `email_log`              | One row per send attempt                                      |
+| `audit_log`              | Every row change, with actor and before/after                 |
+| `page_views`             | One row per page view                                         |
+| `site_content`           | Editable copy for every public page                           |
+| `rate_limits`            | Fixed-window request counters for the public write routes     |
+| `email_events`           | Delivery feedback from Resend — what happened after a send    |
+| `email_suppressions`     | Addresses that hard-bounced or complained; never mailed again |
+| `newsletter_subscribers` | Footer signups, one row per address                           |
 
 Migrations, in order:
 
@@ -64,8 +65,9 @@ Migrations, in order:
 - `20260831000000_job_applications` — role-application table + unique-per-email index
 - `20260901000000_email`, `..._email_template_blocks`, `..._email_assets` — email system tables & assets bucket
 - `20260901030000_company_inbox_limits_and_delivery` — company applicant policy + column grant, resume storage policy, `rate_limits`, `email_events`, `email_suppressions`, and the missing owner-delete policy on the application bucket
+- `20260901040000_newsletter_subscribers` — somewhere for the footer form to write
 
-> **Ten tables became thirteen.** The migration above has not been pushed yet — see §8.
+> **Ten tables became fourteen.** Neither of the two migrations above has been pushed yet — see §8.
 
 ### 2.3 Security model
 
@@ -165,10 +167,12 @@ Three changes:
 
 **Configuration this depends on** — Supabase Dashboard → Authentication → URL Configuration. Without it Supabase drops an unlisted `emailRedirectTo` silently and uses the Site URL anyway:
 
-| Setting       | Value                                                                          |
-| ------------- | ------------------------------------------------------------------------------ |
-| Site URL      | `https://iitgtic.in`                                                           |
-| Redirect URLs | `https://iitgtic.in/**`, `https://*.vercel.app/**`, `http://localhost:5173/**` |
+| Setting       | Value                                                                                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Site URL      | `https://frontend-iitgtic.vercel.app` — where the app is actually served                                                                                |
+| Redirect URLs | `https://frontend-iitgtic.vercel.app/**`, `https://*.vercel.app/**`, `https://iitgtic.com/**`, `https://www.iitgtic.com/**`, `http://localhost:5173/**` |
+
+These are now recorded in `supabase/config.toml` so they are version-controlled rather than living only in a dashboard. `supabase config push` applies them — note it pushes the _whole_ config file, not just these two keys.
 
 `supabase/config.toml` was corrected to match for local development (it still pointed at `127.0.0.1:3000`, while the dev server runs on `5173`).
 
@@ -232,13 +236,32 @@ Found while reading the backend end to end, not reported by anyone:
 | `/login`                                                         | "Forgot password?" was an anchor pointing back at `/login` — a control that looked live and did nothing.                                                                                                                                                                                                                                                                                                                                                    |
 | `sendTemplateEmail()`                                            | The one failure path that returned without writing an `email_log` row was a call with no recipient — the case most worth seeing in the console, since it only happens when a caller is buggy.                                                                                                                                                                                                                                                               |
 
-### 3.10 Analytics & audit
+### 3.10 Search, social, drafts & the newsletter — 1 Sep 2026
+
+The remaining items on the `/status` checklist, closed out.
+
+**Per-page metadata.** `app.html` already carried a description, canonical, Open Graph and Twitter block — but hardcoded, identical on every page. That was worse than having none:
+
+- Two `<title>` tags on every page, the static one first, so **every server-rendered page and every crawler saw the homepage title** and the 37 real ones were dead. The per-page title only appeared after a client-side navigation, which is why it looked correct while browsing.
+- One `<link rel="canonical">` pointing every page at `https://iitgtic.vercel.app` — an instruction to Google to treat all 37 pages as duplicates of the homepage.
+
+`app.html` now keeps only what is genuinely invariant (keywords, author, `og:site_name`, `og:locale`, the Organization JSON-LD). Everything per-page comes from one `Seo.svelte` in the root layout. Descriptions are not new copy — they are read from each section's own `hero.lede` or `hero.intro`, so a page edited in the content console updates its own search snippet. Consoles, `/auth`, `/login` and `/application` are `noindex, nofollow`. An editable `seo` section was added for the site name and the fallback description.
+
+**Application drafts.** The eight-step, ~40-question form lost everything on a refresh — the row in `public.applications` is only written on submit. It now autosaves to `localStorage`, keyed per account so a shared machine keeps two founders apart, and restores the step, the completed steps and the answers, with a notice saying when it was saved and a way to start over. Deliberately excluded: the four uploads (a `File` cannot be serialised, and no browser will re-read one without the user picking it again) and the three consent boxes (consent restored from storage was never actually given). Kept out of the database on purpose: it is one person's unfinished writing, changing on every keystroke, that nobody else ever reads.
+
+**The newsletter form.** It called `preventDefault()` and then displayed "Thanks — we'll be in touch." Nothing was stored and nobody was ever in touch, so the message was simply untrue. It posts to `/api/newsletter` now — rate limited, validated, writing to a new `newsletter_subscribers` table — and only thanks you once the row exists. A repeat address is a plain success rather than an error, so the form cannot be used to find out who is already subscribed. The console shows the count and exports the list; a removal request deletes the row and is audited.
+
+**Avatars.** Every person and mentorship track now carries an `avatar { src, alt }`, editable in the content console like any other field (the editor recurses into nested objects, so this needed no editor work). A card renders the photograph when there is one and keeps the plain circle when there is not, so the pages work as they are and improve the moment real photographs land.
+
+**Prerendering — decided against, not deferred.** The checklist asked for `export const prerender = true` on the static pages. It should not be done: the root layout loads every page's copy from `site_content`, so a prerendered page freezes its text at build time and the content editor silently stops working on it; a prerendered route is also served without touching `hooks.server.ts`, so `page_views` would go dark exactly where traffic matters most. SSR with the in-process content cache already makes these pages a map lookup. The item is recorded as _won't do_ with that reasoning, and the checklist grew a fourth state so a deliberate decision no longer reads as an outstanding gap.
+
+### 3.11 Analytics & audit
 
 - **Page views** written by `src/hooks.server.ts` — one row per HTML GET, admin routes flagged and attributed.
 - **`page_impressions()`** separates crawlers from humans by user agent.
 - **Audit trail** written by Postgres triggers (not the app), so any row change is recorded; actor resolved from `auth.uid()` or the `x-actor-id` header.
 
-### 3.11 Build status page (`/status`)
+### 3.12 Build status page (`/status`)
 
 Self-hosted checklist of every route, component and backend piece, with a frontend and a backend rail. Updated across `dbc8e76`, `ac04233`.
 
@@ -272,6 +295,7 @@ Tracked live at `/status`. Open items:
 | **Email domain**                | Resend is still on the sandbox sender, which delivers only to the account owner. A DNS change, not a code change — and the only reason email is still marked _in progress_ |
 | Backups                         | Running on Supabase defaults; restore never rehearsed                                                                                                                      |
 | Company applicant notifications | A company sees its applicants but is not told when a new one arrives; the inbox is pull-only                                                                               |
+| Real content                    | Partner logos, event and people photographs, startup logos are still placeholders. The `avatar` fields and the content console are ready for them; the pictures are not    |
 | Per-page SEO                    | Only `<title>` per page — descriptions, OG, canonicals are global                                                                                                          |
 | Prerender flags                 | Static pages still SSR                                                                                                                                                     |
 | Real content                    | Partner logos, event/people photos, startup logos are placeholders                                                                                                         |
@@ -304,22 +328,25 @@ _Migration timestamps span `20260829` → `20260901`; several were merged throug
 
 ## 8. What has to be done outside the code
 
-None of this can be done from the repository, and three of the four features above are inert until it is.
+The largest item on this list — pushing the two migrations — was closed on 2026-09-01, so the features that were inert against a schema that did not have them are now live and verified. What remains genuinely cannot be done from the repository: it needs a dashboard, a DNS record, or a project to throw away.
 
 **Verified 2026-09-01 by probing the live project**, rather than assumed:
 
-- The redirect allow-list is _not_ wide open — an unrelated origin was correctly rejected. But only `localhost` is accepted (Supabase always permits it). `https://iitgtic.in` and `https://*.vercel.app` were both **replaced with `http://localhost:3000`**, which means the Site URL is still the dashboard default and **a confirmation link from the deployed site still points at localhost**. The code fix works in dev today; production needs the table below.
-- **`iitgtic.in` has no DNS at all** — no MX record and no A record. Three consequences: Supabase Auth rejects any `@iitgtic.in` address as invalid, so nobody at that domain can sign up; Resend can never verify it as a sending domain, so the "verify the domain" item is blocked on the domain existing first; and `PUBLIC_SITE_URL=https://iitgtic.in` points at nothing. The site currently lives at `iitgtic.vercel.app`.
+- The redirect allow-list is _not_ wide open — an unrelated origin was correctly rejected. But only `localhost` is accepted (Supabase always permits it), which means the Site URL is still the dashboard default and **a confirmation link from the deployed site still points at localhost**. The code fix works in dev today; production needs the table below.
+- **The domain is `iitgtic.com`, not `iitgtic.in`.** An earlier pass in this report recorded `.in`, which resolves to nothing — hence the previous conclusion that "the domain does not exist". Corrected by direct lookup: `iitgtic.com` answers on A `108.167.146.149`, serves a 200, and carries Google Workspace MX records, so `@iitgtic.com` addresses are valid for signup. It is currently the _previous_ site, on shared hosting rather than Vercel; the new site lives at `frontend-iitgtic.vercel.app` until the cutover. Verifying it as a Resend sending domain therefore is not blocked on the domain existing — it is blocked on DNS access, which the team does not have yet.
+- **The Resend key in `.env.local` is send-only.** `GET /domains` answers `401 restricted_api_key`. The earlier reading of "no domains registered at all" was this restriction, not an empty account — the key cannot see the list either way. The domain check in `pnpm doctor` and in the email console needs a full-access key to report anything.
 
-| Step                                        | Where                                          | Why it matters                                                                                                                                                                                                                |
-| ------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Push the migration** — `supabase db push` | Supabase CLI                                   | `20260901030000_company_inbox_limits_and_delivery.sql` has been written but **not applied**. Until it is, the company inbox reads nothing, the rate limiter fails open on every request, and the webhook answers 500.         |
-| **Auth URL configuration**                  | Dashboard → Authentication → URL Configuration | Site URL `https://iitgtic.in`; redirect URLs `https://iitgtic.in/**`, `https://*.vercel.app/**`, `http://localhost:5173/**`. An `emailRedirectTo` that is not allow-listed is dropped silently and the Site URL used instead. |
-| **`RESEND_WEBHOOK_SECRET`**                 | Resend → Webhooks, then Vercel env             | Add an endpoint at `https://<site>/api/resend-webhook` subscribed to `email.bounced` and `email.complained`, and put the `whsec_…` secret in the environment. Without it the endpoint refuses everything, by design.          |
-| **`PUBLIC_SITE_URL`**                       | Vercel env                                     | Currently `http://localhost:5173` in `.env.local`. Every link inside a template email is built from it, so production mail would otherwise ship localhost links.                                                              |
-| **Register / point `iitgtic.in`**           | DNS registrar                                  | Blocks the row below, and blocks `@iitgtic.in` signups. Today the domain resolves to nothing.                                                                                                                                 |
-| **Verify the sending domain**               | Resend → Domains                               | The last thing keeping email marked _in progress_, and not startable until the row above is done.                                                                                                                             |
+| Step                                              | Where                                          | Why it matters                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ~~**Push the migrations**~~ — **done 2026-09-01** | Supabase CLI                                   | Both applied to `vbgldorzvhuippjmqiwq` and verified against the live project: the limiter refuses the 16th write in an hour and returns a retry-after, a forged / stale / tampered webhook payload is rejected and a real bounce writes a suppression, the newsletter stores rows and dedupes on `23505`, and none of the four new tables is readable by an anonymous client. |
+| **Auth URL configuration**                        | Dashboard → Authentication → URL Configuration | Site URL `https://frontend-iitgtic.vercel.app`; redirect URLs as in the table above. An `emailRedirectTo` that is not allow-listed is dropped silently and the Site URL used instead. Recorded in `supabase/config.toml`; still needs applying.                                                                                                                               |
+| **`RESEND_WEBHOOK_SECRET`**                       | Resend → Webhooks, then Vercel env             | Add an endpoint at `https://<site>/api/resend-webhook` subscribed to `email.bounced` and `email.complained`, and put the `whsec_…` secret in the environment. Without it the endpoint refuses everything, by design.                                                                                                                                                          |
+| **`PUBLIC_SITE_URL`**                             | Vercel env                                     | Currently `http://localhost:5173` in `.env.local`. Every link inside a template email is built from it, so production mail would otherwise ship localhost links.                                                                                                                                                                                                              |
+| **DNS access for `iitgtic.com`**                  | Whoever holds the registrar / DNS account      | The domain exists and is live; the records are simply not ours to edit yet. Publishing Resend's DKIM and SPF is the only thing standing between the current sandbox sender and real mail.                                                                                                                                                                                     |
+| **A full-access Resend API key**                  | Resend → API Keys                              | The current key is send-only, so the domain-verification check cannot read anything. Needed for `pnpm doctor` and the console to report the real state.                                                                                                                                                                                                                       |
+| **Verify the sending domain**                     | Resend → Domains                               | The last thing keeping email marked _in progress_. Add `iitgtic.com`, publish the records it returns, then set `RESEND_FROM` to an address on it.                                                                                                                                                                                                                             |
+| **Rehearse a real restore**                       | A scratch Supabase project                     | `pnpm backup` is now complete and `pnpm restore --dry-run` passes; what is untested is writing a backup back into a live database. Needs a project that can be thrown away afterwards.                                                                                                                                                                                        |
 
 ---
 
-<sub>IIT Guwahati Technology Incubation Centre · iitgtic.vercel.app</sub>
+<sub>IIT Guwahati Technology Incubation Centre · frontend-iitgtic.vercel.app</sub>

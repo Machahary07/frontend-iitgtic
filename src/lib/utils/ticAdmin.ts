@@ -170,6 +170,20 @@ export async function adminLiftSuppression(email: string): Promise<boolean> {
 	return res.ok;
 }
 
+export type NewsletterSubscriber = {
+	id: string;
+	email: string;
+	source: string;
+	created_at: string;
+};
+
+export async function adminListNewsletter(): Promise<NewsletterSubscriber[]> {
+	const res = await fetch('/api/tic-admin/newsletter');
+	if (!res.ok) return [];
+	const body = (await res.json().catch(() => ({}))) as { subscribers?: NewsletterSubscriber[] };
+	return body.subscribers ?? [];
+}
+
 // --- users -----------------------------------------------------------------
 
 export type UserRole = 'founder' | 'company' | 'admin';

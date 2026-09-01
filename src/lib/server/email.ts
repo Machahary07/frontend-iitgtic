@@ -65,7 +65,10 @@ export function emailConfig(): EmailConfig {
 		replyTo: env.RESEND_REPLY_TO?.trim() || '',
 		// PUBLIC_-prefixed, so it comes from the public env module — links inside an
 		// email have no request to infer an origin from.
-		siteUrl: (publicEnv.PUBLIC_SITE_URL?.trim() || 'https://iitgtic.in').replace(/\/$/, ''),
+		siteUrl: (publicEnv.PUBLIC_SITE_URL?.trim() || 'https://frontend-iitgtic.vercel.app').replace(
+			/\/$/,
+			''
+		),
 		siteName: env.EMAIL_SITE_NAME?.trim() || 'IIT Guwahati TIC',
 		plan,
 		monthlyLimit:

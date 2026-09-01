@@ -28,3 +28,5 @@ vite.config.ts.timestamp-*
 
 #pnpm
 pnpm-workspace.yaml
+# Backups taken by scripts/backup.js — real personal data, never commit these.
+backups/

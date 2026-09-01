@@ -5,6 +5,7 @@
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
 	import { loadUserSession } from '$lib/utils/userSession';
 	import { submitApplication } from '$lib/utils/applications';
+	import { clearDraft, loadDraft, saveDraft, savedAgo } from '$lib/utils/applicationDraft';
 
 	const STEPS = [
 		{ n: 1, title: 'Founder Info' },
@@ -95,6 +96,13 @@
 	let submitError = $state('');
 	let errors = $state<Record<string, string>>({});
 	let completedSteps = $state(new Set<number>());
+
+	// Draft state. `draftReady` gates the autosave: without it the first effect
+	// run would write the empty initial form over a saved draft before onMount
+	// has had a chance to restore it.
+	let userId = $state('');
+	let draftReady = $state(false);
+	let restoredFrom = $state('');
 
 	const data = $state<FormData>({
 		fullName: '',
@@ -301,6 +309,9 @@
 
 		completedSteps = new Set(completedSteps).add(step);
 		submitted = true;
+		// The row in public.applications is the record now, so the draft is done.
+		clearDraft(userId);
+		restoredFrom = '';
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
@@ -313,6 +324,13 @@
 
 	function goSignUp() {
 		goto(resolve('/apply'));
+	}
+
+	function discardDraft() {
+		if (!confirm('Discard the saved draft and start this application again?')) return;
+		clearDraft(userId);
+		restoredFrom = '';
+		location.reload();
 	}
 
 	onMount(async () => {
@@ -328,6 +346,30 @@
 			const digits = session.phone.replace(/\D/g, '').slice(0, 10);
 			data.phone = digits;
 		}
+
+		// The draft wins over the profile prefill: what someone typed is more
+		// current than what their account happens to hold.
+		userId = session.id;
+		const draft = loadDraft(userId);
+		if (draft) {
+			for (const [key, value] of Object.entries(draft.values)) {
+				if (key in data) (data as Record<string, unknown>)[key] = value;
+			}
+			step = Math.min(Math.max(draft.step, 1), STEPS.length);
+			completedSteps = new Set(draft.completedSteps ?? []);
+			restoredFrom = draft.savedAt;
+		}
+
+		draftReady = true;
+	});
+
+	// Autosaved on every change. Reading the serialised form inside the effect is
+	// what subscribes it to all forty fields without listing them.
+	$effect(() => {
+		if (!draftReady || !userId || submitted) return;
+		const snapshot = { ...data };
+		void JSON.stringify({ snapshot, step, completed: [...completedSteps] });
+		saveDraft(userId, snapshot as Record<string, unknown>, step, [...completedSteps]);
 	});
 </script>
 
@@ -353,8 +395,21 @@
 		{:else}
 			<header class="app__header">
 				<h1>Apply to IITG TIC</h1>
-				<p class="app__sub">Complete all 8 steps to submit your application.</p>
+				<p class="app__sub">
+					Complete all 8 steps to submit your application. Your answers are saved on this device as
+					you go, so you can close this and come back.
+				</p>
 			</header>
+
+			{#if restoredFrom}
+				<div class="draft" role="status">
+					<p class="draft__text">
+						Picked up where you left off — saved {savedAgo(restoredFrom)}. Your uploads and the
+						final consent boxes are not saved and will need doing again.
+					</p>
+					<button type="button" class="draft__discard" onclick={discardDraft}> Start over </button>
+				</div>
+			{/if}
 
 			<!-- Progress bar -->
 			<div class="progress" aria-label="Application progress">
@@ -1023,6 +1078,49 @@
 		margin: 0;
 		font-size: $font-size-base;
 		color: rgba($color-black, 0.7);
+	}
+
+	// ---- Restored draft ----
+	.draft {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: $space-4;
+		margin-bottom: $space-6;
+		padding: $space-3 $space-4;
+		border: 1px solid rgba($color-black, 0.12);
+		border-left: 2px solid $color-black;
+		border-radius: 4px;
+		background: rgba($color-black, 0.03);
+
+		@include breakpoint-down($bp-sm) {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+	}
+
+	.draft__text {
+		margin: 0;
+		font-size: $font-size-sm;
+		line-height: 1.55;
+		color: rgba($color-black, 0.75);
+	}
+
+	.draft__discard {
+		flex-shrink: 0;
+		padding: 8px 14px;
+		font: inherit;
+		font-size: $font-size-sm;
+		font-weight: $font-weight-semibold;
+		color: $color-black;
+		background: $color-white;
+		border: 1px solid rgba($color-black, 0.2);
+		border-radius: 4px;
+		cursor: pointer;
+
+		&:hover {
+			background: rgba($color-black, 0.05);
+		}
 	}
 
 	// ---- Progress bar ----
