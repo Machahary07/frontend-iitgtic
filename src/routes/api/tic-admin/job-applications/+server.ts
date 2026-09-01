@@ -74,6 +74,69 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 	return json({ ok: true, email });
 };
 
+// Full rows for the CSV export. The page loader deliberately selects a summary —
+// it renders a table, and shipping every applicant's resume path and free-text
+// answer into the HTML of a list view is a waste at best. An export needs the
+// whole record, so it asks for it here instead.
+export const GET: RequestHandler = async ({ cookies, url }) => {
+	const ctx = requireAdmin(cookies);
+	const jobSlug = url.searchParams.get('jobSlug');
+
+	let query = ctx.db
+		.from('job_applications')
+		.select(
+			'id, job_slug, job_role, job_company, job_source, full_name, email, phone, applicant_role, portfolio_link, why, start_date, onsite_ok, status, review_note, reviewed_at, created_at'
+		)
+		.order('created_at', { ascending: false });
+
+	if (jobSlug) query = query.eq('job_slug', jobSlug);
+
+	const { data, error: dbError } = await query;
+	if (dbError) error(500, dbError.message);
+
+	await logAdminAction(ctx, `exported applicants${jobSlug ? ` for ${jobSlug}` : ''}`, {
+		table: 'job_applications'
+	});
+
+	return json({ applicants: data ?? [] });
+};
+
+// Retention, done by hand. There is no scheduled purge: resumes are people's
+// personal documents, and deleting them on a timer is the kind of thing that is
+// only noticed once it has already run. Clearing a closed role is a decision
+// somebody makes, and it is audited like every other admin action.
+export const POST: RequestHandler = async ({ cookies, url }) => {
+	const ctx = requireAdmin(cookies);
+	const jobSlug = url.searchParams.get('jobSlug');
+	if (!jobSlug) error(400, 'Missing job slug.');
+
+	const { data: rows, error: readError } = await ctx.db
+		.from('job_applications')
+		.select('id, resume')
+		.eq('job_slug', jobSlug);
+	if (readError) error(500, readError.message);
+	if (!rows || rows.length === 0) return json({ ok: true, deleted: 0 });
+
+	// Files first: once the rows are gone nothing records where the objects are.
+	const paths = rows
+		.map((row) => (row.resume as { path?: string } | null)?.path)
+		.filter((path): path is string => Boolean(path));
+
+	if (paths.length > 0) {
+		const { error: storageError } = await supabaseAdmin.storage.from(BUCKET).remove(paths);
+		if (storageError) error(500, `Could not remove the resumes: ${storageError.message}`);
+	}
+
+	await logAdminAction(ctx, `cleared ${rows.length} applicant(s) for ${jobSlug}`, {
+		table: 'job_applications'
+	});
+
+	const { error: dbError } = await ctx.db.from('job_applications').delete().eq('job_slug', jobSlug);
+	if (dbError) error(500, dbError.message);
+
+	return json({ ok: true, deleted: rows.length });
+};
+
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
 	const ctx = requireAdmin(cookies);
 	const id = url.searchParams.get('id');

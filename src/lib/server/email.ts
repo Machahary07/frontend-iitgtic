@@ -252,6 +252,56 @@ export async function emailUsage(config = emailConfig()): Promise<EmailUsage> {
 	};
 }
 
+// --- suppression ------------------------------------------------------------
+
+export type Suppression = {
+	email: string;
+	reason: string;
+	detail: string | null;
+	createdAt: string;
+};
+
+/**
+ * Whether this address has hard-bounced or reported us as spam. Recorded by
+ * /api/resend-webhook; checked here so a suppressed address is refused before
+ * the send rather than counted against the plan and rejected by the provider.
+ *
+ * A lookup that fails returns null — a database problem must not stop mail.
+ */
+export async function findSuppression(email: string): Promise<Suppression | null> {
+	const address = email.trim().toLowerCase();
+	if (!address) return null;
+
+	const { data, error } = await supabaseAdmin
+		.from('email_suppressions')
+		.select('email, reason, detail, created_at')
+		.eq('email', address)
+		.maybeSingle();
+
+	if (error || !data) return null;
+	return {
+		email: data.email as string,
+		reason: data.reason as string,
+		detail: (data.detail as string | null) ?? null,
+		createdAt: data.created_at as string
+	};
+}
+
+export async function listSuppressions(limit = 200): Promise<Suppression[]> {
+	const { data } = await supabaseAdmin
+		.from('email_suppressions')
+		.select('email, reason, detail, created_at')
+		.order('created_at', { ascending: false })
+		.limit(limit);
+
+	return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+		email: row.email as string,
+		reason: row.reason as string,
+		detail: (row.detail as string | null) ?? null,
+		createdAt: row.created_at as string
+	}));
+}
+
 // --- sending ----------------------------------------------------------------
 
 export type SendResult = {
@@ -362,7 +412,9 @@ export async function sendTemplateEmail(options: SendOptions): Promise<SendResul
 	};
 
 	if (!options.to?.trim()) {
-		return { ok: false, status: 'blocked', id: null, error: 'No recipient address.' };
+		// Logged like every other block: a caller that passed no address is a bug
+		// worth seeing in the console, not something to swallow.
+		return blocked('No recipient address.');
 	}
 
 	const [template, layout] = await Promise.all([
@@ -381,6 +433,20 @@ export async function sendTemplateEmail(options: SendOptions): Promise<SendResul
 
 	if (!config.configured) {
 		return blocked('RESEND_API_KEY is not set, so nothing was sent.', subject, html);
+	}
+
+	// Mailing an address that hard-bounced or filed a spam complaint is what gets
+	// a sending domain blocked. A test send from the console is allowed through:
+	// checking whether an address now accepts mail again is a reason to send one.
+	if (!isTest) {
+		const suppressed = await findSuppression(options.to);
+		if (suppressed) {
+			return blocked(
+				`Address suppressed (${suppressed.reason}): ${suppressed.detail ?? 'no detail'}.`,
+				subject,
+				html
+			);
+		}
 	}
 
 	// Checked before the API call so a message that would bounce off the plan

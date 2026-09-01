@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
 import { sendTemplateEmail } from '$lib/server/email';
+import { removeApplicationDocuments } from '$lib/server/storageCleanup';
 import type { RequestHandler } from './$types';
 
 // Company moderation. `status` and `rejection_reason` are not granted to the
@@ -91,6 +92,15 @@ export const DELETE: RequestHandler = async ({ cookies, url }) => {
 		table: 'companies',
 		recordId: id
 	});
+
+	// Anything this account uploaded to the application bucket goes first — the
+	// cascade below removes the rows that name those files, and an object nothing
+	// points at can never be found again.
+	//
+	// Resumes are deliberately left alone: job_applications.company_id is `on
+	// delete set null`, so applications outlive the company that posted the role
+	// and the TIC console still needs to open them.
+	await removeApplicationDocuments(id);
 
 	// companies.id references auth.users on delete cascade, and jobs.company_id
 	// cascades from companies — so removing the auth user clears all three.

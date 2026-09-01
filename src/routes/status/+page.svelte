@@ -9,10 +9,16 @@
 	// the top; the sort below keeps the order right if one lands out of place.
 	const milestones: Milestone[] = [
 		{
+			date: '2026-09-01',
+			title: 'Company applicant inbox',
+			status: 'done',
+			note: 'A verified company sees who applied to its own roles, with signed resume links and a CSV export. Password reset now has a page to land on, and Forgot password actually sends one.'
+		},
+		{
 			date: '2026-08-31',
 			title: 'Transactional email',
 			status: 'in-progress',
-			note: 'Console side is built — usage against the Resend plan, delivery log with previews, and a block editor for every template. Still to finish: the Supabase Auth confirmation email points at localhost instead of the live site, and deliverability (verified domain, webhooks) is not done.'
+			note: 'Console side is built — usage against the Resend plan, delivery log with previews, and a block editor for every template. Confirmation links now come back to /auth/callback on the origin the person signed up on. Still to finish: deliverability — a verified sending domain, and bounce/complaint webhooks.'
 		},
 		{
 			date: '2026-08-31',
@@ -275,6 +281,24 @@
 			path: '/login',
 			status: 'done',
 			note: 'Turnstile-gated Supabase Auth sign-in'
+		},
+		{
+			name: 'Auth callback',
+			path: '/auth/callback',
+			status: 'done',
+			note: 'Where every link in an auth email lands — picks the session out of the URL and forwards to the right dashboard'
+		},
+		{
+			name: 'Set a new password',
+			path: '/auth/reset-password',
+			status: 'done',
+			note: 'The end of a recovery link. Forgot password on the sign-in screen sends one; an admin can send one too'
+		},
+		{
+			name: 'Company · applicants',
+			path: '/opportunities/job-posting-admin/applicants',
+			status: 'done',
+			note: "A verified company's own applicants, with status tabs, a per-role filter, signed resume links and a CSV export"
 		}
 	];
 
@@ -418,10 +442,16 @@
 	// belong to, so a migration landing is what moves a node here.
 	const backend: Milestone[] = [
 		{
+			date: '2026-09-01',
+			title: 'Hardening + delivery feedback',
+			status: 'done',
+			note: "Per-IP rate limits in Postgres on every public write and on the admin login. Resend bounces and complaints come back through a Svix-signed webhook and suppress the address. An RLS policy and a column grant open job_applications to the company that posted the role. Fixed alongside: an ilike pattern on the signup receipt that could match somebody else's account, a timing-variable compare on the bootstrap password, and uploaded documents that survived the account that owned them."
+		},
+		{
 			date: '2026-08-31',
 			title: 'Transactional email',
 			status: 'in-progress',
-			note: 'email_templates and email_log, both service-role only. A message is stored as blocks and its HTML compiled on save, so nobody edits markup to change a sentence. Sends go through Resend over its REST API; every attempt is logged with the rendered body, including one blocked by a missing key or a spent plan allowance. Not finished: the auth confirmation email links to localhost (Supabase Site URL / redirect config), and the sending domain is not verified.'
+			note: 'email_templates and email_log, both service-role only. A message is stored as blocks and its HTML compiled on save, so nobody edits markup to change a sentence. Sends go through Resend over its REST API; every attempt is logged with the rendered body, including one blocked by a missing key or a spent plan allowance. Auth mail now carries an emailRedirectTo of its own, so a confirmation link lands on /auth/callback rather than the project Site URL. Not finished: the sending domain is not verified.'
 		},
 		{
 			date: '2026-08-31',
@@ -494,7 +524,22 @@
 		{
 			name: 'job_applications',
 			status: 'done',
-			note: 'Applications to a role. The applicant has no account, so RLS carries zero policies — every read and write is service-role, one row per email per role'
+			note: 'Applications to a role. The applicant has no account, so every write is service-role; reads are service-role plus one policy that gives a verified company its own applicants, with review_note held back by a column grant'
+		},
+		{
+			name: 'rate_limits',
+			status: 'done',
+			note: 'Fixed-window counters for the public write routes. In Postgres rather than in memory because the app is serverless — a per-instance map resets on every cold start'
+		},
+		{
+			name: 'email_events',
+			status: 'done',
+			note: 'Delivery feedback from Resend — what happened after a message left. Deduplicated on (provider_id, type, occurred_at), because a webhook that did not get a 2xx is retried'
+		},
+		{
+			name: 'email_suppressions',
+			status: 'done',
+			note: 'Addresses that hard-bounced or filed a spam complaint; checked before every non-test send, and liftable from the console'
 		},
 		{
 			name: 'site_content',
@@ -529,7 +574,7 @@
 		{
 			name: 'Storage · job-applications',
 			status: 'done',
-			note: 'Private bucket of resumes, one folder per role; uploaded by the submit route, deleted with the row'
+			note: 'Private bucket of resumes, one folder per role; uploaded by the submit route, deleted with the row, and readable by the company that owns the role through a policy on the folder name'
 		},
 		{
 			name: 'Storage · email-assets',
@@ -539,7 +584,7 @@
 		{
 			name: 'Helper functions',
 			status: 'done',
-			note: 'slugify, touch_updated_at, is_company_verified, is_admin, admin_count, audit_actor, page_impressions'
+			note: 'slugify, touch_updated_at, is_company_verified, is_admin, admin_count, audit_actor, page_impressions, company_owns_job_slug, rate_limit_hit, rate_limit_sweep'
 		}
 	];
 
@@ -576,9 +621,9 @@
 			note: 'Move an incubation application through review; delete removes its documents first'
 		},
 		{
-			name: 'PATCH / DELETE /api/tic-admin/job-applications',
+			name: 'GET / PATCH / POST / DELETE /api/tic-admin/job-applications',
 			status: 'done',
-			note: 'Shortlist, mark sent on, decline; delete removes the resume from the bucket first'
+			note: 'Shortlist, mark sent on, decline; GET returns the full records for the CSV export, POST clears a whole role, and every delete removes the resume from the bucket first'
 		},
 		{
 			name: 'DELETE /api/tic-admin/jobs',
@@ -611,6 +656,16 @@
 			note: 'Uploads a picture or document for an image or file block; the body is compiled from blocks server-side, never taken from the browser'
 		},
 		{
+			name: 'DELETE /api/tic-admin/email/suppressions',
+			status: 'done',
+			note: 'Lifts a bounce or complaint suppression so the address can be written to again; audited like every other admin action'
+		},
+		{
+			name: 'POST /api/resend-webhook',
+			status: 'done',
+			note: 'Delivery feedback from Resend, Svix-signed. Verifies the HMAC and the timestamp before parsing, records the event, and suppresses the address on a permanent bounce or a complaint'
+		},
+		{
 			name: 'hooks.server.ts',
 			status: 'done',
 			note: 'Visitor cookie + page-view logging, handed to waitUntil so the write never delays a response'
@@ -619,29 +674,34 @@
 			name: 'requireAdmin() guard',
 			status: 'done',
 			note: 'Reads the session cookie and returns a service-role client tagged x-actor-id, which is how an audit row names a person'
+		},
+		{
+			name: 'withinLimit() rate limiter',
+			status: 'done',
+			note: 'Fixed-window counters in Postgres, on the role application, the signup receipt, the Turnstile check and the admin login. Fails open — a counter that cannot be read must not lock people out of a form'
 		}
 	];
 
 	const backendTodo: Item[] = [
 		{
-			name: 'Transactional email',
-			status: 'todo',
-			note: 'Nothing is sent yet — no applicant receipt, no nudge to the company, no notice when an account is verified. The console is the only place a submission is seen'
+			name: 'Email deliverability',
+			status: 'in-progress',
+			note: 'Bounces and complaints now come back through a signed webhook and take the address out of circulation. The one thing left is not code: Resend is still on the sandbox sender, which only reaches the account owner, until the domain is verified'
 		},
 		{
 			name: 'Company-side applicant inbox',
-			status: 'todo',
-			note: 'job_applications already records job_id and company_id, so a verified company could read its own applicants behind an RLS policy; today only the TIC team can'
+			status: 'done',
+			note: "A verified company reads the applicants for roles it posted at /opportunities/job-posting-admin/applicants — contact details, answers and a signed resume link. TIC's review notes are held back by a column grant, and there is no write path, so a status stays TIC's to set"
 		},
 		{
 			name: 'Rate limiting on public writes',
-			status: 'todo',
-			note: 'Turnstile plus one-application-per-email is the only brake on /api/job-applications; there is no per-IP limit'
+			status: 'done',
+			note: 'Per-IP fixed windows in Postgres on the role application, signup receipt, Turnstile check and admin login, alongside Turnstile and one-application-per-email'
 		},
 		{
 			name: 'Resume retention',
-			status: 'todo',
-			note: 'Resumes stay in the bucket until an admin deletes the row — no expiry, and no bulk export for a closed role'
+			status: 'done',
+			note: "CSV export per role on both sides, and a console action that clears a whole role, resumes first. Deliberately no scheduled purge — deleting people's documents on a timer is only noticed once it has already run"
 		},
 		{
 			name: 'Backups + restore drill',

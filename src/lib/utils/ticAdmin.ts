@@ -127,6 +127,49 @@ export async function adminDeleteJobApplication(id: string): Promise<boolean> {
 	return res.ok;
 }
 
+export type JobApplicationExportRow = JobApplicationSummary & {
+	phone: string;
+	portfolio_link: string;
+	why: string;
+	start_date: string | null;
+	onsite_ok: boolean;
+};
+
+// The full records behind the table, for the CSV. Fetched on demand rather than
+// carried in the page data: the export is occasional, the list view is not.
+export async function adminExportJobApplications(
+	jobSlug?: string
+): Promise<JobApplicationExportRow[]> {
+	const query = jobSlug ? `?jobSlug=${encodeURIComponent(jobSlug)}` : '';
+	const res = await fetch(`/api/tic-admin/job-applications${query}`);
+	if (!res.ok) return [];
+
+	const body = (await res.json().catch(() => ({}))) as { applicants?: JobApplicationExportRow[] };
+	return body.applicants ?? [];
+}
+
+/**
+ * Deletes every applicant for one role, resumes included. Returns how many went,
+ * or null if the purge failed.
+ */
+export async function adminClearJobApplicants(jobSlug: string): Promise<number | null> {
+	const res = await fetch(
+		`/api/tic-admin/job-applications?jobSlug=${encodeURIComponent(jobSlug)}`,
+		{ method: 'POST' }
+	);
+	if (!res.ok) return null;
+
+	const body = (await res.json().catch(() => ({}))) as { deleted?: number };
+	return body.deleted ?? 0;
+}
+
+export async function adminLiftSuppression(email: string): Promise<boolean> {
+	const res = await fetch(`/api/tic-admin/email/suppressions?email=${encodeURIComponent(email)}`, {
+		method: 'DELETE'
+	});
+	return res.ok;
+}
+
 // --- users -----------------------------------------------------------------
 
 export type UserRole = 'founder' | 'company' | 'admin';

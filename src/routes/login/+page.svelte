@@ -4,7 +4,7 @@
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
 	import Turnstile from '$lib/components/Turnstile.svelte';
-	import { signInFounder } from '$lib/utils/userSession';
+	import { requestPasswordReset, signInFounder } from '$lib/utils/userSession';
 	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	let email = $state('');
@@ -14,6 +14,22 @@
 	let turnstileToken = $state('');
 	let captcha = $state<{ reset: () => void }>();
 	let submitting = $state(false);
+	let notice = $state('');
+
+	// "Forgot password?" was an anchor back to this same page, so choosing it did
+	// nothing at all. It sends the reset link now, using whatever is in the email
+	// field.
+	async function handleForgot(event: MouseEvent) {
+		event.preventDefault();
+		notice = '';
+		if (!email.trim()) {
+			error = 'Enter your email address first, then choose Forgot password.';
+			return;
+		}
+		error = '';
+		await requestPasswordReset(email);
+		notice = `If ${email.trim()} has an account, a reset link is on its way.`;
+	}
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -75,13 +91,22 @@
 					<span class="agree__dot" aria-hidden="true"></span>
 					<span class="agree__text">Remember me</span>
 				</label>
-				<LinkReveal href="/login" text="Forgot password?" class="form__forgot inline-link" />
+				<LinkReveal
+					href="/login"
+					text="Forgot password?"
+					class="form__forgot inline-link"
+					onclick={handleForgot}
+				/>
 			</div>
 
 			<Turnstile bind:token={turnstileToken} bind:this={captcha} />
 
 			{#if error}
 				<p class="form__error" role="alert">{error}</p>
+			{/if}
+
+			{#if notice}
+				<p class="form__notice" role="status">{notice}</p>
 			{/if}
 
 			<ButtonReveal
@@ -209,6 +234,15 @@
 	:global(.inline-link) {
 		color: $color-white;
 		font-weight: $font-weight-semibold;
+	}
+
+	.form__notice {
+		margin: 0;
+		padding: 8px 12px;
+		font-size: $font-size-sm;
+		color: $color-white;
+		background: rgba($color-white, 0.14);
+		border-left: 2px solid $color-white;
 	}
 
 	.form__error {

@@ -9,6 +9,7 @@
 // routes (service role) can verify or reject an account.
 
 import { supabase } from '$lib/supabaseClient';
+import { AFTER_COMPANY_SIGNUP, authCallbackUrl } from '$lib/utils/authRedirect';
 
 export type CompanyStatus = 'pending' | 'verified' | 'rejected';
 
@@ -99,6 +100,8 @@ export async function signupCompany(input: {
 		email,
 		password: input.password,
 		options: {
+			// Without this the confirmation link falls back to the project's Site URL.
+			emailRedirectTo: authCallbackUrl(AFTER_COMPANY_SIGNUP),
 			data: {
 				role: 'company',
 				company_name: companyName,

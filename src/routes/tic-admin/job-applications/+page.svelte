@@ -5,10 +5,13 @@
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import {
+		adminClearJobApplicants,
+		adminExportJobApplications,
 		adminSetJobApplicationStatus,
 		type JobApplicationStatus,
 		type JobApplicationSummary
 	} from '$lib/utils/ticAdmin';
+	import { downloadCsv, stampedFileName, toCsv } from '$lib/utils/csv';
 	import type { PageData } from './$types';
 
 	type Filter = 'all' | JobApplicationStatus;
@@ -44,9 +47,102 @@
 		rejected: byRole.filter((a) => a.status === 'rejected').length
 	});
 
+	let busy = $state('');
+	let notice = $state('');
+
 	async function setStatus(id: string, status: JobApplicationStatus) {
 		await adminSetJobApplicationStatus(id, status);
 		await invalidateAll();
+	}
+
+	// The whole record, not the summary the table renders — the point of an
+	// export is the free-text answers and the contact details.
+	async function handleExport() {
+		busy = 'export';
+		notice = '';
+		try {
+			const rows = await adminExportJobApplications(role === 'all' ? undefined : role);
+			if (rows.length === 0) {
+				notice = 'Nothing to export in this view.';
+				return;
+			}
+
+			const csv = toCsv(
+				[
+					'Applied',
+					'Name',
+					'Email',
+					'Phone',
+					'Role',
+					'Company',
+					'Source',
+					'Currently',
+					'Earliest start',
+					'On site',
+					'Portfolio',
+					'Status',
+					'Review note',
+					'Reviewed',
+					'Why'
+				],
+				rows.map((r) => [
+					fmtDate(r.created_at),
+					r.full_name,
+					r.email,
+					r.phone,
+					r.job_role,
+					r.job_company,
+					r.job_source,
+					r.applicant_role,
+					r.start_date ?? '',
+					r.onsite_ok,
+					r.portfolio_link,
+					r.status,
+					r.review_note ?? '',
+					r.reviewed_at ? fmtDate(r.reviewed_at) : '',
+					r.why
+				])
+			);
+
+			downloadCsv(
+				stampedFileName('applicants', role === 'all' ? 'all-roles' : roleLabel(role)),
+				csv
+			);
+			notice = `Exported ${rows.length} applicant${rows.length === 1 ? '' : 's'}.`;
+		} finally {
+			busy = '';
+		}
+	}
+
+	// Retention is a decision, not a schedule. Confirmed twice because it takes
+	// the resumes with it and there is no undo.
+	async function handleClearRole() {
+		if (role === 'all') return;
+		const count = counts.all;
+		const label = roleLabel(role);
+
+		if (
+			!confirm(
+				`Delete all ${count} applicant${count === 1 ? '' : 's'} for "${label}", including their resumes?\n\nThis cannot be undone. Export first if you need a record.`
+			)
+		) {
+			return;
+		}
+
+		busy = 'clear';
+		notice = '';
+		try {
+			const deleted = await adminClearJobApplicants(role);
+			if (deleted === null) {
+				notice = 'Could not clear that role. Nothing was deleted.';
+				return;
+			}
+			notice = `Deleted ${deleted} applicant${deleted === 1 ? '' : 's'} and their resumes.`;
+			role = 'all';
+			await invalidateAll();
+		} finally {
+			busy = '';
+		}
 	}
 
 	async function handleLogout() {
@@ -118,7 +214,22 @@
 				</select>
 			</label>
 		{/if}
+
+		<div class="retention">
+			<button class="btn" onclick={handleExport} disabled={busy !== ''}>
+				{busy === 'export' ? 'Exporting…' : 'Export CSV'}
+			</button>
+			{#if role !== 'all'}
+				<button class="btn btn--danger" onclick={handleClearRole} disabled={busy !== ''}>
+					{busy === 'clear' ? 'Clearing…' : 'Clear this role'}
+				</button>
+			{/if}
+		</div>
 	</div>
+
+	{#if notice}
+		<p class="notice" role="status">{notice}</p>
+	{/if}
 
 	<div class="panel">
 		{#if filtered.length === 0}
@@ -284,6 +395,23 @@
 		color: #666;
 	}
 
+	.retention {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.notice {
+		margin: 0 0 16px;
+		padding: 8px 12px;
+		font-family: $font-family-base;
+		font-size: 13px;
+		color: #24427e;
+		background: #eef2fb;
+		border-left: 2px solid #24427e;
+		border-radius: 4px;
+	}
+
 	.panel {
 		background: #fff;
 		border: 1px solid #e6e8ec;
@@ -439,6 +567,11 @@
 
 		&:hover {
 			background: #f3f4f6;
+		}
+
+		&:disabled {
+			opacity: 0.55;
+			cursor: not-allowed;
 		}
 
 		&--primary {

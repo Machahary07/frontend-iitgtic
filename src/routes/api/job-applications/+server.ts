@@ -3,6 +3,7 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { sendTemplateEmail } from '$lib/server/email';
 import { getSiteContent } from '$lib/server/siteContent';
 import { verifyTurnstile } from '$lib/server/turnstile';
+import { LIMITS, retryMinutes, withinLimit } from '$lib/server/rateLimit';
 import {
 	EMAIL_RE,
 	RESUME_MAX_BYTES,
@@ -76,6 +77,15 @@ function text(form: FormData, key: string): string {
 }
 
 export const POST: RequestHandler = async ({ request, url, getClientAddress }) => {
+	// Ahead of reading the body: a scripted caller with solved tokens should be
+	// stopped before an upload is parsed, not after.
+	if (!(await withinLimit('jobApplication', getClientAddress()))) {
+		error(
+			429,
+			`Too many applications from this connection. Try again in ${retryMinutes(LIMITS.jobApplication)} minutes.`
+		);
+	}
+
 	const form = await request.formData().catch(() => null);
 	if (!form) error(400, 'Malformed submission.');
 

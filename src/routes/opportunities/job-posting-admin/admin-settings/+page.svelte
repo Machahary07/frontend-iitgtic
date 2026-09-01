@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import AdminShell from '$lib/components/AdminShell.svelte';
+	import { COMPANY_PORTAL_NAV } from '$lib/utils/companyNav';
 	import {
 		changePassword,
 		deleteCurrentCompany,
@@ -10,12 +11,6 @@
 		type CompanyAccount
 	} from '$lib/utils/companyAuth';
 	import { onMount } from 'svelte';
-
-	const navItems = [
-		{ label: 'Dashboard', href: '/opportunities/job-posting-admin' },
-		{ label: 'Post a role', href: '/opportunities/job-posting-admin/edit/new' },
-		{ label: 'Account settings', href: '/opportunities/job-posting-admin/admin-settings' }
-	];
 
 	let mounted = $state(false);
 	let account = $state<CompanyAccount | null>(null);
@@ -99,7 +94,7 @@
 	<AdminShell
 		brand="Company portal"
 		brandSub={account.companyName}
-		{navItems}
+		navItems={COMPANY_PORTAL_NAV}
 		title="Account settings"
 		eyebrow="Settings"
 		user={account.companyName}

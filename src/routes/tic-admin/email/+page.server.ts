@@ -1,5 +1,5 @@
 import { adminDb } from '$lib/server/adminData';
-import { emailConfig, emailUsage, resolveAllTemplates } from '$lib/server/email';
+import { emailConfig, emailUsage, listSuppressions, resolveAllTemplates } from '$lib/server/email';
 import { EMAIL_LAYOUT_KEY } from '$lib/utils/emailTemplates';
 import type { PageServerLoad } from './$types';
 
@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 	const db = adminDb(admin!);
 	const config = emailConfig();
 
-	const [usage, templates, log, daily] = await Promise.all([
+	const [usage, templates, log, daily, suppressions] = await Promise.all([
 		emailUsage(config),
 		resolveAllTemplates(),
 		db
@@ -31,7 +31,10 @@ export const load: PageServerLoad = async ({ parent }) => {
 			.from('email_log')
 			.select('created_at, status')
 			.gte('created_at', new Date(Date.now() - 29 * 86_400_000).toISOString())
-			.order('created_at', { ascending: true })
+			.order('created_at', { ascending: true }),
+		// Addresses that hard-bounced or filed a complaint. Nothing is sent to
+		// these, so they belong next to the meter rather than buried in the log.
+		listSuppressions()
 	]);
 
 	const buckets = new Map<string, { sent: number; failed: number; blocked: number }>();
@@ -62,6 +65,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 		templates: templates.filter((t) => t.key !== EMAIL_LAYOUT_KEY),
 		log: log.data ?? [],
 		hasMore: (log.data?.length ?? 0) === PAGE_SIZE,
-		trend: [...buckets].map(([day, counts]) => ({ day, ...counts }))
+		trend: [...buckets].map(([day, counts]) => ({ day, ...counts })),
+		suppressions
 	};
 };

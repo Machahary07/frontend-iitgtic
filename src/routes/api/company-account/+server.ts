@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { sendTemplateEmail } from '$lib/server/email';
+import { LIMITS, retryMinutes, withinLimit } from '$lib/server/rateLimit';
 import type { RequestHandler } from './$types';
 
 // A company can delete its own account. Removing the row from `companies` is
@@ -16,15 +17,23 @@ import type { RequestHandler } from './$types';
 // an open relay.
 const SIGNUP_WINDOW_MS = 10 * 60 * 1000;
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, getClientAddress }) => {
+	if (!(await withinLimit('signupReceipt', getClientAddress()))) {
+		error(429, `Too many requests. Try again in ${retryMinutes(LIMITS.signupReceipt)} minutes.`);
+	}
+
 	const body = (await request.json().catch(() => ({}))) as { email?: string };
 	const email = body.email?.trim().toLowerCase();
 	if (!email) error(400, 'Missing email address.');
 
+	// eq, not ilike: PostgREST hands an ilike value through as a LIKE pattern, so
+	// `%` and `_` in the body would match somebody else's account and post them a
+	// receipt. Supabase Auth stores addresses lowercased and the signup trigger
+	// copies that value, so an exact match on the lowercased input is right.
 	const { data: company } = await supabaseAdmin
 		.from('companies')
 		.select('id, email, company_name, contact_name, created_at')
-		.ilike('email', email)
+		.eq('email', email)
 		.maybeSingle();
 
 	// Silent on a miss: answering differently for a real and an invented address
