@@ -463,6 +463,12 @@
 	// belong to, so a migration landing is what moves a node here.
 	const backend: Milestone[] = [
 		{
+			date: '2026-09-03',
+			title: 'Editable media',
+			status: 'in-progress',
+			note: 'Media in site content is becoming uploadable, not just its alt text. A public site-assets bucket plus /api/tic-admin/content/assets (admin-only, service-role) receives an upload; the content editor shows a preview and an upload button wherever a field reads as an image, and resolveMedia() lets an uploaded URL and a legacy bundled key coexist while content migrates. First surface: the Partners logos, which the home association marquee now mirrors, so one edit updates both. Still to do: the remaining {alt}-only placeholders (events, incubation, startups) and video.'
+		},
+		{
 			date: '2026-09-01',
 			title: 'Backups + real domain status',
 			status: 'done',
@@ -614,6 +620,11 @@
 			note: 'Public bucket for pictures and documents inside an email — mail clients fetch an image unauthenticated, so a signed URL would break after delivery; admin-only to write'
 		},
 		{
+			name: 'Storage · site-assets',
+			status: 'in-progress',
+			note: 'Public bucket for images uploaded from the content editor; admin-only to write. Wired up for the Partners logos first — the rest of the placeholders and video still to migrate'
+		},
+		{
 			name: 'Helper functions',
 			status: 'done',
 			note: 'slugify, touch_updated_at, is_company_verified, is_admin, admin_count, audit_actor, page_impressions, company_owns_job_slug, rate_limit_hit, rate_limit_sweep'
@@ -696,6 +707,11 @@
 			name: 'POST /api/tic-admin/email/assets',
 			status: 'done',
 			note: 'Uploads a picture or document for an image or file block; the body is compiled from blocks server-side, never taken from the browser'
+		},
+		{
+			name: 'POST /api/tic-admin/content/assets',
+			status: 'in-progress',
+			note: 'Uploads an image for a media field in the content editor into the public site-assets bucket; admin-only, returns the public URL saved into the section'
 		},
 		{
 			name: 'DELETE /api/tic-admin/email/suppressions',
