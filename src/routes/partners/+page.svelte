@@ -1,19 +1,17 @@
 <script lang="ts">
 	import CallToAction from '$lib/components/CallToAction.svelte';
 	import { getContent } from '$lib/content';
-	import { images } from '$lib/data/images';
+	import { resolveMedia } from '$lib/media';
 	import { loadGsap, prefersReducedMotion } from '$lib/utils/animation';
 
 	const content = getContent();
-
-	type AssociationLogoKey = keyof typeof images.associationLogos;
 
 	const page = content.pages.partners;
 	const ctaContent = content.cta.apply;
 
 	const partners = page.partners.map((p) => ({
 		...p,
-		src: images.associationLogos[p.image as AssociationLogoKey]
+		src: resolveMedia(p.image)
 	}));
 
 	let nameRefs: HTMLElement[] = $state([]);

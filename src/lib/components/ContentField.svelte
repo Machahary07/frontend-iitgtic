@@ -4,6 +4,7 @@
 	// entries, categories of startups each holding their own list — so the editor
 	// is driven by the data rather than by a hand-written form per section.
 	import Self from './ContentField.svelte';
+	import { resolveMedia } from '$lib/media';
 
 	interface Props {
 		node: Record<string, unknown> | unknown[];
@@ -33,6 +34,40 @@
 	// Long-form copy deserves a textarea even when it is currently short.
 	const LONG_FIELDS = /^(body|bio|answer|excerpt|lede|citation|description|summary|intro|text|content|blurb|note)$/i;
 	const isLong = $derived(kind === 'longtext' || LONG_FIELDS.test(String(field)));
+
+	// A string field whose name reads as an image gets an uploader with a preview
+	// instead of a bare text box. Takes priority over the long-text branch, since
+	// an uploaded URL can run past the length threshold.
+	const MEDIA_FIELDS = /^(image|logo|photo|avatar|icon|poster|cover|coverImage|thumbnail|background)$/i;
+	const isMedia = $derived(
+		(kind === 'text' || kind === 'longtext') && MEDIA_FIELDS.test(String(field))
+	);
+	const preview = $derived(resolveMedia(value as string | null));
+
+	let uploading = $state(false);
+	let mediaError = $state<string | null>(null);
+
+	async function upload(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+		uploading = true;
+		mediaError = null;
+		try {
+			const body = new FormData();
+			body.append('file', file);
+			const res = await fetch('/api/tic-admin/content/assets', { method: 'POST', body });
+			const data = (await res.json().catch(() => ({}))) as { url?: string; message?: string };
+			if (!res.ok || !data.url) {
+				mediaError = data.message ?? 'Upload failed.';
+				return;
+			}
+			set(data.url);
+		} finally {
+			uploading = false;
+			input.value = '';
+		}
+	}
 
 	function humanise(key: string | number): string {
 		if (typeof key === 'number') return `Item ${key + 1}`;
@@ -186,6 +221,40 @@
 			oninput={(e) => set(Number((e.currentTarget as HTMLInputElement).value))}
 		/>
 	</label>
+{:else if isMedia}
+	<div class="field field--wide">
+		<span class="field__label">{label}</span>
+		<div class="media">
+			<div class="media__preview">
+				{#if preview}
+					<img src={preview} alt="" />
+				{:else}
+					<span class="media__empty">No image</span>
+				{/if}
+			</div>
+			<div class="media__controls">
+				<input
+					class="field__input"
+					type="text"
+					value={String(value ?? '')}
+					placeholder="Upload a file or paste an image URL"
+					oninput={(e) => set((e.currentTarget as HTMLInputElement).value)}
+				/>
+				<div class="media__actions">
+					<label class="media__btn" class:media__btn--busy={uploading}>
+						{uploading ? 'Uploading…' : 'Upload image'}
+						<input type="file" accept="image/*" hidden disabled={uploading} onchange={upload} />
+					</label>
+					{#if value}
+						<button type="button" class="media__btn media__btn--ghost" onclick={() => set('')}>
+							Clear
+						</button>
+					{/if}
+				</div>
+				{#if mediaError}<span class="media__error">{mediaError}</span>{/if}
+			</div>
+		</div>
+	</div>
 {:else if isLong}
 	<label class="field field--wide">
 		<span class="field__label">{label}</span>
@@ -236,6 +305,90 @@
 			resize: vertical;
 			line-height: 1.55;
 		}
+	}
+
+	.media {
+		display: flex;
+		gap: 14px;
+		align-items: flex-start;
+	}
+
+	.media__preview {
+		flex: none;
+		width: 96px;
+		height: 72px;
+		display: grid;
+		place-items: center;
+		padding: 6px;
+		border: 1px solid #e6e8ec;
+		border-radius: 8px;
+		background: #f6f7f9;
+		overflow: hidden;
+
+		img {
+			max-width: 100%;
+			max-height: 100%;
+			width: auto;
+			height: auto;
+			object-fit: contain;
+		}
+	}
+
+	.media__empty {
+		font-size: 11px;
+		color: #9aa0aa;
+	}
+
+	.media__controls {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.media__actions {
+		display: inline-flex;
+		gap: 6px;
+	}
+
+	.media__btn {
+		display: inline-flex;
+		align-items: center;
+		padding: 6px 12px;
+		font: inherit;
+		font-family: $font-family-base;
+		font-size: 12px;
+		font-weight: $font-weight-semibold;
+		color: #fff;
+		background: #111;
+		border: 1px solid #111;
+		border-radius: 6px;
+		cursor: pointer;
+
+		&:hover {
+			background: #000;
+		}
+
+		&--busy {
+			opacity: 0.6;
+			cursor: default;
+		}
+
+		&--ghost {
+			color: #444;
+			background: #fff;
+			border-color: #d8dbe0;
+
+			&:hover {
+				background: #eef0f3;
+			}
+		}
+	}
+
+	.media__error {
+		font-size: 12px;
+		color: #a01515;
 	}
 
 	.check {

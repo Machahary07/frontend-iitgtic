@@ -8,7 +8,7 @@
 
 ---
 
-## 1. Executive summary
+## 1. Executive summary 
 
 The project moved from a static, front-end-only site to a full platform with a database, authentication, an admin console, transactional email, and analytics. The work breaks into four phases:
 
@@ -19,7 +19,7 @@ The project moved from a static, front-end-only site to a full platform with a d
 
 Overall delta since the backend began: **135 files changed, ~19,000 insertions, ~4,700 deletions.**
 
-> **Current focus (2026-09-01):** the transactional email system is **in progress**, not complete. The Supabase Auth confirmation email is sending a `localhost` link instead of the live URL; fixing that is today's work. The status page has been updated to show email as *in progress*.
+> **Current focus (2026-09-03):** making **media editable from the console** — images (and later video) uploadable through the content editor, not just their alt text. First surface is the Partners logos, which the home association marquee now mirrors from the same list. The frontend is complete; it is *in progress* only because the public `site-assets` storage bucket must be created on the backend, which is owned by a separate person (see §3.9). The transactional email system remains **in progress** (auth confirmation email links to `localhost`; Resend domain unverified).
 
 ---
 
@@ -76,6 +76,7 @@ Migrations, in order:
 | `application-documents` | No | Pitch deck, CV, financials, incorporation cert |
 | `job-applications` | No | Resumes for role applications |
 | `email-assets` | Yes | Images/files used inside emails |
+| `site-assets` | Yes | Images uploaded for the public site (see §3.9) — **not yet created on the backend** |
 
 Private buckets are never exposed directly — admin screens hand out **10-minute signed URLs**. Deleting a row deletes its objects first (no orphans).
 
@@ -93,7 +94,7 @@ Server routes added under `src/routes/api/`:
 - `/api/tic-admin/jobs` — take down a company-posted role
 - `/api/tic-admin/users` — roles, suspend, reset mail, delete, create admin
 - `/api/tic-admin/activity` — paged audit entries + impressions
-- `/api/tic-admin/content` — save / reset a content section
+- `/api/tic-admin/content` + `/api/tic-admin/content/assets` — save / reset a content section; upload an image for a media field (see §3.9)
 - `/api/tic-admin/email` + `/api/tic-admin/email/assets` — log, templates, test send, asset upload
 
 ---
@@ -160,6 +161,35 @@ Resend-backed mail, visible at `/tic-admin/email`. The console and template mach
 
 Self-hosted checklist of every route, component and backend piece, with a frontend and a backend rail. Updated across `dbc8e76`, `ac04233`.
 
+### 3.9 Editable media — 3 Sep 2026 · **IN PROGRESS**
+
+Until now the content editor only made **text** editable; images were either baked into the bundle as a key (`"image": "iitGuwahati"`, resolved against `src/lib/data/images.ts`) or existed as `{ alt }`-only placeholders with no real source. This change begins making the image itself uploadable from the console.
+
+**Done (frontend, in the repo):**
+
+- **Media field in the content editor** — the recursive `ContentField.svelte` now renders a preview + **Upload image** button (and a paste-a-URL box) wherever a string field reads as an image (`image`, `logo`, `photo`, `avatar`, …), instead of a plain text input.
+- **Upload route** `POST /api/tic-admin/content/assets` — admin-only, service-role; stores the file in the public `site-assets` bucket and returns its URL, which is saved into the section. Mirrors the existing email-asset uploader.
+- **`resolveMedia()`** (`src/lib/media.ts`) — lets an uploaded URL and a legacy bundled key coexist, so content migrates gradually without anything breaking.
+- **Partners ⇄ home marquee connected** — the home association marquee now mirrors `pages.partners.partners`, and the duplicate `homeHero.association.logos` list was removed. Editing the Partners section in the console is the single source of truth and updates both surfaces.
+
+**Blocked on backend (owned by a separate person):**
+
+- 🔧 **The `site-assets` storage bucket does not exist yet.** Backend access is not held by the frontend author, so the bucket must be created by whoever owns Supabase. Until then, uploads return an error. The one statement to run in the Supabase SQL editor:
+
+  ```sql
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('site-assets', 'site-assets', true, 5242880,
+    array['image/png','image/jpeg','image/gif','image/webp','image/svg+xml'])
+  on conflict (id) do update
+    set public = excluded.public,
+        file_size_limit = excluded.file_size_limit,
+        allowed_mime_types = excluded.allowed_mime_types;
+  ```
+
+  (Public read + no write policies, so only the service-role upload route can put files in — same model as `email-assets`.)
+
+**Still to do after the bucket lands:** the remaining `{ alt }`-only placeholders (events, incubation, startups, people photos) and video support.
+
 ---
 
 ## 4. Ops, tooling & deploy
@@ -195,6 +225,7 @@ Tracked live at `/status`. Open items:
 | Per-page SEO | Only `<title>` per page — descriptions, OG, canonicals are global |
 | Prerender flags | Static pages still SSR |
 | Real content | Partner logos, event/people photos, startup logos are placeholders |
+| **Editable media (in progress)** | Media field + upload route + Partners⇄marquee done in the frontend; blocked on the `site-assets` bucket being created on the backend (§3.9). Events/incubation/startup placeholders and video still to migrate |
 | Application drafts | A refresh loses progress on the eight-step form |
 
 ---
@@ -203,6 +234,7 @@ Tracked live at `/status`. Open items:
 
 | Date | Commit | Summary |
 | --- | --- | --- |
+| 2026-09-03 | _(pending)_ | Editable media (in progress): media field in the content editor, `/api/tic-admin/content/assets` upload route, `resolveMedia()`, Partners⇄home-marquee connected; status page updated. Needs `site-assets` bucket created on the backend |
 | 2026-09-01 | _(pending)_ | Mark email system as **in progress** on the status page; fix confirmation-email localhost link |
 | 2026-07-13 | `a295b62` | Turnstile verification + server-side TIC admin auth |
 | 2026-08-28 | `dbc8e76` | Updated status page |

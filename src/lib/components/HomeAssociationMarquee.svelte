@@ -1,17 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { getContent } from '$lib/content';
-	import { images } from '$lib/data/images';
+	import { resolveMedia } from '$lib/media';
 	import { loadGsap, prefersReducedMotion } from '$lib/utils/animation';
 
 	const content = getContent();
 
-	type AssociationLogoKey = keyof typeof images.associationLogos;
-
 	const association = content.homeHero.association;
-	const logos = association.logos.map((logo) => ({
-		...logo,
-		src: images.associationLogos[logo.image as AssociationLogoKey]
+	// The marquee mirrors the Partners page, so the two never drift: editing the
+	// partner list in the console updates both surfaces.
+	const logos = content.pages.partners.partners.map((partner) => ({
+		name: partner.name,
+		image: partner.image,
+		src: resolveMedia(partner.image)
 	}));
 	const logoGroups = [logos, logos];
 
