@@ -173,6 +173,37 @@ if (admins !== null) {
 	} else {
 		pass(`${sections} editable content sections`);
 	}
+
+	// Storage is the half a schema check never covers: the tables can be perfect
+	// while an upload still fails, because a bucket lives outside the migration's
+	// reach if it was never pushed. Missing buckets only ever surface as a 500 in
+	// the console, so ask for them by name here instead.
+	const BUCKETS = {
+		'application-documents': false,
+		'job-applications': false,
+		'email-assets': true,
+		'site-assets': true
+	};
+
+	const { data: buckets, error: bucketError } = await db.storage.listBuckets();
+	if (bucketError) {
+		bad(`could not list storage buckets — ${bucketError.message}`);
+	} else {
+		const found = new Map((buckets ?? []).map((b) => [b.name, b]));
+		for (const [name, shouldBePublic] of Object.entries(BUCKETS)) {
+			const bucket = found.get(name);
+			if (!bucket) {
+				bad(`storage bucket "${name}" is missing — run: supabase db push`);
+			} else if (bucket.public !== shouldBePublic) {
+				bad(
+					`storage bucket "${name}" is ${bucket.public ? 'public' : 'private'}, expected ` +
+						`${shouldBePublic ? 'public' : 'private'}`
+				);
+			}
+		}
+		if (!problems)
+			pass(`all ${Object.keys(BUCKETS).length} storage buckets exist, public flags correct`);
+	}
 }
 
 if (problems) {

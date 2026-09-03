@@ -463,10 +463,10 @@
 	// belong to, so a migration landing is what moves a node here.
 	const backend: Milestone[] = [
 		{
-			date: '2026-09-03',
+			date: '2026-09-04',
 			title: 'Editable media',
-			status: 'in-progress',
-			note: 'Media in site content is becoming uploadable, not just its alt text. A public site-assets bucket plus /api/tic-admin/content/assets (admin-only, service-role) receives an upload; the content editor shows a preview and an upload button wherever a field reads as an image, and resolveMedia() lets an uploaded URL and a legacy bundled key coexist while content migrates. First surface: the Partners logos, which the home association marquee now mirrors, so one edit updates both. Still to do: the remaining {alt}-only placeholders (events, incubation, startups) and video.'
+			status: 'done',
+			note: 'Media in site content is uploadable, not just its alt text. The public site-assets bucket landed in 20260904000000_site_assets, so /api/tic-admin/content/assets (admin-only, service-role) now stores a file and hands back its public URL; the content editor shows a preview and an upload button wherever a field reads as an image, and resolveMedia() lets an uploaded URL and a legacy bundled key coexist while content migrates. First surface: the Partners logos, which the home association marquee now mirrors, so one edit updates both. What is left is content rather than plumbing — the remaining {alt}-only placeholders (events, incubation, startups) still need pictures, and video is a separate bucket and player.'
 		},
 		{
 			date: '2026-09-01',
@@ -621,8 +621,8 @@
 		},
 		{
 			name: 'Storage · site-assets',
-			status: 'in-progress',
-			note: 'Public bucket for images uploaded from the content editor; admin-only to write. Wired up for the Partners logos first — the rest of the placeholders and video still to migrate'
+			status: 'done',
+			note: 'Public bucket for images uploaded from the content editor; 5 MB cap, PNG/JPEG/GIF/WebP/SVG only, and no write policies, so the service-role route is the only way in — anon writes are refused'
 		},
 		{
 			name: 'Helper functions',

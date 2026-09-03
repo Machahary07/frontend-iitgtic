@@ -19,7 +19,7 @@ The project moved from a static, front-end-only site to a full platform with a d
 
 Overall delta since the backend began: **135 files changed, ~19,000 insertions, ~4,700 deletions.**
 
-> **Current focus (2026-09-03):** making **media editable from the console** — images (and later video) uploadable through the content editor, not just their alt text. First surface is the Partners logos, which the home association marquee now mirrors from the same list. The frontend is complete; it is *in progress* only because the public `site-assets` storage bucket must be created on the backend, which is owned by a separate person (see §3.9). The transactional email system remains **in progress** (auth confirmation email links to `localhost`; Resend domain unverified).
+> **Current focus (2026-09-04):** **media is now editable from the console** — images uploadable through the content editor, not just their alt text. The `site-assets` bucket landed as migration `20260904000000_site_assets`, so the upload path is complete end to end and §3.9 is **done**. First surface is the Partners logos, which the home association marquee mirrors from the same list. What remains there is content, not plumbing: the `{ alt }`-only placeholders still need real pictures, and video is a separate bucket and player. The transactional email system remains **in progress** (auth confirmation email links to `localhost`; Resend domain unverified).
 
 ---
 
@@ -60,6 +60,7 @@ Migrations, in order:
 - `20260829050000_site_content` + `20260829060000_..._preserve_key_order` — editable content store
 - `20260831000000_job_applications` — role-application table + unique-per-email index
 - `20260901000000_email`, `..._email_template_blocks`, `..._email_assets` — email system tables & assets bucket
+- `20260904000000_site_assets` — public `site-assets` bucket for content-editor image uploads
 
 ### 2.3 Security model
 
@@ -76,7 +77,7 @@ Migrations, in order:
 | `application-documents` | No | Pitch deck, CV, financials, incorporation cert |
 | `job-applications` | No | Resumes for role applications |
 | `email-assets` | Yes | Images/files used inside emails |
-| `site-assets` | Yes | Images uploaded for the public site (see §3.9) — **not yet created on the backend** |
+| `site-assets` | Yes | Images uploaded for the public site from the content editor (see §3.9) |
 
 Private buckets are never exposed directly — admin screens hand out **10-minute signed URLs**. Deleting a row deletes its objects first (no orphans).
 
@@ -161,43 +162,34 @@ Resend-backed mail, visible at `/tic-admin/email`. The console and template mach
 
 Self-hosted checklist of every route, component and backend piece, with a frontend and a backend rail. Updated across `dbc8e76`, `ac04233`.
 
-### 3.9 Editable media — 3 Sep 2026 · **IN PROGRESS**
+### 3.9 Editable media — 3–4 Sep 2026 · **DONE (backend complete)**
 
 Until now the content editor only made **text** editable; images were either baked into the bundle as a key (`"image": "iitGuwahati"`, resolved against `src/lib/data/images.ts`) or existed as `{ alt }`-only placeholders with no real source. This change begins making the image itself uploadable from the console.
 
-**Done (frontend, in the repo):**
+**Done (frontend):**
 
 - **Media field in the content editor** — the recursive `ContentField.svelte` now renders a preview + **Upload image** button (and a paste-a-URL box) wherever a string field reads as an image (`image`, `logo`, `photo`, `avatar`, …), instead of a plain text input.
 - **Upload route** `POST /api/tic-admin/content/assets` — admin-only, service-role; stores the file in the public `site-assets` bucket and returns its URL, which is saved into the section. Mirrors the existing email-asset uploader.
 - **`resolveMedia()`** (`src/lib/media.ts`) — lets an uploaded URL and a legacy bundled key coexist, so content migrates gradually without anything breaking.
 - **Partners ⇄ home marquee connected** — the home association marquee now mirrors `pages.partners.partners`, and the duplicate `homeHero.association.logos` list was removed. Editing the Partners section in the console is the single source of truth and updates both surfaces.
 
-**Blocked on backend (owned by a separate person):**
+**Done (backend, 4 Sep 2026):**
 
-- 🔧 **The `site-assets` storage bucket does not exist yet.** Backend access is not held by the frontend author, so the bucket must be created by whoever owns Supabase. Until then, uploads return an error. The one statement to run in the Supabase SQL editor:
+- **The `site-assets` bucket now exists**, applied as migration `20260904000000_site_assets.sql` rather than a hand-run SQL statement, so it is reproducible on any environment via `supabase db push`. Public read, 5 MB cap, `image/png · jpeg · gif · webp · svg+xml` only, and **no write policies** — so the service-role upload route is the only way anything gets in. Same model as `email-assets`.
+- **Verified end to end**, not just created: service-role upload succeeds; the returned public URL is readable with no credentials at all and comes back as `image/png`; an upload with the **publishable key is refused (400)**; a non-image MIME type is **refused (400)**; the test object was removed afterwards.
+- **`pnpm doctor` now checks storage.** The schema could be perfect while an upload still fails, because a bucket that was never pushed lives outside the tables the doctor read. It now asserts all four buckets exist with the right public flag, so a missing bucket is a one-line diagnosis instead of a 500 in the console.
 
-  ```sql
-  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-  values ('site-assets', 'site-assets', true, 5242880,
-    array['image/png','image/jpeg','image/gif','image/webp','image/svg+xml'])
-  on conflict (id) do update
-    set public = excluded.public,
-        file_size_limit = excluded.file_size_limit,
-        allowed_mime_types = excluded.allowed_mime_types;
-  ```
-
-  (Public read + no write policies, so only the service-role upload route can put files in — same model as `email-assets`.)
-
-**Still to do after the bucket lands:** the remaining `{ alt }`-only placeholders (events, incubation, startups, people photos) and video support.
+**Still to do — content and video, not plumbing:** the remaining `{ alt }`-only placeholders (events, incubation, startups, people photos) need real pictures uploaded, and video needs its own bucket and player.
 
 ---
 
 ## 4. Ops, tooling & deploy
 
-- **`pnpm doctor`** — checks `.env.local` can reach Supabase, flags a publishable-for-secret key mix-up, reports admin/content counts.
+- **`pnpm doctor`** — checks `.env.local` can reach Supabase, flags a publishable-for-secret key mix-up, reports admin/content counts, and asserts every storage bucket exists with the right public flag.
 - **Seed scripts** — `scripts/seed-content.js` (import content sections) and `scripts/demo-data.js` (two applications + one pending company on `@demo-tic.co`).
 - **First-run bootstrap** — `/tic-admin/login` offers one-time first-admin setup using `TIC_ADMIN_PASSWORD`; the console refuses to bootstrap while it can't read the admin table.
 - **`vercel.json`** added; deploy via `@sveltejs/adapter-auto`, pushes to `main` auto-deploy.
+- **Dev server header limit** — `pnpm dev` and `pnpm preview` run Vite through `node --max-http-header-size=65536`. Cookies are scoped to a host and ignore the port, so every project ever served from `localhost` shares one cookie jar; once it passes Node's 16 KB default the dev server answers every request with **HTTP 431** in that browser profile while incognito works fine. Raising the ceiling fixes it without asking anyone to clear cookies and sign out of their other local projects.
 - **`.gitignore`** / `supabase/.gitignore` updated for the Supabase toolchain and env files.
 - **Environment** — new server-only vars: `SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_SESSION_SECRET`, `TIC_ADMIN_PASSWORD`, `TURNSTILE_SECRET_KEY`, `RESEND_*`, plus public `PUBLIC_TURNSTILE_SITE_KEY`.
 
@@ -225,7 +217,7 @@ Tracked live at `/status`. Open items:
 | Per-page SEO | Only `<title>` per page — descriptions, OG, canonicals are global |
 | Prerender flags | Static pages still SSR |
 | Real content | Partner logos, event/people photos, startup logos are placeholders |
-| **Editable media (in progress)** | Media field + upload route + Partners⇄marquee done in the frontend; blocked on the `site-assets` bucket being created on the backend (§3.9). Events/incubation/startup placeholders and video still to migrate |
+| Editable media | **Backend complete** — `site-assets` bucket applied and verified, upload path works end to end (§3.9). Remaining work is content: events/incubation/startup placeholders need real pictures, and video needs its own bucket and player |
 | Application drafts | A refresh loses progress on the eight-step form |
 
 ---
@@ -234,7 +226,8 @@ Tracked live at `/status`. Open items:
 
 | Date | Commit | Summary |
 | --- | --- | --- |
-| 2026-09-03 | _(pending)_ | Editable media (in progress): media field in the content editor, `/api/tic-admin/content/assets` upload route, `resolveMedia()`, Partners⇄home-marquee connected; status page updated. Needs `site-assets` bucket created on the backend |
+| 2026-09-04 | _(pending)_ | Editable media **completed**: `20260904000000_site_assets` migration creates the public `site-assets` bucket, upload path verified end to end (anon writes and non-image types both refused), `pnpm doctor` gained a storage-bucket check, status page updated. Also raised the dev server's max HTTP header size to 64 KB so an accumulated `localhost` cookie jar stops returning 431 |
+| 2026-09-03 | _(pending)_ | Editable media (frontend): media field in the content editor, `/api/tic-admin/content/assets` upload route, `resolveMedia()`, Partners⇄home-marquee connected; status page updated |
 | 2026-09-01 | _(pending)_ | Mark email system as **in progress** on the status page; fix confirmation-email localhost link |
 | 2026-07-13 | `a295b62` | Turnstile verification + server-side TIC admin auth |
 | 2026-08-28 | `dbc8e76` | Updated status page |
