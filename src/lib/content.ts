@@ -29,6 +29,7 @@ export const CONTENT_SECTIONS: { key: string; label: string; group: string }[] =
 	{ key: 'homeHero', label: 'Home hero', group: 'Global' },
 	{ key: 'cta', label: 'Call to action', group: 'Global' },
 	{ key: 'error', label: 'Error page', group: 'Global' },
+	{ key: 'seo', label: 'Search & social', group: 'Global' },
 	{ key: 'pages.about', label: 'About', group: 'Pages' },
 	{ key: 'pages.whatHappens', label: 'What happens', group: 'Pages' },
 	{ key: 'pages.governingBody', label: 'Governing body', group: 'Pages' },
@@ -45,10 +46,13 @@ export const CONTENT_SECTIONS: { key: string; label: string; group: string }[] =
 ];
 
 export function readPath(doc: unknown, key: string): unknown {
-	return key.split('.').reduce<unknown>(
-		(node, part) => (node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined),
-		doc
-	);
+	return key
+		.split('.')
+		.reduce<unknown>(
+			(node, part) =>
+				node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined,
+			doc
+		);
 }
 
 export function writePath(doc: Record<string, unknown>, key: string, value: unknown): void {

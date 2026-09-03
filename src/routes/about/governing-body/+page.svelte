@@ -31,7 +31,19 @@
 				<article class="card">
 					<span class="card__index">0{i + 1}</span>
 					<div class="card__avatar-wrap">
-						<div class="card__avatar" aria-hidden="true"></div>
+						{#if member.avatar?.src}
+							<img
+								class="card__avatar card__avatar--photo"
+								src={member.avatar.src}
+								alt={member.avatar.alt}
+								loading="lazy"
+								decoding="async"
+							/>
+						{:else}
+							<!-- No photo yet: the plain circle is the placeholder, and being
+							     decorative it stays out of the accessibility tree. -->
+							<div class="card__avatar" aria-hidden="true"></div>
+						{/if}
 					</div>
 					<p class="card__role">{member.role}</p>
 					<h2 class="card__name">{member.affiliation}</h2>
@@ -145,6 +157,11 @@
 		aspect-ratio: 1 / 1;
 		border-radius: $radius-circle;
 		background: $color-black;
+	}
+
+	.card__avatar--photo {
+		object-fit: cover;
+		display: block;
 	}
 
 	.card__role {

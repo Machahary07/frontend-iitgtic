@@ -208,8 +208,7 @@
 						<h2>About the role</h2>
 						<p>{job.description}</p>
 					</div>
-
-					{/if}
+				{/if}
 			</article>
 
 			<aside class="panel">

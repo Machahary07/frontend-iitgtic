@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import AdminShell from '$lib/components/AdminShell.svelte';
+	import { COMPANY_PORTAL_NAV } from '$lib/utils/companyNav';
 	import { getCurrentCompany, logoutCompany, type CompanyAccount } from '$lib/utils/companyAuth';
 	import {
 		createJob,
@@ -11,12 +12,6 @@
 		type PostedJob
 	} from '$lib/utils/jobPostings';
 	import { onMount } from 'svelte';
-
-	const navItems = [
-		{ label: 'Dashboard', href: '/opportunities/job-posting-admin' },
-		{ label: 'Post a role', href: '/opportunities/job-posting-admin/edit/new' },
-		{ label: 'Account settings', href: '/opportunities/job-posting-admin/admin-settings' }
-	];
 
 	const id = $derived(page.params.id ?? '');
 	const isNew = $derived(id === 'new' || id === '');
@@ -101,7 +96,7 @@
 	<AdminShell
 		brand="Company portal"
 		brandSub={account.companyName}
-		{navItems}
+		navItems={COMPANY_PORTAL_NAV}
 		title={isNew ? 'Post a new role' : 'Edit role'}
 		eyebrow={isNew ? 'New role' : 'Editing'}
 		user={account.companyName}

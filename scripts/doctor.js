@@ -90,6 +90,35 @@ if (!env.RESEND_API_KEY) {
 	warn('RESEND_FROM is the Resend sandbox sender — it only reaches the API key owner');
 } else {
 	pass('Resend key and From address are set');
+
+	// Ask Resend rather than guess. A From address on an unverified domain looks
+	// perfectly fine to the check above and is still refused at send time.
+	const domain = (/<([^>]+)>/.exec(env.RESEND_FROM)?.[1] ?? env.RESEND_FROM)
+		.trim()
+		.split('@')
+		.pop()
+		?.toLowerCase();
+
+	try {
+		const res = await fetch('https://api.resend.com/domains', {
+			headers: { authorization: `Bearer ${env.RESEND_API_KEY}` }
+		});
+		if (!res.ok) {
+			warn(`could not ask Resend about ${domain} — it returned ${res.status}`);
+		} else {
+			const body = await res.json();
+			const match = (body.data ?? []).find((row) => row.name?.toLowerCase() === domain);
+			if (!match) {
+				bad(`${domain} has not been added to Resend — real mail will not be delivered`);
+			} else if ((match.status ?? '').toLowerCase() === 'verified') {
+				pass(`${domain} is verified in Resend`);
+			} else {
+				bad(`${domain} is in Resend but not verified (${match.status}) — sending will fail`);
+			}
+		}
+	} catch (err) {
+		warn(`could not reach Resend to check ${domain} — ${err.message}`);
+	}
 }
 
 let host;

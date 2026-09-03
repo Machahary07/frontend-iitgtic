@@ -46,13 +46,42 @@
 
 	let email = $state('');
 	let submitted = $state(false);
+	let subscribing = $state(false);
+	let subscribeError = $state('');
 	let subscribeInner: HTMLElement;
 
-	function handleSubscribe(event: SubmitEvent) {
+	// This used to preventDefault and show "Thanks — we'll be in touch" without
+	// storing anything, so the message was untrue. It posts to /api/newsletter
+	// now, and only says thanks once the row is actually written.
+	async function handleSubscribe(event: SubmitEvent) {
 		event.preventDefault();
-		if (!email) return;
-		submitted = true;
-		email = '';
+		if (subscribing) return;
+
+		const address = email.trim();
+		if (!address) return;
+
+		subscribing = true;
+		subscribeError = '';
+		try {
+			const res = await fetch('/api/newsletter', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ email: address })
+			});
+
+			if (!res.ok) {
+				const body = (await res.json().catch(() => ({}))) as { message?: string };
+				subscribeError = body.message ?? 'Could not subscribe just now. Please try again.';
+				return;
+			}
+
+			submitted = true;
+			email = '';
+		} catch {
+			subscribeError = 'Could not reach the server. Check your connection and try again.';
+		} finally {
+			subscribing = false;
+		}
 	}
 
 	async function animateSubscribe(yPercent: number) {
@@ -95,6 +124,7 @@
 						<button
 							type="submit"
 							class="newsletter-submit"
+							disabled={subscribing}
 							onmouseenter={() => animateSubscribe(-50)}
 							onmouseleave={() => animateSubscribe(0)}
 							onfocus={() => animateSubscribe(-50)}
@@ -110,6 +140,8 @@
 					</div>
 					{#if submitted}
 						<p class="newsletter-status" role="status">Thanks — we'll be in touch.</p>
+					{:else if subscribeError}
+						<p class="newsletter-status newsletter-status--error" role="alert">{subscribeError}</p>
 					{/if}
 				</form>
 			</div>
@@ -252,6 +284,11 @@
 			}
 		}
 
+		.newsletter-submit:disabled {
+			opacity: 0.55;
+			cursor: not-allowed;
+		}
+
 		.newsletter-submit {
 			padding: $space-3 $space-5;
 			border: 1px solid $color-black;
@@ -289,6 +326,10 @@
 		color: rgba($color-black, 0.72);
 		font-size: $font-size-sm;
 		line-height: $line-height-snug;
+
+		&--error {
+			color: #9a1515;
+		}
 	}
 
 	.visually-hidden {

@@ -1,6 +1,8 @@
 import { error, json } from '@sveltejs/kit';
 import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import { removeApplicationDocuments } from '$lib/server/storageCleanup';
+import { AFTER_PASSWORD_RESET, AUTH_CALLBACK_PATH } from '$lib/utils/authRedirect';
 import type { RequestHandler } from './$types';
 
 // Account management. Roles, sign-in state and password resets all live here;
@@ -76,8 +78,14 @@ export const PUT: RequestHandler = async ({ cookies, request, url }) => {
 	const body = (await request.json().catch(() => ({}))) as { email?: string; id?: string };
 	if (!body.email) error(400, 'Missing email.');
 
+	// /login had no way to spend a recovery token — it arrived as a fragment on a
+	// page that ignored it, so the reset silently did nothing. It goes through the
+	// auth callback now, which forwards to the form that can actually set a
+	// password.
+	const redirectTo = `${url.origin}${AUTH_CALLBACK_PATH}?next=${encodeURIComponent(AFTER_PASSWORD_RESET)}`;
+
 	const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(body.email, {
-		redirectTo: `${url.origin}/login`
+		redirectTo
 	});
 	if (resetError) error(500, resetError.message);
 
@@ -113,8 +121,20 @@ export const DELETE: RequestHandler = async ({ cookies, url }) => {
 		recordId: id
 	});
 
+	// Before the cascade, not after: once the auth user is gone so are the
+	// application rows that name these files, and nothing can find them to
+	// delete. They would sit in the private bucket forever.
+	const removed = await removeApplicationDocuments(id);
+
 	const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
 	if (deleteError) error(500, deleteError.message);
+
+	if (removed > 0) {
+		await logAdminAction(ctx, `removed ${removed} uploaded document(s) with the account`, {
+			table: 'profiles',
+			recordId: id
+		});
+	}
 	return json({ ok: true });
 };
 

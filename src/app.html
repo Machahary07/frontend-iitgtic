@@ -7,40 +7,23 @@
 		<meta name="color-scheme" content="light" />
 		<meta name="theme-color" content="#ffffff" />
 
-		<title>IIT Guwahati Technology Incubation Centre (IITG TIC)</title>
-		<meta
-			name="description"
-			content="IIT Guwahati Technology Incubation Centre (IITG TIC) supports deep-tech startups across the North-East with incubation, mentorship, infrastructure, and funding."
-		/>
+		<!-- Only what is identical on every page belongs in this file. The title,
+		     description, canonical, robots directive and social cards are
+		     per-page and come from Seo.svelte, injected at the placeholder near
+		     the end of this head.
+
+		     They were hardcoded here once, which put a second, static title tag
+		     ahead of every page's real one: every server-rendered page, and so
+		     every crawler and social card, saw the homepage title instead. The
+		     canonical was worse, naming the homepage on all 37 pages, which asks
+		     Google to treat the whole site as one duplicate. -->
 		<meta
 			name="keywords"
 			content="IITG TIC, IIT Guwahati, technology incubation, startup incubator, deep tech, North East India, IITG incubator, startup funding, entrepreneurship, IIT Guwahati incubation centre"
 		/>
 		<meta name="author" content="IIT Guwahati Technology Incubation Centre" />
-		<meta name="robots" content="index, follow, max-image-preview:large" />
-		<link rel="canonical" href="https://iitgtic.vercel.app" />
-
 		<meta property="og:site_name" content="IIT Guwahati Technology Incubation Centre" />
 		<meta property="og:locale" content="en_IN" />
-		<meta property="og:type" content="website" />
-		<meta property="og:url" content="https://iitgtic.vercel.app" />
-		<meta property="og:title" content="IIT Guwahati Technology Incubation Centre" />
-		<meta
-			property="og:description"
-			content="IITG TIC nurtures deep-tech startups through incubation, mentorship, and funding support at IIT Guwahati."
-		/>
-		<meta property="og:image" content="https://iitgtic.vercel.app/banner-iitgtic.webp" />
-		<meta property="og:image:width" content="1200" />
-		<meta property="og:image:height" content="630" />
-
-		<meta name="twitter:card" content="summary_large_image" />
-		<meta name="twitter:url" content="https://iitgtic.vercel.app" />
-		<meta name="twitter:title" content="IIT Guwahati Technology Incubation Centre" />
-		<meta
-			name="twitter:description"
-			content="IITG TIC nurtures deep-tech startups through incubation, mentorship, and funding support at IIT Guwahati."
-		/>
-		<meta name="twitter:image" content="https://iitgtic.vercel.app/banner-iitgtic.webp" />
 
 		<script type="application/ld+json">
 			{
@@ -48,8 +31,8 @@
 				"@type": "Organization",
 				"name": "IIT Guwahati Technology Incubation Centre",
 				"alternateName": "IITG TIC",
-				"url": "https://iitgtic.vercel.app",
-				"logo": "https://iitgtic.vercel.app/banner-iitgtic.webp",
+				"url": "https://frontend-iitgtic.vercel.app",
+				"logo": "https://frontend-iitgtic.vercel.app/banner-iitgtic.webp",
 				"description": "IIT Guwahati Technology Incubation Centre supports deep-tech startups with incubation, mentorship, infrastructure, and funding.",
 				"address": {
 					"@type": "PostalAddress",

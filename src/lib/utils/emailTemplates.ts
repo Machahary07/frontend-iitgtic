@@ -35,7 +35,11 @@ export type EmailTemplateDef = {
 // Every template is given these on top of its own variables.
 export const COMMON_VARIABLES: TemplateVariable[] = [
 	{ name: 'siteName', description: 'Name of the centre', sample: 'IIT Guwahati TIC' },
-	{ name: 'siteUrl', description: 'Public site origin', sample: 'https://iitgtic.in' },
+	{
+		name: 'siteUrl',
+		description: 'Public site origin',
+		sample: 'https://frontend-iitgtic.vercel.app'
+	},
 	{ name: 'year', description: 'Current year', sample: String(new Date().getFullYear()) }
 ];
 

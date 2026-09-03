@@ -3,6 +3,11 @@
 // on_auth_user_created trigger writes the matching public.profiles row.
 
 import { supabase } from '$lib/supabaseClient';
+import {
+	AFTER_FOUNDER_SIGNUP,
+	AFTER_PASSWORD_RESET,
+	authCallbackUrl
+} from '$lib/utils/authRedirect';
 
 export type UserSession = {
 	id?: string;
@@ -26,6 +31,8 @@ export async function signUpFounder(input: {
 		email,
 		password: input.password,
 		options: {
+			// Without this the confirmation link falls back to the project's Site URL.
+			emailRedirectTo: authCallbackUrl(AFTER_FOUNDER_SIGNUP),
 			data: {
 				role: 'founder',
 				full_name: input.name.trim(),
@@ -96,6 +103,23 @@ export async function saveUserSession(patch: Partial<UserSession>): Promise<void
 
 export async function clearUserSession(): Promise<void> {
 	await supabase.auth.signOut();
+}
+
+/**
+ * Emails a reset link. Used by both the founder and company sign-in screens.
+ *
+ * Always reports success. Answering differently for a registered and an unknown
+ * address would turn the form into a way to test whether somebody has an
+ * account here, which is the same reason the signup receipt is silent on a miss.
+ */
+export async function requestPasswordReset(email: string): Promise<{ ok: true }> {
+	const address = email.trim().toLowerCase();
+	if (address) {
+		await supabase.auth.resetPasswordForEmail(address, {
+			redirectTo: authCallbackUrl(AFTER_PASSWORD_RESET)
+		});
+	}
+	return { ok: true };
 }
 
 function friendlyAuthError(message: string): string {

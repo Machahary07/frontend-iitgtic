@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { error, json } from '@sveltejs/kit';
 import { TIC_ADMIN_PASSWORD } from '$env/static/private';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
@@ -6,12 +7,22 @@ import {
 	issueTicAdminSession,
 	readTicAdminSession
 } from '$lib/server/ticAdminSession';
+import { LIMITS, retryMinutes, withinLimit } from '$lib/server/rateLimit';
 import type { RequestHandler } from './$types';
 
 // GET     current session, plus whether the console still needs its first admin
 // POST    { accessToken }                       sign in as an existing admin
 // POST    { bootstrapPassword, email, password } create the first admin, once
 // DELETE  sign out
+
+// Compared through a digest so the two buffers are always the same length: a
+// direct `!==` on the strings returns as soon as a character differs, which
+// leaks the length and the matching prefix of the shared bootstrap secret.
+function secretMatches(provided: string, expected: string): boolean {
+	const a = createHash('sha256').update(provided).digest();
+	const b = createHash('sha256').update(expected).digest();
+	return timingSafeEqual(a, b);
+}
 
 // Throws rather than returning 0 when the lookup fails. A database that cannot
 // be read must never look like "no admin exists yet" — that is what re-arms the
@@ -43,7 +54,16 @@ export const GET: RequestHandler = async ({ cookies }) => {
 	}
 };
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async ({ request, cookies, getClientAddress }) => {
+	// Both branches below are password guesses — the shared bootstrap secret and,
+	// through the token, an account password. Neither had a brake on it.
+	if (!(await withinLimit('adminLogin', getClientAddress()))) {
+		error(
+			429,
+			`Too many sign-in attempts. Try again in ${retryMinutes(LIMITS.adminLogin)} minutes.`
+		);
+	}
+
 	const body = (await request.json().catch(() => ({}))) as {
 		accessToken?: string;
 		bootstrapPassword?: string;
@@ -57,7 +77,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		if ((await adminCount()) > 0) {
 			error(403, 'An admin account already exists. Sign in with your own credentials.');
 		}
-		if (body.bootstrapPassword !== TIC_ADMIN_PASSWORD) {
+		if (!TIC_ADMIN_PASSWORD || !secretMatches(body.bootstrapPassword, TIC_ADMIN_PASSWORD)) {
 			return json({ ok: false, error: 'Incorrect setup password.' }, { status: 401 });
 		}
 		const email = body.email?.trim().toLowerCase();

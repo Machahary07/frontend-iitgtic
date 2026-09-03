@@ -10,6 +10,7 @@
 	import { injectAnalytics } from '@vercel/analytics/sveltekit';
 	import { images } from '$lib/data/images';
 	import { Navbar, EventBar, Footer } from '$lib';
+	import Seo from '$lib/components/Seo.svelte';
 	import { setContent } from '$lib/content';
 	import type { LayoutData } from './$types';
 
@@ -33,6 +34,10 @@
 <svelte:head>
 	<link rel="icon" type="image/webp" href={images.favicon} />
 </svelte:head>
+
+<!-- Description, canonical and social cards for every route, in one place.
+     It does not set <title> — the pages already do, and two would collide. -->
+<Seo />
 
 {#if !isAdmin}
 	<EventBar />

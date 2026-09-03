@@ -21,10 +21,10 @@ The public website, the company job portal, the incubation application, and the 
 </p>
 
 <p>
-  <a href="https://iitgtic.vercel.app"><b>Live site</b></a> ·
-  <a href="https://iitgtic.vercel.app/status">Project status</a> ·
-  <a href="https://iitgtic.vercel.app/opportunities">Opportunities</a> ·
-  <a href="https://iitgtic.vercel.app/application">Apply for incubation</a>
+  <a href="https://frontend-iitgtic.vercel.app"><b>Live site</b></a> ·
+  <a href="https://frontend-iitgtic.vercel.app/status">Project status</a> ·
+  <a href="https://frontend-iitgtic.vercel.app/opportunities">Opportunities</a> ·
+  <a href="https://frontend-iitgtic.vercel.app/application">Apply for incubation</a>
 </p>
 
 </div>
@@ -46,18 +46,19 @@ The public website, the company job portal, the incubation application, and the 
 
 ## Overview
 
-| Area                       | What it does                                                                                                                               | Lives at                           |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- |
-| **Public site**            | Editorial pages for the centre — about, team, mentors, governing body, FAQ, blog, incubation pillars, incubated startups, events, partners | `/`                                |
-| **Opportunities board**    | Roles at incubated startups, filterable by type; merges seed posts with live company postings                                              | `/opportunities`                   |
-| **Role applications**      | Public apply form per role — resume upload, Turnstile-gated, no account needed                                                             | `/opportunities/[id]`              |
-| **Job-posting portal**     | Company signs up → TIC verifies → company posts and edits roles                                                                            | `/opportunities/job-posting-admin` |
-| **Incubation application** | Eight-step wizard, 38 questions, four document uploads                                                                                     | `/application`                     |
-| **TIC admin console**      | Companies, incubation applications, role applicants, posted jobs, users, activity, content                                                 | `/tic-admin`                       |
-| **Content editing**        | Every public page's copy, edited from the console and versioned in the audit log                                                           | `/tic-admin/content`               |
-| **Transactional email**    | Resend-backed mail with editable templates, a delivery log you can preview, and usage against the plan allowance                           | `/tic-admin/email`                 |
-| **Analytics & audit**      | Page impressions with bot separation, plus a trigger-written audit trail                                                                   | `/tic-admin/activity`              |
-| **Build status**           | Self-hosted checklist of every route, component and backend piece                                                                          | `/status`                          |
+| Area                       | What it does                                                                                                                                                      | Lives at                                      |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| **Public site**            | Editorial pages for the centre — about, team, mentors, governing body, FAQ, blog, incubation pillars, incubated startups, events, partners                        | `/`                                           |
+| **Opportunities board**    | Roles at incubated startups, filterable by type; merges seed posts with live company postings                                                                     | `/opportunities`                              |
+| **Role applications**      | Public apply form per role — resume upload, Turnstile-gated, no account needed                                                                                    | `/opportunities/[id]`                         |
+| **Job-posting portal**     | Company signs up → TIC verifies → company posts and edits roles                                                                                                   | `/opportunities/job-posting-admin`            |
+| **Incubation application** | Eight-step wizard, 38 questions, four document uploads; autosaves a draft so a refresh does not lose progress                                                     | `/application`                                |
+| **TIC admin console**      | Companies, incubation applications, role applicants, posted jobs, users, activity, content                                                                        | `/tic-admin`                                  |
+| **Content editing**        | Every public page's copy, edited from the console and versioned in the audit log                                                                                  | `/tic-admin/content`                          |
+| **Applicant inbox**        | A verified company reads the applicants for roles it posted — contact details, answers, signed resume links, CSV export                                           | `/opportunities/job-posting-admin/applicants` |
+| **Transactional email**    | Resend-backed mail with editable templates, a delivery log you can preview, usage against the plan allowance, and bounce/complaint feedback from a signed webhook | `/tic-admin/email`                            |
+| **Analytics & audit**      | Page impressions with bot separation, plus a trigger-written audit trail                                                                                          | `/tic-admin/activity`                         |
+| **Build status**           | Self-hosted checklist of every route, component and backend piece                                                                                                 | `/status`                                     |
 
 ## Stack
 
@@ -144,23 +145,24 @@ Open http://localhost:5173.
 Copy `.env.example` to `.env.local`. Everything without the `PUBLIC_` prefix is server-only
 and must never reach the browser.
 
-| Variable                                     | Scope           | What it is                                                                    |
-| -------------------------------------------- | --------------- | ----------------------------------------------------------------------------- |
-| `PUBLIC_SUPABASE_URL`                        | client + server | Supabase project URL                                                          |
-| `PUBLIC_SUPABASE_PUBLISHABLE_KEY`            | client + server | Browser-safe key; RLS still applies to everything it does                     |
-| `SUPABASE_SERVICE_ROLE_KEY`                  | **server only** | Bypasses RLS. Used by the admin routes and the public submit route            |
-| `ADMIN_SESSION_SECRET`                       | **server only** | Signs the admin session cookie. Rotating it signs every admin out             |
-| `TIC_ADMIN_PASSWORD`                         | **server only** | Bootstrap password; works only while no admin account exists                  |
-| `IITG_SUPABASE_PASSWORD`                     | CLI only        | Postgres password for `supabase db push`; the app never reads it              |
-| `PUBLIC_TURNSTILE_SITE_KEY`                  | client          | Cloudflare Turnstile widget key                                               |
-| `TURNSTILE_SECRET_KEY`                       | **server only** | Verifies tokens against Cloudflare                                            |
-| `RESEND_API_KEY`                             | **server only** | Sends transactional mail. Absent, nothing is delivered                        |
-| `RESEND_FROM`                                | **server only** | From address; must be on a domain verified in Resend                          |
-| `RESEND_REPLY_TO`                            | **server only** | Optional reply-to                                                             |
-| `RESEND_PLAN`                                | **server only** | `free` / `pro` / `scale` / `enterprise` — what the usage meter counts against |
-| `RESEND_MONTHLY_LIMIT`, `RESEND_DAILY_LIMIT` | **server only** | Override the plan caps for a custom allowance                                 |
-| `PUBLIC_SITE_URL`                            | client + server | Absolute origin for links inside emails                                       |
-| `EMAIL_SITE_NAME`                            | **server only** | Name used in the email copy and the From display name                         |
+| Variable                                     | Scope           | What it is                                                                                                                                                                                                       |
+| -------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PUBLIC_SUPABASE_URL`                        | client + server | Supabase project URL                                                                                                                                                                                             |
+| `PUBLIC_SUPABASE_PUBLISHABLE_KEY`            | client + server | Browser-safe key; RLS still applies to everything it does                                                                                                                                                        |
+| `SUPABASE_SERVICE_ROLE_KEY`                  | **server only** | Bypasses RLS. Used by the admin routes and the public submit route                                                                                                                                               |
+| `ADMIN_SESSION_SECRET`                       | **server only** | Signs the admin session cookie. Rotating it signs every admin out                                                                                                                                                |
+| `TIC_ADMIN_PASSWORD`                         | **server only** | Bootstrap password; works only while no admin account exists                                                                                                                                                     |
+| `IITG_SUPABASE_PASSWORD`                     | CLI only        | Postgres password for `supabase db push`; the app never reads it                                                                                                                                                 |
+| `PUBLIC_TURNSTILE_SITE_KEY`                  | client          | Cloudflare Turnstile widget key                                                                                                                                                                                  |
+| `TURNSTILE_SECRET_KEY`                       | **server only** | Verifies tokens against Cloudflare                                                                                                                                                                               |
+| `RESEND_API_KEY`                             | **server only** | Sends transactional mail. Absent, nothing is delivered                                                                                                                                                           |
+| `RESEND_FROM`                                | **server only** | From address; must be on a domain verified in Resend                                                                                                                                                             |
+| `RESEND_REPLY_TO`                            | **server only** | Optional reply-to                                                                                                                                                                                                |
+| `RESEND_PLAN`                                | **server only** | `free` / `pro` / `scale` / `enterprise` — what the usage meter counts against                                                                                                                                    |
+| `RESEND_MONTHLY_LIMIT`, `RESEND_DAILY_LIMIT` | **server only** | Override the plan caps for a custom allowance                                                                                                                                                                    |
+| `RESEND_WEBHOOK_SECRET`                      | **server only** | Signing secret for `/api/resend-webhook`. Without it the endpoint refuses every request, by design — an unsigned version would let anyone suppress any address                                                   |
+| `PUBLIC_SITE_URL`                            | client + server | Absolute origin for links inside emails, which have no request to infer one from. Canonicals and social cards do **not** use it — they come from the request, so a preview deploy is right without configuration |
+| `EMAIL_SITE_NAME`                            | **server only** | Name used in the email copy and the From display name                                                                                                                                                            |
 
 Everything under `RESEND_*` is optional. Without `RESEND_API_KEY` the app still renders
 every message and records it in the console as **blocked**, so nothing breaks — it simply
@@ -174,17 +176,19 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ## Scripts
 
-| Script                           | What it does                                                             |
-| -------------------------------- | ------------------------------------------------------------------------ |
-| `pnpm dev`                       | Start the dev server                                                     |
-| `pnpm build`                     | Build for production                                                     |
-| `pnpm preview`                   | Preview the production build locally                                     |
-| `pnpm check`                     | Type-check with `svelte-check`                                           |
-| `pnpm lint`                      | Prettier + ESLint check                                                  |
-| `pnpm format`                    | Format with Prettier                                                     |
-| `pnpm doctor`                    | Check `.env.local` can reach Supabase                                    |
-| `node scripts/seed-content.js`   | Import `content.json` sections into `site_content`                       |
-| `node scripts/demo-data.js seed` | Two applications + one pending company, for working on the admin screens |
+| Script                           | What it does                                                                     |
+| -------------------------------- | -------------------------------------------------------------------------------- |
+| `pnpm dev`                       | Start the dev server                                                             |
+| `pnpm build`                     | Build for production                                                             |
+| `pnpm preview`                   | Preview the production build locally                                             |
+| `pnpm check`                     | Type-check with `svelte-check`                                                   |
+| `pnpm lint`                      | Prettier + ESLint check                                                          |
+| `pnpm format`                    | Format with Prettier                                                             |
+| `pnpm doctor`                    | Check `.env.local` can reach Supabase                                            |
+| `pnpm backup`                    | Tables + storage to `./backups/` — see [Backups](#backups-and-the-restore-drill) |
+| `pnpm restore <dir> --dry-run`   | Rehearse a restore; drop the flag to actually write                              |
+| `node scripts/seed-content.js`   | Import `content.json` sections into `site_content`                               |
+| `node scripts/demo-data.js seed` | Two applications + one pending company, for working on the admin screens         |
 
 ## Project structure
 
@@ -226,31 +230,34 @@ static/
 <details open>
 <summary><b>Public</b></summary>
 
-| Route                                                                                                     | Page                                                         |
-| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `/`                                                                                                       | Home — intro hero, association marquee, events-driven slider |
-| `/about` + `/about/what-happens`, `/governing-body`, `/team`, `/mentors`, `/faq`, `/blog`, `/blog/[slug]` | The centre, its people and its writing                       |
-| `/incubation` + `/incubation/[slug]`                                                                      | Five support pillars, scrollspy detail pages                 |
-| `/incubated-startups` + `/[slug]/[startupSlug]`                                                           | Current / virtual / graduated cohorts                        |
-| `/events` + `/events/[slug]`                                                                              | Upcoming and past events                                     |
-| `/partners`                                                                                               | Partner grid                                                 |
-| `/opportunities` + `/opportunities/[id]`                                                                  | Hiring board and role detail with the apply form             |
-| `/apply` · `/login`                                                                                       | Account sign-up and sign-in, both Turnstile-gated            |
-| `/application`                                                                                            | Eight-step incubation application                            |
-| `/status`                                                                                                 | Build checklist — frontend and backend rails                 |
-| `/sitemap.xml`                                                                                            | Generated from the route list + content slugs                |
+| Route                                                                                                     | Page                                                          |
+| --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `/`                                                                                                       | Home — intro hero, association marquee, events-driven slider  |
+| `/about` + `/about/what-happens`, `/governing-body`, `/team`, `/mentors`, `/faq`, `/blog`, `/blog/[slug]` | The centre, its people and its writing                        |
+| `/incubation` + `/incubation/[slug]`                                                                      | Five support pillars, scrollspy detail pages                  |
+| `/incubated-startups` + `/[slug]/[startupSlug]`                                                           | Current / virtual / graduated cohorts                         |
+| `/events` + `/events/[slug]`                                                                              | Upcoming and past events                                      |
+| `/partners`                                                                                               | Partner grid                                                  |
+| `/opportunities` + `/opportunities/[id]`                                                                  | Hiring board and role detail with the apply form              |
+| `/apply` · `/login`                                                                                       | Account sign-up and sign-in, both Turnstile-gated             |
+| `/application`                                                                                            | Eight-step incubation application                             |
+| `/status`                                                                                                 | Build checklist — frontend and backend rails                  |
+| `/auth/callback`                                                                                          | Where every link in an auth email lands; forwards to `?next=` |
+| `/auth/reset-password`                                                                                    | The end of a recovery link — sets a new password              |
+| `/sitemap.xml`                                                                                            | Generated from the route list + content slugs                 |
 
 </details>
 
 <details>
 <summary><b>Company job portal</b> — <code>/opportunities/job-posting-admin</code></summary>
 
-| Route                               | Page                                                               |
-| ----------------------------------- | ------------------------------------------------------------------ |
-| `/job-posting-admin`                | Dashboard, gated by account status (pending / verified / rejected) |
-| `/job-posting-admin/signup`         | Creates a pending account; TIC verifies it before roles go live    |
-| `/job-posting-admin/edit/[id]`      | Create or edit a role — verified accounts only                     |
-| `/job-posting-admin/admin-settings` | Profile, password change, delete account                           |
+| Route                               | Page                                                                                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `/job-posting-admin`                | Dashboard, gated by account status (pending / verified / rejected)                                                                   |
+| `/job-posting-admin/signup`         | Creates a pending account; TIC verifies it before roles go live                                                                      |
+| `/job-posting-admin/edit/[id]`      | Create or edit a role — verified accounts only                                                                                       |
+| `/job-posting-admin/applicants`     | The company's own applicants — status tabs, per-role filter, signed resume links, CSV export. Read-only: a status stays TIC's to set |
+| `/job-posting-admin/admin-settings` | Profile, password change, delete account                                                                                             |
 
 </details>
 
@@ -279,20 +286,24 @@ Everything the browser is allowed to ask the server to do. The `/api/tic-admin/*
 guarded by `requireAdmin()`, which returns a service-role client tagged with the acting
 admin's id.
 
-| Endpoint                          | Methods                       | Purpose                                                                                 |
-| --------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------- |
-| `/api/turnstile`                  | `POST`                        | Verify a widget token against Cloudflare                                                |
-| `/api/job-applications`           | `POST`                        | **Public** role application — Turnstile, role lookup, resume upload, insert             |
-| `/api/company-account`            | `POST` `DELETE`               | Signup receipt for a just-created account; a company closing its own account            |
-| `/api/tic-admin-login`            | `GET` `POST` `DELETE`         | Session state, sign-in, first-admin bootstrap, sign-out                                 |
-| `/api/tic-admin/companies`        | `PATCH` `DELETE`              | Verify / reject / delete an account                                                     |
-| `/api/tic-admin/applications`     | `PATCH` `DELETE`              | Move an incubation application through review                                           |
-| `/api/tic-admin/job-applications` | `PATCH` `DELETE`              | Shortlist, mark sent on, decline, delete                                                |
-| `/api/tic-admin/jobs`             | `DELETE`                      | Take down a company-posted role                                                         |
-| `/api/tic-admin/users`            | `PATCH` `PUT` `POST` `DELETE` | Roles, suspend, reset mail, delete, create admin                                        |
-| `/api/tic-admin/activity`         | `GET`                         | Paged audit entries and impressions over 7d / 30d / all                                 |
-| `/api/tic-admin/content`          | `PUT` `DELETE`                | Save a section, or reset it to the bundled default                                      |
-| `/api/tic-admin/email`            | `GET` `PUT` `POST` `DELETE`   | Page the log, read one rendered message, save a template, send a test, reset a template |
+| Endpoint                            | Methods                       | Purpose                                                                                                                                                  |
+| ----------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/turnstile`                    | `POST`                        | Verify a widget token against Cloudflare                                                                                                                 |
+| `/api/job-applications`             | `POST`                        | **Public** role application — Turnstile, role lookup, resume upload, insert                                                                              |
+| `/api/company-account`              | `POST` `DELETE`               | Signup receipt for a just-created account; a company closing its own account                                                                             |
+| `/api/tic-admin-login`              | `GET` `POST` `DELETE`         | Session state, sign-in, first-admin bootstrap, sign-out                                                                                                  |
+| `/api/tic-admin/companies`          | `PATCH` `DELETE`              | Verify / reject / delete an account                                                                                                                      |
+| `/api/tic-admin/applications`       | `PATCH` `DELETE`              | Move an incubation application through review                                                                                                            |
+| `/api/tic-admin/job-applications`   | `GET` `PATCH` `POST` `DELETE` | Shortlist, mark sent on, decline, delete; `GET` returns full records for the CSV export and `POST ?jobSlug=` clears a whole role, resumes first          |
+| `/api/tic-admin/jobs`               | `DELETE`                      | Take down a company-posted role                                                                                                                          |
+| `/api/tic-admin/users`              | `PATCH` `PUT` `POST` `DELETE` | Roles, suspend, reset mail, delete, create admin                                                                                                         |
+| `/api/tic-admin/activity`           | `GET`                         | Paged audit entries and impressions over 7d / 30d / all                                                                                                  |
+| `/api/tic-admin/content`            | `PUT` `DELETE`                | Save a section, or reset it to the bundled default                                                                                                       |
+| `/api/tic-admin/email`              | `GET` `PUT` `POST` `DELETE`   | Page the log, read one rendered message, save a template, send a test, reset a template                                                                  |
+| `/api/tic-admin/email/suppressions` | `DELETE`                      | Lift a bounce or complaint suppression so the address can be written to again                                                                            |
+| `/api/newsletter`                   | `POST`                        | **Public** footer subscribe — rate limited and validated; a repeat address is a plain success, so the form cannot be used to discover who is on the list |
+| `/api/tic-admin/newsletter`         | `GET` `DELETE`                | The subscriber list for export, and removal on request                                                                                                   |
+| `/api/resend-webhook`               | `POST`                        | **Public but Svix-signed** delivery feedback from Resend — records the event and suppresses the address on a permanent bounce or a complaint             |
 
 ## Data model
 
@@ -303,20 +314,24 @@ supabase link --project-ref <project-ref>
 supabase db push
 ```
 
-Ten tables, all with RLS enabled:
+Fourteen tables, all with RLS enabled:
 
-| Table              | Holds                                                        | Who can read/write                                                       |
-| ------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `profiles`         | One row per auth user (`founder`, `company` or `admin`)      | Own row; `role` is service-role only                                     |
-| `companies`        | Job-portal accounts + verification status                    | Own row; `status` is service-role only                                   |
-| `jobs`             | Company job postings                                         | Public read once the company is verified; write only by a verified owner |
-| `applications`     | Submitted incubation applications                            | Own rows; `status` is service-role only                                  |
-| `job_applications` | Applications to a role on the Opportunities board            | Service role only — RLS on, zero policies                                |
-| `email_templates`  | Subject + HTML body per message, overriding the bundled copy | Service role only — RLS on, zero policies                                |
-| `email_log`        | One row per send attempt, with the rendered body             | Service role only — RLS on, zero policies                                |
-| `audit_log`        | Every row change, with actor and before/after                | Service role only — RLS on, zero policies                                |
-| `page_views`       | One row per page view, admin routes included                 | Service role only — RLS on, zero policies                                |
-| `site_content`     | Editable copy for every public page                          | Service role only; read on the server, written from the console          |
+| Table                    | Holds                                                        | Who can read/write                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `profiles`               | One row per auth user (`founder`, `company` or `admin`)      | Own row; `role` is service-role only                                                                                                    |
+| `companies`              | Job-portal accounts + verification status                    | Own row; `status` is service-role only                                                                                                  |
+| `jobs`                   | Company job postings                                         | Public read once the company is verified; write only by a verified owner                                                                |
+| `applications`           | Submitted incubation applications                            | Own rows; `status` is service-role only                                                                                                 |
+| `job_applications`       | Applications to a role on the Opportunities board            | Service role for writes; a verified company reads its own applicants through one policy, with `review_note` held back by a column grant |
+| `email_templates`        | Subject + HTML body per message, overriding the bundled copy | Service role only — RLS on, zero policies                                                                                               |
+| `email_log`              | One row per send attempt, with the rendered body             | Service role only — RLS on, zero policies                                                                                               |
+| `audit_log`              | Every row change, with actor and before/after                | Service role only — RLS on, zero policies                                                                                               |
+| `page_views`             | One row per page view, admin routes included                 | Service role only — RLS on, zero policies                                                                                               |
+| `site_content`           | Editable copy for every public page                          | Service role only; read on the server, written from the console                                                                         |
+| `rate_limits`            | Fixed-window request counters for the public write routes    | Service role only — RLS on, zero policies                                                                                               |
+| `email_events`           | Delivery feedback from Resend: what happened after a send    | Service role only — RLS on, zero policies                                                                                               |
+| `email_suppressions`     | Addresses that hard-bounced or complained                    | Service role only — checked before every non-test send                                                                                  |
+| `newsletter_subscribers` | Footer signups, one row per address case-folded              | Service role only — RLS on, zero policies                                                                                               |
 
 ```mermaid
 erDiagram
@@ -502,6 +517,62 @@ project and reports how many admins and content sections it can see. Note that
 `$env/static/*` is read once at startup — **restart the dev server after editing
 `.env.local`**, or you are still running the old values.
 
+### Backups and the restore drill
+
+Supabase takes its own backups. Two things they do not solve: nobody had ever
+rehearsed a restore, and **a database backup does not contain the files** —
+Supabase Storage keeps objects in S3 and only the metadata rows in Postgres, so
+restoring the database alone gives you rows pointing at resumes and pitch decks
+that no longer exist.
+
+```sh
+pnpm backup                    # tables + storage, into ./backups/<ref>-<timestamp>/
+pnpm backup --full             # include audit_log and page_views
+pnpm backup --no-storage       # metadata only
+
+pnpm restore backups/<dir> --dry-run                        # the drill
+pnpm restore backups/<dir> --into <url> --key <service-key>  # into a scratch project
+```
+
+A backup directory holds `schema.sql` and `data.sql` (when `pg_dump` can run),
+one NDJSON file per table, every storage object under `storage/<bucket>/`, and a
+`manifest.json` recording row counts, checksums and — importantly — what that
+particular backup can and cannot put back.
+
+**What restores from what:**
+
+| Content                                                                                                                            | Restored by                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `site_content`, `email_templates`, `email_log`, `email_events`, `email_suppressions`, `newsletter_subscribers`, `job_applications` | `pnpm restore` — upserted from NDJSON, safe to re-run |
+| Storage objects in all three buckets                                                                                               | `pnpm restore` — re-uploaded with `upsert`            |
+| `profiles`, `companies`, `jobs`, `applications`                                                                                    | **`schema.sql` + `data.sql` through `psql` only**     |
+
+That last row is the one to understand. Those four tables are keyed by
+`auth.users.id`, and Supabase's Admin API will not create a user with a chosen
+id — so their rows cannot be reattached to the people they belong to from JSON.
+`restore.js` refuses to write them rather than silently orphaning records, and
+says so when it does.
+
+> **`pnpm backup` calls `pg_dump` directly, not through `supabase db dump`.** The
+> CLI always runs `pg_dump` inside a container, so it fails on a machine that has
+> `pg_dump` installed but no Docker daemon — which is the common case on macOS.
+> The script looks for `pg_dump` on `PATH` and then in the Homebrew `libpq`
+> prefixes (Homebrew keeps it off `PATH` so it does not shadow the system
+> `psql`), and only falls back to the CLI. If neither route works it still takes
+> the tables and storage, but cannot capture the schema, the roles or
+> `auth.users`, and both the run output and the manifest say so. Fix it with
+> `brew install libpq`.
+
+**The drill.** `pnpm restore <dir> --dry-run` reads the backup, checks every file
+against the row counts in the manifest, confirms the target is reachable, and
+reports exactly what would be written where — without writing anything. It is the
+cheap version of finding out, and it catches a truncated file or an empty bucket
+before the day it matters. Restoring into the project a backup came from is
+refused unless `--force-same-project` is passed; a drill belongs in a scratch
+project.
+
+`backups/` is gitignored — these files are real personal data.
+
 ### Audit trail
 
 `audit_log` is written by Postgres triggers rather than by the application, so a row changed
@@ -609,7 +680,40 @@ A send never fails a request. `sendTemplateEmail()` resolves whatever happens, s
 verification or an application submit completes even when mail is down; what went wrong is
 in the log.
 
-### Email confirmation
+### Delivery feedback
+
+`email_log` records what was handed to Resend; it cannot know what happened next. A hard
+bounce or a spam complaint arrives later as a webhook at **`/api/resend-webhook`**, which
+verifies Resend's Svix signature (HMAC-SHA256 over `id.timestamp.body`, with a five-minute
+timestamp tolerance so a captured request is not replayable) **before** parsing the body.
+Events land in `email_events`, deduplicated because Resend retries anything that did not
+answer 2xx.
+
+A permanent bounce or any complaint writes `email_suppressions`, and `sendTemplateEmail()`
+refuses a suppressed address before spending plan allowance on it. Transient bounces — a
+full mailbox, a temporary server failure — do not suppress. The console lists suppressed
+addresses beside the meter and can lift one.
+
+Point Resend at `https://<site>/api/resend-webhook`, subscribe it to `email.bounced` and
+`email.complained`, and put the `whsec_…` secret in `RESEND_WEBHOOK_SECRET`.
+
+### Auth email and the callback
+
+Supabase Auth sends the confirmation and password-reset mail itself — it never goes through
+the Resend layer above. Every `signUp` passes an **`emailRedirectTo`** pointing at
+`/auth/callback`; without one Supabase falls back to the project's **Site URL**, which is
+how a confirmation link ends up on `http://localhost:3000`.
+
+`/auth/callback` is client-only (`ssr = false`) because the implicit flow returns the
+tokens in the URL fragment, which never reaches the server. It handles both shapes — the
+implicit `#access_token=…` and a PKCE `?code=` — then forwards to `?next=`, and explains
+itself when a link is expired, already used, or opened in a different browser. A recovery
+link forwards to `/auth/reset-password`.
+
+> **This depends on dashboard configuration.** Under **Authentication → URL Configuration**,
+> the Site URL must be the real origin and the redirect list must include it. An
+> `emailRedirectTo` that is not allow-listed is dropped silently and the Site URL used
+> instead.
 
 The project currently has **email confirmation enabled**, so `signUp` returns no session
 and the sign-up screens tell the user to check their inbox. To let people in immediately
@@ -643,9 +747,19 @@ node scripts/seed-content.js --force  # overwrite every section from content.jso
 
 The editor is schema-driven rather than hand-written per page: it reads the shape of the
 stored JSON and renders text inputs, textareas for long copy, checkboxes, and reorderable
-lists with add and remove. Adding a page to `content.json` and re-running the seed makes it
-editable without touching the admin code. Every save is audited with a before and after, and
-each section has a **Reset to default copy** button.
+lists with add and remove — recursing into nested objects, so a new field is editable the
+moment it exists in the JSON. Adding a page to `content.json` and re-running the seed makes
+it editable without touching the admin code.
+
+Two sections earn a mention:
+
+- **`seo`** — site name, home title and the fallback description used where a page has no
+  hero copy of its own. See [SEO](#seo).
+- **`avatar { src, alt }`** on every entry in `pages.team.members`,
+  `pages.governingBody.members` and `pages.mentors.tracks`. A card renders the photograph
+  when `src` is set and keeps the plain circle when it is not, so the pages work before the
+  photographs arrive. Every save is audited with a before and after, and
+  each section has a **Reset to default copy** button.
 
 > [!NOTE]
 > The `value` column is `json` rather than `jsonb` on purpose — `jsonb` sorts object keys, which
@@ -660,10 +774,34 @@ role and company names, so it still reads correctly after the posting is taken d
 
 ## SEO
 
-- **Global meta** — title, description, keywords, OG, Twitter card, canonical, and Organization JSON-LD live in `src/app.html`.
-- **Open Graph image** — `static/banner-iitgtic.webp` is served at `/banner-iitgtic.webp` for social previews.
-- **Sitemap** — `src/routes/sitemap.xml/+server.ts` generates `/sitemap.xml` from the static route list + `content.json` slugs.
-- **robots.txt** — `static/robots.txt` allows public pages, disallows admin/auth routes, and links the sitemap.
+Metadata is **per page**, resolved in one place. `src/lib/components/Seo.svelte` renders
+from the root layout, so every route gets a description, canonical, Open Graph block and
+Twitter card without 37 pages repeating themselves.
+
+- **Descriptions are not written twice.** `src/lib/utils/seo.ts` maps a route to its
+  content section and reads that section's own `hero.lede` or `hero.intro`, trimmed to 155
+  characters on a word boundary. Editing a page in the content console updates its search
+  snippet with it.
+- **Titles stay with the pages.** `Seo.svelte` deliberately does not emit `<title>` — every
+  route sets its own, and a second one in the document is a duplicate rather than an
+  override.
+- **Canonicals come from the request**, not from `PUBLIC_SITE_URL`, so a Vercel preview is
+  correct without being configured.
+- **`noindex, nofollow`** on the consoles, `/auth`, `/login`, `/apply`, `/application` and
+  `/status`, matching what `static/robots.txt` already disallows.
+- **`src/app.html`** keeps only what is genuinely identical everywhere: keywords, author,
+  `og:site_name`, `og:locale` and the Organization JSON-LD.
+- **Open Graph image** — `static/banner-iitgtic.webp` served at `/banner-iitgtic.webp`; a
+  page can override it, in which case the fixed 1200×630 dimensions are omitted.
+- **Sitemap** — `src/routes/sitemap.xml/+server.ts` generates `/sitemap.xml` from the static
+  route list + `content.json` slugs.
+- **robots.txt** — `static/robots.txt` allows public pages, disallows admin/auth routes, and
+  links the sitemap.
+
+> Before this, `app.html` carried a hardcoded description, canonical and social block. That
+> put a second static `<title>` ahead of every page's real one, so every server-rendered
+> page — and so every crawler and social card — saw the homepage title; and the canonical
+> named the homepage on all 37 pages, asking Google to treat the site as one duplicate.
 
 After deploy, re-scrape social previews:
 
@@ -671,7 +809,7 @@ After deploy, re-scrape social previews:
 - Twitter/X: https://cards-dev.twitter.com/validator
 - LinkedIn: https://www.linkedin.com/post-inspector/
 
-Submit `https://iitgtic.vercel.app/sitemap.xml` to:
+Submit `https://frontend-iitgtic.vercel.app/sitemap.xml` to:
 
 - Google Search Console: https://search.google.com/search-console
 - Bing Webmaster Tools: https://www.bing.com/webmasters
@@ -682,22 +820,25 @@ Deployed to Vercel via `@sveltejs/adapter-auto`. Pushes to `main` deploy automat
 
 ## Roadmap
 
-The live checklist is at **[/status](https://iitgtic.vercel.app/status)** — every route,
+The live checklist is at **[/status](https://frontend-iitgtic.vercel.app/status)** — every route,
 component and backend piece, with a frontend and a backend rail. The open items today:
 
-| Area                         | Gap                                                                                                                     |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Company-side applicant inbox | `job_applications` already records `job_id` and `company_id`; a verified company still cannot read its own applicants   |
-| Email deliverability         | Sending works, but the domain is not verified in Resend yet, and bounces and complaints are not read back from webhooks |
-| Rate limiting                | Turnstile plus one-application-per-email is the only brake on the public submit route                                   |
-| Resume retention             | Resumes stay in the bucket until an admin deletes the row — no expiry, no bulk export                                   |
-| Backups                      | Running on Supabase defaults; the restore has never been rehearsed                                                      |
-| Per-page SEO                 | Only `<title>` per page — descriptions, OG and canonicals are global                                                    |
-| Prerender flags              | Static pages still SSR; `export const prerender = true` where it is safe                                                |
-| Real content                 | Partner logos, event and people photos, startup logos are placeholders                                                  |
-| Application drafts           | A refresh still loses progress on the eight-step form                                                                   |
+| Area                    | Gap                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sending domain          | Mail still leaves as `onboarding@resend.dev`, Resend's shared sandbox sender. The real domain is **`iitgtic.com`** — it resolves, and its MX is Google Workspace — but its DNS is not ours to edit yet, so the Resend records cannot be published. Separately the `RESEND_API_KEY` in `.env.local` is a **send-only** key, so the domain check in the console and in `pnpm doctor` gets a `restricted_api_key` 401 rather than a domain list; a full-access key is needed for that read |
+| Auth URL configuration  | Site URL on the linked project is still the dashboard default, so a confirmation link mailed from production points at `localhost`. The values are recorded in `supabase/config.toml`; applying them needs the dashboard, or a `supabase config push`                                                                                                                                                                                                                                   |
+| Backups                 | `pnpm backup` is complete — a real `pg_dump` of schema and data including `auth.users`, plus NDJSON and storage — and `pnpm restore --dry-run` passes. One thing left: rehearse the real restore once into a scratch project, which needs a project to throw away first                                                                                                                                                                                                                 |
+| Real content            | Partner logos, event and people photographs, startup logos are still placeholders. The `avatar { src, alt }` fields and the content console are ready for them                                                                                                                                                                                                                                                                                                                          |
+| Applicant notifications | A company sees its applicants but is not told when a new one arrives; the inbox is pull-only                                                                                                                                                                                                                                                                                                                                                                                            |
+
+Deliberately **not** doing:
+
+| Decision        | Why                                                                                                                                                                                                                                                                          |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prerender flags | The root layout loads every page's copy from `site_content`, so a prerendered page freezes its text at build time and the content editor silently stops working on it. A prerendered route is also served without touching `hooks.server.ts`, so `page_views` would go dark. |
+| Scheduled purge | Retention is a console action, not a timer. Deleting people's personal documents on a schedule is the kind of thing only noticed after it has already run.                                                                                                                   |
 
 <div align="center">
 <br>
-<sub>IIT Guwahati Technology Incubation Centre · <a href="https://iitgtic.vercel.app">iitgtic.vercel.app</a></sub>
+<sub>IIT Guwahati Technology Incubation Centre · <a href="https://frontend-iitgtic.vercel.app">frontend-iitgtic.vercel.app</a></sub>
 </div>

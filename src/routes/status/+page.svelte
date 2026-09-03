@@ -1,5 +1,9 @@
 <script lang="ts">
-	type Status = 'done' | 'in-progress' | 'todo';
+	// 'wont-do' is a decision, not a gap: something considered and deliberately
+	// rejected, with the reason in its note. It is left out of the denominators
+	// below, so a checklist is never permanently short of 100% because of a call
+	// that was made on purpose.
+	type Status = 'done' | 'in-progress' | 'todo' | 'wont-do';
 
 	type Item = { name: string; path?: string; status: Status; note?: string };
 
@@ -9,10 +13,28 @@
 	// the top; the sort below keeps the order right if one lands out of place.
 	const milestones: Milestone[] = [
 		{
+			date: '2026-09-01',
+			title: 'Hardening schema live',
+			status: 'done',
+			note: 'The two migrations behind the last round — company inbox grants, the Postgres rate limiter, delivery feedback, newsletter — were written but never applied, so every feature resting on them was reporting green against a schema that did not have them. Both are pushed and verified against the live project: the limiter refuses the 16th write in an hour, a forged webhook is rejected and a real bounce suppresses the address, the newsletter stores what it collects, and none of the four new tables is readable by an anonymous client.'
+		},
+		{
+			date: '2026-09-01',
+			title: 'Search, social and drafts',
+			status: 'done',
+			note: 'Every route now has its own description, canonical and social card, read from the copy already on the page — app.html had been serving the homepage title and a homepage canonical on all 37. The eight-step application survives a refresh. The footer newsletter stores what it collects instead of only claiming to. People cards take real photographs whenever they arrive.'
+		},
+		{
+			date: '2026-09-01',
+			title: 'Company applicant inbox',
+			status: 'done',
+			note: 'A verified company sees who applied to its own roles, with signed resume links and a CSV export. Password reset now has a page to land on, and Forgot password actually sends one.'
+		},
+		{
 			date: '2026-08-31',
 			title: 'Transactional email',
 			status: 'in-progress',
-			note: 'Console side is built — usage against the Resend plan, delivery log with previews, and a block editor for every template. Still to finish: the Supabase Auth confirmation email points at localhost instead of the live site, and deliverability (verified domain, webhooks) is not done.'
+			note: 'Console side is built — usage against the Resend plan, delivery log with previews, and a block editor for every template. Confirmation links now come back to /auth/callback on the origin the person signed up on. Bounce and complaint webhooks are live and suppress the address. Still to finish: a verified sending domain, which waits on DNS access.'
 		},
 		{
 			date: '2026-08-31',
@@ -275,6 +297,24 @@
 			path: '/login',
 			status: 'done',
 			note: 'Turnstile-gated Supabase Auth sign-in'
+		},
+		{
+			name: 'Auth callback',
+			path: '/auth/callback',
+			status: 'done',
+			note: 'Where every link in an auth email lands — picks the session out of the URL and forwards to the right dashboard'
+		},
+		{
+			name: 'Set a new password',
+			path: '/auth/reset-password',
+			status: 'done',
+			note: 'The end of a recovery link. Forgot password on the sign-in screen sends one; an admin can send one too'
+		},
+		{
+			name: 'Company · applicants',
+			path: '/opportunities/job-posting-admin/applicants',
+			status: 'done',
+			note: "A verified company's own applicants, with status tabs, a per-role filter, signed resume links and a CSV export"
 		}
 	];
 
@@ -291,6 +331,11 @@
 		{ name: 'HomeHeroSlider (events-driven)', status: 'done' },
 		{ name: 'EventCalendar', status: 'done' },
 		{ name: 'BrandIcon', status: 'done' },
+		{
+			name: 'Seo (per-page metadata)',
+			status: 'done',
+			note: "Rendered once from the root layout. Description, canonical, Open Graph and Twitter card for every route, with the description read from the page's own hero copy. It does not emit a title — the pages own that"
+		},
 		{
 			name: 'Turnstile (captcha widget)',
 			status: 'done',
@@ -384,23 +429,23 @@
 		},
 		{
 			name: 'Form submit handlers',
-			status: 'in-progress',
-			note: 'Login, apply, application, job posting, role applications and content editing all persist; the footer newsletter is still preventDefault'
+			status: 'done',
+			note: 'Every form on the site now persists what it collects. The footer newsletter was the last holdout — it called preventDefault and then said "we\'ll be in touch", which was not true; it posts to /api/newsletter and only thanks you once the row is written'
 		},
 		{
 			name: 'SEO metadata',
-			status: 'todo',
-			note: 'Only <title> per page — need meta description, OG/Twitter cards, canonicals'
+			status: 'done',
+			note: "app.html carried a hardcoded description, canonical and social block, which was worse than none: it put a second static title ahead of every page's real one, so every server-rendered page and every crawler saw the homepage title, and the canonical named the homepage on all 37 pages. One Seo component in the root layout owns it now, with descriptions read from each section's own hero copy so editing a page updates its search snippet. Consoles, auth, /apply, /application and /status are noindex, matching robots.txt"
 		},
 		{
 			name: 'Prerender flags',
-			status: 'todo',
-			note: 'Static pages still SSR — add export const prerender = true where safe'
+			status: 'wont-do',
+			note: "Decided against. The root layout loads every page's copy from site_content, so a prerendered page freezes its text at build time and the content editor silently stops working on it; a prerendered route is also served without touching hooks.server.ts, so page_views would go dark exactly where traffic matters. SSR with the in-process content cache already makes these a map lookup"
 		},
 		{
 			name: 'Avatar fields on JSON',
-			status: 'todo',
-			note: 'governing-body / team / mentors use placeholder circles; no avatar: {alt} field yet'
+			status: 'done',
+			note: 'Every person and track carries an avatar { src, alt }, editable in the content console like any other field. A card renders the photo when there is one and keeps the plain circle when there is not, so the pages work before the photographs arrive'
 		},
 		{
 			name: 'Real content (logos, photos, bios)',
@@ -409,8 +454,8 @@
 		},
 		{
 			name: 'Application draft persistence',
-			status: 'todo',
-			note: 'Refresh still loses progress; submitted applications persist, in-progress ones do not'
+			status: 'done',
+			note: 'The eight-step form autosaves to localStorage, keyed per account so a shared machine keeps two founders apart, and restores the step and the answers on return. Uploads and the consent boxes are deliberately excluded — a File cannot be serialised, and consent restored from storage was never actually given'
 		}
 	];
 
@@ -418,10 +463,22 @@
 	// belong to, so a migration landing is what moves a node here.
 	const backend: Milestone[] = [
 		{
+			date: '2026-09-01',
+			title: 'Backups + real domain status',
+			status: 'done',
+			note: 'pnpm backup takes the tables and every storage object — the half a database backup never covers, because Supabase keeps files in S3 and only their metadata in Postgres. pnpm restore --dry-run is the restore drill. The email console stopped guessing at the sending domain and now reports what Resend actually says, with the DNS records still missing.'
+		},
+		{
+			date: '2026-09-01',
+			title: 'Hardening + delivery feedback',
+			status: 'done',
+			note: "Per-IP rate limits in Postgres on every public write and on the admin login. Resend bounces and complaints come back through a Svix-signed webhook and suppress the address. An RLS policy and a column grant open job_applications to the company that posted the role. Fixed alongside: an ilike pattern on the signup receipt that could match somebody else's account, a timing-variable compare on the bootstrap password, and uploaded documents that survived the account that owned them."
+		},
+		{
 			date: '2026-08-31',
 			title: 'Transactional email',
 			status: 'in-progress',
-			note: 'email_templates and email_log, both service-role only. A message is stored as blocks and its HTML compiled on save, so nobody edits markup to change a sentence. Sends go through Resend over its REST API; every attempt is logged with the rendered body, including one blocked by a missing key or a spent plan allowance. Not finished: the auth confirmation email links to localhost (Supabase Site URL / redirect config), and the sending domain is not verified.'
+			note: 'email_templates and email_log, both service-role only. A message is stored as blocks and its HTML compiled on save, so nobody edits markup to change a sentence. Sends go through Resend over its REST API; every attempt is logged with the rendered body, including one blocked by a missing key, a spent plan allowance or a suppressed recipient. Auth mail now carries an emailRedirectTo of its own, so a confirmation link lands on /auth/callback rather than the project Site URL. Not finished: mail still leaves from the Resend sandbox sender, because the sending domain cannot be verified without DNS access.'
 		},
 		{
 			date: '2026-08-31',
@@ -494,7 +551,27 @@
 		{
 			name: 'job_applications',
 			status: 'done',
-			note: 'Applications to a role. The applicant has no account, so RLS carries zero policies — every read and write is service-role, one row per email per role'
+			note: 'Applications to a role. The applicant has no account, so every write is service-role; reads are service-role plus one policy that gives a verified company its own applicants, with review_note held back by a column grant'
+		},
+		{
+			name: 'newsletter_subscribers',
+			status: 'done',
+			note: 'Footer signups, one row per address case-folded. Service-role only and audited — a subscriber list is personal data, and who removed someone from it is worth being able to answer'
+		},
+		{
+			name: 'rate_limits',
+			status: 'done',
+			note: 'Fixed-window counters for the public write routes. In Postgres rather than in memory because the app is serverless — a per-instance map resets on every cold start'
+		},
+		{
+			name: 'email_events',
+			status: 'done',
+			note: 'Delivery feedback from Resend — what happened after a message left. Deduplicated on (provider_id, type, occurred_at), because a webhook that did not get a 2xx is retried'
+		},
+		{
+			name: 'email_suppressions',
+			status: 'done',
+			note: 'Addresses that hard-bounced or filed a spam complaint; checked before every non-test send, and liftable from the console'
 		},
 		{
 			name: 'site_content',
@@ -529,7 +606,7 @@
 		{
 			name: 'Storage · job-applications',
 			status: 'done',
-			note: 'Private bucket of resumes, one folder per role; uploaded by the submit route, deleted with the row'
+			note: 'Private bucket of resumes, one folder per role; uploaded by the submit route, deleted with the row, and readable by the company that owns the role through a policy on the folder name'
 		},
 		{
 			name: 'Storage · email-assets',
@@ -539,12 +616,22 @@
 		{
 			name: 'Helper functions',
 			status: 'done',
-			note: 'slugify, touch_updated_at, is_company_verified, is_admin, admin_count, audit_actor, page_impressions'
+			note: 'slugify, touch_updated_at, is_company_verified, is_admin, admin_count, audit_actor, page_impressions, company_owns_job_slug, rate_limit_hit, rate_limit_sweep'
 		}
 	];
 
 	// Everything the browser is allowed to ask the server to do.
 	const endpoints: Item[] = [
+		{
+			name: 'POST /api/newsletter',
+			status: 'done',
+			note: 'Footer subscribe. Per-IP limited and validated; a repeat address is a plain success rather than an error, so the form cannot be used to find out who is already on the list'
+		},
+		{
+			name: 'GET / DELETE /api/tic-admin/newsletter',
+			status: 'done',
+			note: 'The subscriber list for export, and removal on request. Both audited'
+		},
 		{
 			name: 'POST /api/turnstile',
 			status: 'done',
@@ -576,9 +663,9 @@
 			note: 'Move an incubation application through review; delete removes its documents first'
 		},
 		{
-			name: 'PATCH / DELETE /api/tic-admin/job-applications',
+			name: 'GET / PATCH / POST / DELETE /api/tic-admin/job-applications',
 			status: 'done',
-			note: 'Shortlist, mark sent on, decline; delete removes the resume from the bucket first'
+			note: 'Shortlist, mark sent on, decline; GET returns the full records for the CSV export, POST clears a whole role, and every delete removes the resume from the bucket first'
 		},
 		{
 			name: 'DELETE /api/tic-admin/jobs',
@@ -611,6 +698,16 @@
 			note: 'Uploads a picture or document for an image or file block; the body is compiled from blocks server-side, never taken from the browser'
 		},
 		{
+			name: 'DELETE /api/tic-admin/email/suppressions',
+			status: 'done',
+			note: 'Lifts a bounce or complaint suppression so the address can be written to again; audited like every other admin action'
+		},
+		{
+			name: 'POST /api/resend-webhook',
+			status: 'done',
+			note: 'Delivery feedback from Resend, Svix-signed. Verifies the HMAC and the timestamp before parsing, records the event, and suppresses the address on a permanent bounce or a complaint'
+		},
+		{
 			name: 'hooks.server.ts',
 			status: 'done',
 			note: 'Visitor cookie + page-view logging, handed to waitUntil so the write never delays a response'
@@ -619,38 +716,55 @@
 			name: 'requireAdmin() guard',
 			status: 'done',
 			note: 'Reads the session cookie and returns a service-role client tagged x-actor-id, which is how an audit row names a person'
+		},
+		{
+			name: 'resendDomains.ts',
+			status: 'done',
+			note: "Asks Resend for the sending domain's verification state and the DNS records it still wants, instead of inferring it from whether the From address contains resend.dev — an address on an unverified domain looks fine by that test and is refused at send time"
+		},
+		{
+			name: 'scripts/backup.js · scripts/restore.js',
+			status: 'done',
+			note: 'Tables to NDJSON, every storage object to disk, and a manifest recording row counts, checksums and what that backup can put back. restore.js upserts the standalone tables and re-uploads storage; --dry-run is the drill'
+		},
+		{
+			name: 'withinLimit() rate limiter',
+			status: 'done',
+			note: 'Fixed-window counters in Postgres, on the role application, the signup receipt, the Turnstile check and the admin login. Fails open — a counter that cannot be read must not lock people out of a form'
 		}
 	];
 
 	const backendTodo: Item[] = [
 		{
-			name: 'Transactional email',
-			status: 'todo',
-			note: 'Nothing is sent yet — no applicant receipt, no nudge to the company, no notice when an account is verified. The console is the only place a submission is seen'
+			name: 'Email deliverability',
+			status: 'in-progress',
+			note: "The webhook is live: a bounce or a complaint arrives Svix-signed, is recorded once and takes the address out of circulation, and a suppressed address is refused before the next send rather than after. Verified end to end against the deployed schema — a forged, stale or tampered payload is rejected, a valid one suppresses, a replay is deduplicated. What is left is not code. Mail still goes out as onboarding@resend.dev, the shared sandbox sender, because iitgtic.com's DNS is not ours to edit yet; and the Resend key in use is send-only, so it cannot read the domain list the console and pnpm doctor ask for"
 		},
 		{
 			name: 'Company-side applicant inbox',
-			status: 'todo',
-			note: 'job_applications already records job_id and company_id, so a verified company could read its own applicants behind an RLS policy; today only the TIC team can'
+			status: 'done',
+			note: "A verified company reads the applicants for roles it posted at /opportunities/job-posting-admin/applicants — contact details, answers and a signed resume link. TIC's review notes are held back by a column grant, and there is no write path, so a status stays TIC's to set"
 		},
 		{
 			name: 'Rate limiting on public writes',
-			status: 'todo',
-			note: 'Turnstile plus one-application-per-email is the only brake on /api/job-applications; there is no per-IP limit'
+			status: 'done',
+			note: 'Per-IP fixed windows in Postgres on the role application, signup receipt, Turnstile check and admin login, alongside Turnstile and one-application-per-email'
 		},
 		{
 			name: 'Resume retention',
-			status: 'todo',
-			note: 'Resumes stay in the bucket until an admin deletes the row — no expiry, and no bulk export for a closed role'
+			status: 'done',
+			note: "CSV export per role on both sides, and a console action that clears a whole role, resumes first. Deliberately no scheduled purge — deleting people's documents on a timer is only noticed once it has already run"
 		},
 		{
 			name: 'Backups + restore drill',
-			status: 'todo',
-			note: 'Running on Supabase defaults; the restore has never been rehearsed'
+			status: 'in-progress',
+			note: 'pnpm backup is now complete: a real pg_dump of the schema and the data — 45 tables, 21 RLS policies, auth.users included — alongside an NDJSON copy of every table and every storage object, the half a database backup never covers since Supabase keeps files in S3 and only their metadata in Postgres. It calls pg_dump directly rather than through supabase db dump, which runs it inside Docker and so fails on a machine that has pg_dump but no daemon. pnpm restore --dry-run passes: the backup verifies against its manifest and the target is reachable. Left: rehearse the real restore once into a scratch project, which needs a project to throw away first'
 		}
 	];
 
-	const all = [...routes, ...components, ...infra, ...data, ...endpoints, ...backendTodo];
+	const open = (items: Item[]) => items.filter((i) => i.status !== 'wont-do');
+
+	const all = open([...routes, ...components, ...infra, ...data, ...endpoints, ...backendTodo]);
 	const done = all.filter((i) => i.status === 'done').length;
 	const total = all.length;
 	const pct = Math.round((done / total) * 100);
@@ -660,8 +774,9 @@
 
 	function toGroups(entries: { title: string; items: Item[] }[]): Group[] {
 		return entries.map((g) => {
-			const done = g.items.filter((i) => i.status === 'done').length;
-			return { ...g, done, state: done === g.items.length ? 'done' : 'pending' };
+			const counted = open(g.items);
+			const done = counted.filter((i) => i.status === 'done').length;
+			return { ...g, done, state: done === counted.length ? 'done' : 'pending' };
 		});
 	}
 
@@ -678,8 +793,9 @@
 	]);
 
 	function tally(items: Item[]) {
-		const done = items.filter((i) => i.status === 'done').length;
-		return `${done} / ${items.length} done`;
+		const counted = open(items);
+		const done = counted.filter((i) => i.status === 'done').length;
+		return `${done} / ${counted.length} done`;
 	}
 
 	const frontendTally = tally([...routes, ...components, ...infra]);
@@ -1008,6 +1124,15 @@
 
 	.item.in-progress .item__dot {
 		background: #b8860b;
+	}
+
+	.item.wont-do {
+		opacity: 0.65;
+
+		.item__dot {
+			background: transparent;
+			box-shadow: inset 0 0 0 1px #9a9a9a;
+		}
 	}
 
 	.item__note {
