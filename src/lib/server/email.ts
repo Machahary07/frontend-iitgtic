@@ -36,7 +36,7 @@ import {
 // a host that has not set RESEND_API_KEY yet would fail rather than degrade to
 // "email not configured", which is the state the console is built to show.
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
-const DEFAULT_FROM = 'IIT Guwahati TIC <onboarding@resend.dev>';
+const DEFAULT_FROM = 'IIT Guwahati TIC <hello@itsjeu.com>';
 
 export type EmailConfig = {
 	configured: boolean;
@@ -65,10 +65,7 @@ export function emailConfig(): EmailConfig {
 		replyTo: env.RESEND_REPLY_TO?.trim() || '',
 		// PUBLIC_-prefixed, so it comes from the public env module — links inside an
 		// email have no request to infer an origin from.
-		siteUrl: (publicEnv.PUBLIC_SITE_URL?.trim() || 'https://frontend-iitgtic.vercel.app').replace(
-			/\/$/,
-			''
-		),
+		siteUrl: (publicEnv.PUBLIC_SITE_URL?.trim() || 'https://iitgtic.itsjeu.com').replace(/\/$/, ''),
 		siteName: env.EMAIL_SITE_NAME?.trim() || 'IIT Guwahati TIC',
 		plan,
 		monthlyLimit:

@@ -30,3 +30,20 @@ vite.config.ts.timestamp-*
 pnpm-workspace.yaml
 # Backups taken by scripts/backup.js — real personal data, never commit these.
 backups/
+
+# MCP servers & agent skills — local setup, regenerable (skills add / claude mcp add)
+.mcp.json
+.agents/
+skills-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# Editor / OS cruft
+.idea/
+*.swp
+*~
+Desktop.ini

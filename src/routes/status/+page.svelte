@@ -501,7 +501,7 @@
 			date: '2026-08-31',
 			title: 'Transactional email',
 			status: 'in-progress',
-			note: 'email_templates and email_log, both service-role only. A message is stored as blocks and its HTML compiled on save, so nobody edits markup to change a sentence. Sends go through Resend over its REST API; every attempt is logged with the rendered body, including one blocked by a missing key, a spent plan allowance or a suppressed recipient. Auth mail now carries an emailRedirectTo of its own, so a confirmation link lands on /auth/callback rather than the project Site URL. Not finished: mail still leaves from the Resend sandbox sender, because the sending domain cannot be verified without DNS access.'
+			note: 'email_templates and email_log, both service-role only. A message is stored as blocks and its HTML compiled on save, so nobody edits markup to change a sentence. Sends go through Resend over its REST API; every attempt is logged with the rendered body, including one blocked by a missing key, a spent plan allowance or a suppressed recipient. Auth mail now carries an emailRedirectTo of its own, so a confirmation link lands on /auth/callback rather than the project Site URL. Development mail sends from hello@itsjeu.com on the verified itsjeu.com domain, so real recipients get it; the production cutover to an iitgtic.com address waits on that domain’s DNS access.'
 		},
 		{
 			date: '2026-08-31',
@@ -776,7 +776,7 @@
 		{
 			name: 'Email deliverability',
 			status: 'in-progress',
-			note: "The webhook is live: a bounce or a complaint arrives Svix-signed, is recorded once and takes the address out of circulation, and a suppressed address is refused before the next send rather than after. Verified end to end against the deployed schema — a forged, stale or tampered payload is rejected, a valid one suppresses, a replay is deduplicated. What is left is not code. Mail still goes out as onboarding@resend.dev, the shared sandbox sender that only delivers to the address owning the API key, because iitgtic.com's DNS is not ours to edit yet and the domain's verification records cannot be published"
+			note: "The webhook is live: a bounce or a complaint arrives Svix-signed, is recorded once and takes the address out of circulation, and a suppressed address is refused before the next send rather than after. Verified end to end against the deployed schema — a forged, stale or tampered payload is rejected, a valid one suppresses, a replay is deduplicated. What is left is not code. Development mail sends from hello@itsjeu.com on the verified itsjeu.com domain, so it reaches real recipients; the production cutover to an official iitgtic.com address waits on that domain's DNS access"
 		},
 		{
 			name: 'Company-side applicant inbox',
