@@ -17,7 +17,10 @@ const STATIC_ROUTES = [
 	'/incubated-startups',
 	'/incubation',
 	'/opportunities',
-	'/partners'
+	'/partners',
+	'/contact',
+	'/privacy',
+	'/terms'
 ];
 
 function buildUrls(content: SiteContent): string[] {

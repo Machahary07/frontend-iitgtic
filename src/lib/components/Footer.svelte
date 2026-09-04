@@ -1,48 +1,20 @@
 <script lang="ts">
 	import LinkReveal from './LinkReveal.svelte';
 	import { images } from '$lib/data/images';
+	import { getContent } from '$lib/content';
 	import { loadGsap, prefersReducedMotion } from '$lib/utils/animation';
 
 	type FooterLink = { label: string; href: string };
 	type FooterGroup = { title: string; links: FooterLink[] };
+	type Social = { label: string; href: string; text: string };
+
+	// Editable at /tic-admin/content → Global → Footer.
+	const footer = getContent().footer;
+	const linkGroups = footer.linkGroups as FooterGroup[];
+	const socialLinks = footer.socials as Social[];
+	const legalLinks = footer.legal as FooterLink[];
 
 	const year = new Date().getFullYear();
-
-	const linkGroups: FooterGroup[] = [
-		{
-			title: 'Programs',
-			links: [
-				{ label: 'Incubation Support', href: '/incubation/support' },
-				{ label: 'Funding Support', href: '/incubation/funding' },
-				{ label: 'Technical Support', href: '/incubation/technical' },
-				{ label: 'Apply for Incubation', href: '/apply' }
-			]
-		},
-		{
-			title: 'Resources',
-			links: [
-				{ label: 'Events & Workshops', href: '/events' },
-				{ label: 'Opportunities', href: '/opportunities' },
-				{ label: 'Incubated Startups', href: '/incubated-startups' },
-				{ label: 'Partners', href: '/partners' }
-			]
-		},
-		{
-			title: 'Company',
-			links: [
-				{ label: 'About TIC', href: '/about' },
-				{ label: 'Governing Body', href: '/about/governing-body' },
-				{ label: 'TIC Team', href: '/about/team' },
-				{ label: 'FAQ', href: '/about/faq' }
-			]
-		}
-	];
-
-	const socialLinks = [
-		{ label: 'X', href: 'https://x.com', text: 'X' },
-		{ label: 'LinkedIn', href: 'https://www.linkedin.com', text: 'in' },
-		{ label: 'YouTube', href: 'https://www.youtube.com', text: 'yt' }
-	];
 
 	let email = $state('');
 	let submitted = $state(false);
@@ -104,12 +76,12 @@
 					<span class="footer-logo">
 						<img src={images.logo} alt="" loading="lazy" decoding="async" />
 					</span>
-					<span class="footer-tagline">Make something people want.</span>
+					<span class="footer-tagline">{footer.tagline}</span>
 				</div>
 
 				<form class="footer-newsletter" onsubmit={handleSubscribe} novalidate>
-					<h2>Stay in the loop</h2>
-					<p>Get updates on programs, events, and incubated startups.</p>
+					<h2>{footer.newsletter.heading}</h2>
+					<p>{footer.newsletter.text}</p>
 					<div class="newsletter-row">
 						<label class="visually-hidden" for="footer-newsletter-email">Email address</label>
 						<input
@@ -144,6 +116,12 @@
 						<p class="newsletter-status newsletter-status--error" role="alert">{subscribeError}</p>
 					{/if}
 				</form>
+
+				<div class="footer-contact">
+					<h2>{footer.contact.heading}</h2>
+					<p class="footer-contact__line">{footer.contact.email}</p>
+					<p class="footer-contact__line">{footer.contact.phone}</p>
+				</div>
 			</div>
 
 			<nav class="footer-nav" aria-label="Footer navigation">
@@ -164,6 +142,12 @@
 
 		<div class="footer-bottom">
 			<p>&copy; {year} IIT Guwahati Technology Incubation Centre</p>
+
+			<nav class="footer-legal" aria-label="Legal">
+				{#each legalLinks as link (link.href)}
+					<LinkReveal text={link.label} href={link.href} class="footer-legal__link" />
+				{/each}
+			</nav>
 
 			<div class="footer-socials" aria-label="Social links">
 				{#each socialLinks as social}
@@ -344,6 +328,26 @@
 		border: 0;
 	}
 
+	.footer-contact {
+		display: flex;
+		flex-direction: column;
+		gap: $space-2;
+
+		h2 {
+			margin: 0;
+			font-size: $font-size-base;
+			line-height: $line-height-snug;
+			font-weight: $font-weight-bold;
+		}
+	}
+
+	.footer-contact__line {
+		margin: 0;
+		color: rgba($color-black, 0.72);
+		font-size: $font-size-base;
+		line-height: $line-height-snug;
+	}
+
 	.footer-nav {
 		display: grid;
 		grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -386,6 +390,19 @@
 			font-size: $font-size-base;
 			line-height: $line-height-snug;
 		}
+	}
+
+	.footer-legal {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: $space-4;
+	}
+
+	:global(.footer-legal__link) {
+		color: $color-black;
+		font-size: $font-size-sm;
+		line-height: $line-height-snug;
 	}
 
 	.footer-socials {

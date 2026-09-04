@@ -30,6 +30,10 @@
 					{
 						"label": "Mentors",
 						"href": "/about/mentors"
+					},
+					{
+						"label": "Contact",
+						"href": "/contact"
 					}
 				]
 			},
@@ -2676,6 +2680,203 @@
 					}
 				}
 			]
+		},
+		"contact": {
+			"title": "Contact · IIT Guwahati TIC",
+			"hero": {
+				"eyebrow": "Get in touch",
+				"headlineLead": "Talk to",
+				"headlineEmphasis": "IITG-TIC.",
+				"lede": "Questions about incubation, partnerships, workspace, or a visit — reach the Technology Incubation Centre at IIT Guwahati."
+			},
+			"details": {
+				"heading": "Reach us",
+				"org": "IITG Technology Incubation Centre",
+				"addressLines": ["Technology Complex, IIT Guwahati", "Guwahati – 781039, Assam, India"],
+				"email": "tic@iitg.ac.in",
+				"phone": "+91 0361 2583194 / 2583191"
+			},
+			"map": {
+				"heading": "Find us",
+				"title": "IITG-TIC location on Google Maps",
+				"embedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3580.1078314531264!2d91.70253749999999!3d26.1931703!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x375a5aec4ce6118d%3A0x343d31830da16d72!2sTechnology%20Incubation%20Centre%20(IITG-TIC)!5e0!3m2!1sen!2sin!4v1788529868612!5m2!1sen!2sin"
+			}
+		},
+		"privacy": {
+			"title": "Privacy Policy · IIT Guwahati TIC",
+			"hero": {
+				"eyebrow": "Legal",
+				"headlineLead": "Privacy",
+				"headlineEmphasis": "Policy.",
+				"lede": "Indian Institute of Technology Guwahati – Technology Incubation Centre (IITG-TIC) respects your privacy and is committed to protecting personal information provided through its website."
+			},
+			"sections": [
+				{
+					"heading": "Information We Collect",
+					"paragraphs": [
+						"IITG-TIC does not automatically collect personally identifiable information, such as your name, phone number, or email address, merely by visiting this website.",
+						"Personal information may be collected when you voluntarily submit it through forms, enquiries, registrations, applications, or other website services. The information collected will depend on the purpose of your interaction with IITG-TIC.",
+						"Technical information, such as IP address, browser type, operating system, date and time of access, and pages visited, may also be processed for website security, administration, troubleshooting, and improving website performance."
+					]
+				},
+				{
+					"heading": "Use of Information",
+					"paragraphs": ["Information provided by you may be used to:"],
+					"bullets": [
+						"Respond to enquiries and requests.",
+						"Provide requested services or information.",
+						"Process applications and registrations.",
+						"Communicate relevant updates.",
+						"Maintain website security and functionality.",
+						"Comply with applicable legal requirements."
+					],
+					"outro": "IITG-TIC will process personal information only for lawful and specified purposes."
+				},
+				{
+					"heading": "Sharing of Information",
+					"paragraphs": [
+						"IITG-TIC does not sell personal information.",
+						"Personal information will not be shared with third parties except where necessary to provide requested services, comply with legal obligations, protect the website or its users, or where otherwise permitted or required by applicable law."
+					]
+				},
+				{
+					"heading": "Data Security",
+					"paragraphs": [
+						"IITG-TIC takes reasonable measures to protect personal information against unauthorized access, misuse, alteration, disclosure, loss, or destruction.",
+						"However, no method of electronic transmission or storage can be guaranteed to be completely secure."
+					]
+				},
+				{
+					"heading": "Data Retention",
+					"paragraphs": [
+						"Personal information will be retained only for as long as necessary to fulfil the purpose for which it was collected, comply with applicable legal requirements, or meet legitimate administrative requirements."
+					]
+				},
+				{
+					"heading": "Cookies",
+					"paragraphs": [
+						"A cookie is a small piece of data stored by a website in your browser.",
+						"This website does not intentionally use cookies for advertising or tracking purposes. Where essential cookies or similar technologies are introduced for website functionality, security, or service delivery, relevant information will be provided through this Privacy Policy or an appropriate notice."
+					]
+				},
+				{
+					"heading": "Third-Party Websites",
+					"paragraphs": [
+						"This website may contain links to external websites. IITG-TIC is not responsible for the privacy practices, content, or security of third-party websites.",
+						"Users are advised to review the privacy policies of external websites before providing personal information."
+					]
+				},
+				{
+					"heading": "Your Rights",
+					"paragraphs": [
+						"Subject to applicable law, individuals may have rights concerning their personal information, including requesting access, correction, or deletion where applicable, and withdrawing consent where processing is based on consent.",
+						"Requests or privacy-related concerns may be submitted to IITG-TIC using the contact details provided below."
+					]
+				},
+				{
+					"heading": "Changes to This Policy",
+					"paragraphs": [
+						"IITG-TIC may update this Privacy Policy from time to time to reflect changes in its practices, technology, or applicable laws.",
+						"The updated version will be published on this website with the revised effective or updated date."
+					]
+				},
+				{
+					"heading": "Contact",
+					"paragraphs": ["For privacy-related questions, requests, or complaints, please contact:"],
+					"contact": {
+						"org": "IITG Technology Incubation Centre",
+						"addressLines": ["Technology Complex, IIT Guwahati", "Guwahati – 781039, Assam, India"],
+						"email": "tic@iitg.ac.in",
+						"phone": "+91 0361 2583194 / 2583191"
+					}
+				}
+			]
+		},
+		"terms": {
+			"title": "Terms of Use · IIT Guwahati TIC",
+			"hero": {
+				"eyebrow": "Legal",
+				"headlineLead": "Terms of",
+				"headlineEmphasis": "Use.",
+				"lede": "The Indian Institute of Technology Guwahati – Technology Incubation Centre (IITG-TIC) website and its sub-sites are governed by these Terms of Use. By accessing or using this website, you agree to these terms."
+			},
+			"sections": [
+				{
+					"heading": "Disclaimer",
+					"paragraphs": [
+						"IITG-TIC makes reasonable efforts to keep website information accurate and current. However, IITG-TIC does not warrant that all information, content, services, or materials available on the website are complete, accurate, reliable, or current.",
+						"Information provided on this website is intended for general informational purposes. Users are responsible for evaluating and using such information appropriately.",
+						"To the extent permitted by applicable law, IITG-TIC shall not be liable for any direct, indirect, incidental, special, consequential, or other damages arising from access to, use of, or reliance upon information, services, content, or materials available through this website.",
+						"IITG-TIC may update, modify, suspend, or remove website content, services, features, or functionality at any time without prior notice."
+					]
+				},
+				{
+					"heading": "Copyright",
+					"paragraphs": [
+						"Unless otherwise stated, content available on this website, including text, graphics, photographs, videos, logos, interface elements, and website design, is protected by applicable copyright laws and is owned by or licensed to IITG-TIC or its respective rights holders.",
+						"No material from this website may be reproduced, modified, distributed, republished, transmitted, or used for public or commercial purposes without appropriate permission, unless such use is permitted under applicable law.",
+						"Requests for permission to reproduce or use website content may be submitted to IITG-TIC using the contact information provided below."
+					]
+				},
+				{
+					"heading": "Trademarks",
+					"paragraphs": [
+						"The names, logos, trademarks, service marks, and trade names associated with IITG-TIC and the Indian Institute of Technology Guwahati are the property of their respective owners.",
+						"Nothing on this website grants any license or right to use such trademarks without prior written permission."
+					]
+				},
+				{
+					"heading": "Links to External Websites",
+					"paragraphs": [
+						"This website may contain links to third-party websites for convenience and informational purposes.",
+						"IITG-TIC does not own or control these external websites and is not responsible for their content, accuracy, availability, security, privacy practices, or terms of use.",
+						"Users should review the applicable terms and privacy policies before using any third-party website.",
+						"The inclusion of an external link does not necessarily imply endorsement, affiliation, or recommendation by IITG-TIC."
+					]
+				},
+				{
+					"heading": "Links to IITG-TIC Website",
+					"paragraphs": [
+						"Third parties may link to the IITG-TIC website provided that such links are lawful, do not misrepresent IITG-TIC or its relationship with the linking website, and do not damage the reputation of IITG-TIC.",
+						"Where a proposed link could reasonably imply endorsement, affiliation, or authorization, prior written permission from IITG-TIC is required."
+					]
+				},
+				{
+					"heading": "Website Availability",
+					"paragraphs": [
+						"IITG-TIC does not guarantee uninterrupted or error-free availability of the website.",
+						"Website access may occasionally be suspended, restricted, or interrupted due to maintenance, technical issues, security measures, or circumstances beyond IITG-TIC's reasonable control."
+					]
+				},
+				{
+					"heading": "Changes to These Terms",
+					"paragraphs": [
+						"IITG-TIC may revise these Terms of Use from time to time.",
+						"Updated terms will be published on this website. Continued use of the website after such changes constitutes acceptance of the revised terms."
+					]
+				},
+				{
+					"heading": "Governing Law",
+					"paragraphs": [
+						"These Terms of Use shall be governed by and interpreted in accordance with the applicable laws of India."
+					]
+				},
+				{
+					"heading": "Contact Information",
+					"paragraphs": [
+						"For permissions, questions, or concerns regarding these Terms of Use, contact:"
+					],
+					"contact": {
+						"org": "IITG Technology Incubation Centre",
+						"addressLines": [
+							"Indian Institute of Technology Guwahati",
+							"Guwahati – 781039, Assam, India"
+						],
+						"email": "tic@iitg.ac.in",
+						"phone": ""
+					}
+				}
+			]
 		}
 	},
 	"cta": {
@@ -2697,5 +2898,103 @@
 			"message": "An unexpected error occurred. Please try again later."
 		},
 		"backHome": "← Back to home"
+	},
+	"footer": {
+		"tagline": "Make something people want.",
+		"newsletter": {
+			"heading": "Stay in the loop",
+			"text": "Get updates on programs, events, and incubated startups."
+		},
+		"linkGroups": [
+			{
+				"title": "Programs",
+				"links": [
+					{
+						"label": "Incubation Support",
+						"href": "/incubation/support"
+					},
+					{
+						"label": "Funding Support",
+						"href": "/incubation/funding"
+					},
+					{
+						"label": "Technical Support",
+						"href": "/incubation/technical"
+					},
+					{
+						"label": "Apply for Incubation",
+						"href": "/apply"
+					}
+				]
+			},
+			{
+				"title": "Resources",
+				"links": [
+					{
+						"label": "Events & Workshops",
+						"href": "/events"
+					},
+					{
+						"label": "Opportunities",
+						"href": "/opportunities"
+					},
+					{
+						"label": "Incubated Startups",
+						"href": "/incubated-startups"
+					},
+					{
+						"label": "Partners",
+						"href": "/partners"
+					}
+				]
+			},
+			{
+				"title": "Company",
+				"links": [
+					{
+						"label": "About TIC",
+						"href": "/about"
+					},
+					{
+						"label": "Governing Body",
+						"href": "/about/governing-body"
+					},
+					{
+						"label": "TIC Team",
+						"href": "/about/team"
+					},
+					{
+						"label": "FAQ",
+						"href": "/about/faq"
+					}
+				]
+			}
+		],
+		"contact": {
+			"heading": "Contact",
+			"email": "tic@iitg.ac.in",
+			"phone": "(+91 0361) 2583194 / 2583191"
+		},
+		"socials": [
+			{
+				"label": "LinkedIn",
+				"href": "https://www.linkedin.com/company/iitg-tic",
+				"text": "in"
+			}
+		],
+		"legal": [
+			{
+				"label": "Contact",
+				"href": "/contact"
+			},
+			{
+				"label": "Privacy Policy",
+				"href": "/privacy"
+			},
+			{
+				"label": "Terms of Use",
+				"href": "/terms"
+			}
+		]
 	}
 }

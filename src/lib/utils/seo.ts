@@ -35,7 +35,10 @@ const SECTION_FOR: Record<string, string> = {
 	'/events': 'pages.events',
 	'/partners': 'pages.partners',
 	'/opportunities': 'pages.opportunities',
-	'/apply': 'pages.apply'
+	'/apply': 'pages.apply',
+	'/contact': 'pages.contact',
+	'/privacy': 'pages.privacy',
+	'/terms': 'pages.terms'
 };
 
 // Nothing under these belongs in a search result: consoles, the auth plumbing,

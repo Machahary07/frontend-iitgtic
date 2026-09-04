@@ -30,6 +30,7 @@ export const CONTENT_SECTIONS: { key: string; label: string; group: string }[] =
 	{ key: 'cta', label: 'Call to action', group: 'Global' },
 	{ key: 'error', label: 'Error page', group: 'Global' },
 	{ key: 'seo', label: 'Search & social', group: 'Global' },
+	{ key: 'footer', label: 'Footer', group: 'Global' },
 	{ key: 'pages.about', label: 'About', group: 'Pages' },
 	{ key: 'pages.whatHappens', label: 'What happens', group: 'Pages' },
 	{ key: 'pages.governingBody', label: 'Governing body', group: 'Pages' },
@@ -42,7 +43,10 @@ export const CONTENT_SECTIONS: { key: string; label: string; group: string }[] =
 	{ key: 'pages.events', label: 'Events', group: 'Pages' },
 	{ key: 'pages.partners', label: 'Partners', group: 'Pages' },
 	{ key: 'pages.opportunities', label: 'Opportunities', group: 'Pages' },
-	{ key: 'pages.apply', label: 'Apply', group: 'Pages' }
+	{ key: 'pages.apply', label: 'Apply', group: 'Pages' },
+	{ key: 'pages.contact', label: 'Contact', group: 'Pages' },
+	{ key: 'pages.privacy', label: 'Privacy policy', group: 'Pages' },
+	{ key: 'pages.terms', label: 'Terms of use', group: 'Pages' }
 ];
 
 export function readPath(doc: unknown, key: string): unknown {
