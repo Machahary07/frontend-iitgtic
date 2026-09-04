@@ -99,7 +99,6 @@
 
 <AdminShell
 	brand="TIC Team Admin"
-	brandSub="Internal"
 	navItems={TIC_ADMIN_NAV}
 	title={application.startup_name || 'Untitled startup'}
 	eyebrow="Application"

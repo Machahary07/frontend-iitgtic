@@ -172,7 +172,6 @@
 
 <AdminShell
 	brand="TIC Team Admin"
-	brandSub="Internal"
 	navItems={TIC_ADMIN_NAV}
 	title="Users"
 	eyebrow="Accounts"

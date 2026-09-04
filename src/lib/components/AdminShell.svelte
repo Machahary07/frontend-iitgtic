@@ -6,7 +6,8 @@
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
 	import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
-	import Sprout from '@lucide/svelte/icons/sprout';
+	import Scanner from '$lib/components/Scanner.svelte';
+	import { images } from '$lib/data/images';
 	import type { NavItem } from '$lib/utils/adminNavTypes';
 
 	interface Props {
@@ -232,10 +233,44 @@
 </script>
 
 <div class="shell" class:shell--collapsed={collapsed}>
+	<!-- Animated ground. Fixed and inert, so it stays put while the page scrolls
+	     and never takes a click; the gradient on .shell shows through if WebGL is
+	     unavailable, so the admin is never left on a bare white page. -->
+	<div class="scanner-bg" aria-hidden="true">
+		<Scanner
+			color1="#6697D6"
+			color2="#71CEA4"
+			color3="#FFFFFF"
+			speed={0.5}
+			sweepSpeed={0.25}
+			sweepWidth={1.6}
+			sweepFalloff={6}
+			scale={1.5}
+			frequency={2}
+			ripple={0.22}
+			bandDensity={11}
+			lineSharpness={5.5}
+			glow={0.22}
+			scanDirection="vertical"
+			colorSpread={0.7}
+			brightness={1.0}
+			contrast={1.15}
+			softness={1.4}
+			vignette={0.45}
+			scanline={true}
+			grain={true}
+			grainIntensity={0.05}
+			opacity={0.5}
+			mouseInteraction={true}
+			mouseRadius={0.5}
+			mouseStrength={0.5}
+		/>
+	</div>
+
 	<aside class="sidebar" class:sidebar--open={mobileOpen}>
 		<div class="brand">
 			<a href="/" class="brand__mark" aria-label="IITG TIC home">
-				<Sprout size={19} strokeWidth={1.8} />
+				<img src={images.logo} alt="" width="38" height="38" decoding="async" />
 			</a>
 			<div class="brand__text">
 				<span class="brand__name">IITG TIC</span>
@@ -429,10 +464,20 @@
 		}
 	}
 
+	// Fixed rather than absolute so it covers the viewport, not the (taller)
+	// document — the shader should not stretch to the length of a long table.
+	.scanner-bg {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+		pointer-events: none;
+	}
+
 	// ---- Sidebar -------------------------------------------------------------
 
 	.sidebar {
 		grid-column: 1;
+		z-index: 1;
 		display: flex;
 		flex-direction: column;
 		gap: 22px;
@@ -523,10 +568,23 @@
 		border-bottom: 1px solid $admin-line-soft;
 	}
 
+	// The real mark, so no tinted tile behind it — the logo carries its own
+	// colour and a pastel square would read as a second, competing badge.
 	.brand__mark {
-		@include admin-icon-tile('good', 38px);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex: none;
+		width: 38px;
+		height: 38px;
 		text-decoration: none;
 		@include admin-focus-ring;
+
+		img {
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+		}
 	}
 
 	.brand__text {
@@ -637,6 +695,8 @@
 
 	.main {
 		grid-column: 2;
+		position: relative;
+		z-index: 1;
 		display: flex;
 		flex-direction: column;
 		min-width: 0;

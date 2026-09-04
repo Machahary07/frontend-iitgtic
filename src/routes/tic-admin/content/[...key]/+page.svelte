@@ -135,7 +135,6 @@
 
 <AdminShell
 	brand="TIC Team Admin"
-	brandSub="Internal"
 	navItems={TIC_ADMIN_NAV}
 	title={data.section.label}
 	eyebrow="Content"
