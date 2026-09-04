@@ -11,6 +11,7 @@
 		type JobApplicationStatus
 	} from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -46,12 +47,13 @@
 	}
 
 	async function remove() {
-		if (
-			!confirm(
-				`Permanently delete ${applicant.full_name}'s application? The resume is deleted with it, and this cannot be undone.`
-			)
-		)
-			return;
+		const confirmed = await askConfirm({
+			title: `Permanently delete ${applicant.full_name}'s application?`,
+			body: 'The resume is deleted with it. This cannot be undone.',
+			confirmLabel: 'Delete application',
+			tone: 'danger'
+		});
+		if (!confirmed) return;
 		const ok = await adminDeleteJobApplication(applicant.id);
 		if (ok) goto(resolve('/tic-admin/job-applications'));
 		else message = { tone: 'err', text: 'Could not delete the application.' };

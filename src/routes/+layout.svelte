@@ -11,6 +11,7 @@
 	import { images } from '$lib/data/images';
 	import { Navbar, EventBar, Footer } from '$lib';
 	import Seo from '$lib/components/Seo.svelte';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import { setContent } from '$lib/content';
 	import type { LayoutData } from './$types';
 
@@ -51,6 +52,10 @@
 {#if !isAdmin}
 	<Footer />
 {/if}
+
+<!-- Mounted once for the whole app, admin and public alike, so any component can
+     ask a question without shipping its own modal. -->
+<ConfirmDialog />
 
 <style lang="scss">
 	main {

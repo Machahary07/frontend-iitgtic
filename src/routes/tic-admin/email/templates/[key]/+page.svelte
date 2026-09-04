@@ -32,6 +32,7 @@
 		type SpacerSize
 	} from '$lib/utils/emailBlocks';
 	import type { PageData } from './$types';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -298,14 +299,13 @@
 			message = { tone: 'err', text: problems[0] };
 			return;
 		}
-		if (
-			mode === 'html' &&
-			composable &&
-			!confirm(
-				'Saving as HTML replaces the composed version of this message. You can get it back with Reset. Continue?'
-			)
-		) {
-			return;
+		if (mode === 'html' && composable) {
+			const ok = await askConfirm({
+				title: 'Save as HTML?',
+				body: 'This replaces the composed version of the message. Reset brings it back.',
+				confirmLabel: 'Save as HTML'
+			});
+			if (!ok) return;
 		}
 
 		saving = true;
@@ -326,7 +326,13 @@
 	}
 
 	async function reset() {
-		if (!confirm('Discard your edits and restore the copy bundled in the codebase?')) return;
+		const ok = await askConfirm({
+			title: 'Restore the bundled copy?',
+			body: 'Your edits to this template are discarded.',
+			confirmLabel: 'Restore',
+			tone: 'danger'
+		});
+		if (!ok) return;
 
 		resetting = true;
 		message = null;
@@ -342,8 +348,13 @@
 	}
 
 	async function sendTest() {
-		if (dirty && !confirm('A test sends the saved copy, not your unsaved edits. Send anyway?')) {
-			return;
+		if (dirty) {
+			const ok = await askConfirm({
+				title: 'Send the saved copy?',
+				body: 'A test sends what is saved, not your unsaved edits.',
+				confirmLabel: 'Send test'
+			});
+			if (!ok) return;
 		}
 
 		testing = true;

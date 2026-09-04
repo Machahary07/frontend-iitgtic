@@ -14,6 +14,7 @@
 		type UserRole
 	} from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	type Filter = 'all' | UserRole | 'never' | 'suspended';
 
@@ -50,7 +51,11 @@
 		return users.filter((u) => u.role === filter);
 	});
 
-	async function run(id: string, work: () => Promise<{ ok: true } | { ok: false; error: string }>, okText: string) {
+	async function run(
+		id: string,
+		work: () => Promise<{ ok: true } | { ok: false; error: string }>,
+		okText: string
+	) {
 		busyId = id;
 		const result = await work();
 		busyId = null;
@@ -58,15 +63,30 @@
 		if (result.ok) await refresh();
 	}
 
-	function changeRole(user: ManagedUser, role: UserRole) {
+	async function changeRole(user: ManagedUser, role: UserRole) {
 		if (role === user.role) return;
-		if (role === 'admin' && !confirm(`Give ${user.email} full admin access?`)) return;
+		if (role === 'admin') {
+			const ok = await askConfirm({
+				title: `Give ${user.email} full admin access?`,
+				body: 'They will be able to read every application and manage other admins.',
+				confirmLabel: 'Make admin'
+			});
+			if (!ok) return;
+		}
 		run(user.id, () => adminSetUserRole(user.id, role), `${user.email} is now ${role}.`);
 	}
 
-	function toggleBan(user: ManagedUser) {
+	async function toggleBan(user: ManagedUser) {
 		const next = !user.banned;
-		if (next && !confirm(`Suspend ${user.email}? They will not be able to sign in.`)) return;
+		if (next) {
+			const ok = await askConfirm({
+				title: `Suspend ${user.email}?`,
+				body: 'They will not be able to sign in until you restore the account.',
+				confirmLabel: 'Suspend',
+				tone: 'danger'
+			});
+			if (!ok) return;
+		}
 		run(
 			user.id,
 			() => adminSetUserBanned(user.id, next),
@@ -82,8 +102,14 @@
 		);
 	}
 
-	function remove(user: ManagedUser) {
-		if (!confirm(`Permanently delete ${user.email}? Everything they own goes with it.`)) return;
+	async function remove(user: ManagedUser) {
+		const ok = await askConfirm({
+			title: `Permanently delete ${user.email}?`,
+			body: 'Everything they own goes with the account. This cannot be undone.',
+			confirmLabel: 'Delete user',
+			tone: 'danger'
+		});
+		if (!ok) return;
 		run(user.id, () => adminDeleteUser(user.id), `${user.email} deleted.`);
 	}
 
@@ -141,175 +167,175 @@
 </svelte:head>
 
 <AdminShell
-		brand="TIC Team Admin"
-		brandSub="Internal"
-		navItems={TIC_ADMIN_NAV}
-		title="Users"
-		eyebrow="Accounts"
-		user={adminName}
-		onLogout={handleLogout}
-	>
-		{#snippet actions()}
-			<button class="btn btn--primary" onclick={() => (showInvite = !showInvite)}>
-				{showInvite ? 'Cancel' : '+ New admin'}
-			</button>
-		{/snippet}
+	brand="TIC Team Admin"
+	brandSub="Internal"
+	navItems={TIC_ADMIN_NAV}
+	title="Users"
+	eyebrow="Accounts"
+	user={adminName}
+	onLogout={handleLogout}
+>
+	{#snippet actions()}
+		<button class="btn btn--primary" onclick={() => (showInvite = !showInvite)}>
+			{showInvite ? 'Cancel' : '+ New admin'}
+		</button>
+	{/snippet}
 
-		{#if showInvite}
-			<form class="invite" onsubmit={createAdmin}>
-				<h2>Create an admin account</h2>
-				<p class="invite__sub">
-					They sign in with this email and password, and can change the password themselves
-					afterwards. Founders and companies sign themselves up — only admins are created here.
-				</p>
-				<div class="invite__grid">
-					<label class="field">
-						<span>Name</span>
-						<input type="text" bind:value={newName} autocomplete="off" />
-					</label>
-					<label class="field">
-						<span>Email</span>
-						<input type="email" bind:value={newEmail} autocomplete="off" required />
-					</label>
-					<label class="field">
-						<span>Temporary password</span>
-						<input type="text" bind:value={newPassword} autocomplete="off" required />
-					</label>
-				</div>
-				<button class="btn btn--primary" type="submit" disabled={busyId === 'new'}>
-					{busyId === 'new' ? 'Creating…' : 'Create admin'}
-				</button>
-			</form>
-		{/if}
+	{#if showInvite}
+		<form class="invite" onsubmit={createAdmin}>
+			<h2>Create an admin account</h2>
+			<p class="invite__sub">
+				They sign in with this email and password, and can change the password themselves
+				afterwards. Founders and companies sign themselves up — only admins are created here.
+			</p>
+			<div class="invite__grid">
+				<label class="field">
+					<span>Name</span>
+					<input type="text" bind:value={newName} autocomplete="off" />
+				</label>
+				<label class="field">
+					<span>Email</span>
+					<input type="email" bind:value={newEmail} autocomplete="off" required />
+				</label>
+				<label class="field">
+					<span>Temporary password</span>
+					<input type="text" bind:value={newPassword} autocomplete="off" required />
+				</label>
+			</div>
+			<button class="btn btn--primary" type="submit" disabled={busyId === 'new'}>
+				{busyId === 'new' ? 'Creating…' : 'Create admin'}
+			</button>
+		</form>
+	{/if}
 
-		{#if message}
-			<p class="msg msg--{message.tone}" role="status">{message.text}</p>
-		{/if}
+	{#if message}
+		<p class="msg msg--{message.tone}" role="status">{message.text}</p>
+	{/if}
 
-		<div class="tabs">
-			<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
-				All <span class="tab__count">{counts.all}</span>
-			</button>
-			<button class="tab" class:tab--active={filter === 'admin'} onclick={() => (filter = 'admin')}>
-				Admins <span class="tab__count">{counts.admin}</span>
-			</button>
-			<button
-				class="tab"
-				class:tab--active={filter === 'company'}
-				onclick={() => (filter = 'company')}
-			>
-				Companies <span class="tab__count">{counts.company}</span>
-			</button>
-			<button
-				class="tab"
-				class:tab--active={filter === 'founder'}
-				onclick={() => (filter = 'founder')}
-			>
-				Founders <span class="tab__count">{counts.founder}</span>
-			</button>
-			<button class="tab" class:tab--active={filter === 'never'} onclick={() => (filter = 'never')}>
-				Never signed in <span class="tab__count">{counts.never}</span>
-			</button>
-			<button
-				class="tab"
-				class:tab--active={filter === 'suspended'}
-				onclick={() => (filter = 'suspended')}
-			>
-				Suspended <span class="tab__count">{counts.suspended}</span>
-			</button>
-		</div>
+	<div class="tabs">
+		<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
+			All <span class="tab__count">{counts.all}</span>
+		</button>
+		<button class="tab" class:tab--active={filter === 'admin'} onclick={() => (filter = 'admin')}>
+			Admins <span class="tab__count">{counts.admin}</span>
+		</button>
+		<button
+			class="tab"
+			class:tab--active={filter === 'company'}
+			onclick={() => (filter = 'company')}
+		>
+			Companies <span class="tab__count">{counts.company}</span>
+		</button>
+		<button
+			class="tab"
+			class:tab--active={filter === 'founder'}
+			onclick={() => (filter = 'founder')}
+		>
+			Founders <span class="tab__count">{counts.founder}</span>
+		</button>
+		<button class="tab" class:tab--active={filter === 'never'} onclick={() => (filter = 'never')}>
+			Never signed in <span class="tab__count">{counts.never}</span>
+		</button>
+		<button
+			class="tab"
+			class:tab--active={filter === 'suspended'}
+			onclick={() => (filter = 'suspended')}
+		>
+			Suspended <span class="tab__count">{counts.suspended}</span>
+		</button>
+	</div>
 
-		<div class="panel">
-			{#if filtered.length === 0}
-				<p class="empty">No accounts in this view.</p>
-			{:else}
-				<div class="table-wrap">
-					<table class="table">
-						<thead>
-							<tr>
-								<th>Account</th>
-								<th>Role</th>
-								<th>Last signed in</th>
-								<th>Joined</th>
-								<th class="actions-col">Actions</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each filtered as user (user.id)}
-								<tr class:row--busy={busyId === user.id}>
-									<td>
-										<p class="cell__name">
-											{user.fullName || user.companyName || user.email}
-											{#if user.id === currentAdminId}
-												<span class="you">you</span>
-											{/if}
-										</p>
-										<p class="cell__sub">{user.email}</p>
-										{#if user.companyName && user.companyStatus}
-											<p class="cell__sub">
-												{user.companyName} · <span class="dot dot--{user.companyStatus}"
-												></span>{user.companyStatus}
-											</p>
+	<div class="panel">
+		{#if filtered.length === 0}
+			<p class="empty">No accounts in this view.</p>
+		{:else}
+			<div class="table-wrap">
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Account</th>
+							<th>Role</th>
+							<th>Last signed in</th>
+							<th>Joined</th>
+							<th class="actions-col">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each filtered as user (user.id)}
+							<tr class:row--busy={busyId === user.id}>
+								<td>
+									<p class="cell__name">
+										{user.fullName || user.companyName || user.email}
+										{#if user.id === currentAdminId}
+											<span class="you">you</span>
 										{/if}
-									</td>
-									<td>
-										<select
-											class="role"
-											value={user.role}
-											disabled={user.id === currentAdminId || busyId === user.id}
-											onchange={(e) =>
-												changeRole(user, (e.currentTarget as HTMLSelectElement).value as UserRole)}
+									</p>
+									<p class="cell__sub">{user.email}</p>
+									{#if user.companyName && user.companyStatus}
+										<p class="cell__sub">
+											{user.companyName} ·
+											<span class="dot dot--{user.companyStatus}"></span>{user.companyStatus}
+										</p>
+									{/if}
+								</td>
+								<td>
+									<select
+										class="role"
+										value={user.role}
+										disabled={user.id === currentAdminId || busyId === user.id}
+										onchange={(e) =>
+											changeRole(user, (e.currentTarget as HTMLSelectElement).value as UserRole)}
+									>
+										<option value="founder">founder</option>
+										<option value="company">company</option>
+										<option value="admin">admin</option>
+									</select>
+									<div class="flags">
+										{#if user.banned}<span class="badge badge--bad">suspended</span>{/if}
+										{#if !user.emailConfirmed}
+											<span class="badge badge--warn">unconfirmed</span>
+										{/if}
+									</div>
+								</td>
+								<td>
+									<p class="cell__name" class:muted={!user.lastSignInAt}>
+										{fmtRelative(user.lastSignInAt)}
+									</p>
+									{#if user.lastSignInAt}
+										<p class="cell__sub">{fmtDate(user.lastSignInAt)}</p>
+									{/if}
+								</td>
+								<td><p class="cell__sub">{fmtDate(user.createdAt)}</p></td>
+								<td class="actions-col">
+									<div class="actions">
+										<button
+											class="btn"
+											disabled={busyId === user.id}
+											onclick={() => sendReset(user)}>Reset password</button
 										>
-											<option value="founder">founder</option>
-											<option value="company">company</option>
-											<option value="admin">admin</option>
-										</select>
-										<div class="flags">
-											{#if user.banned}<span class="badge badge--bad">suspended</span>{/if}
-											{#if !user.emailConfirmed}
-												<span class="badge badge--warn">unconfirmed</span>
-											{/if}
-										</div>
-									</td>
-									<td>
-										<p class="cell__name" class:muted={!user.lastSignInAt}>
-											{fmtRelative(user.lastSignInAt)}
-										</p>
-										{#if user.lastSignInAt}
-											<p class="cell__sub">{fmtDate(user.lastSignInAt)}</p>
-										{/if}
-									</td>
-									<td><p class="cell__sub">{fmtDate(user.createdAt)}</p></td>
-									<td class="actions-col">
-										<div class="actions">
+										{#if user.id !== currentAdminId}
 											<button
 												class="btn"
 												disabled={busyId === user.id}
-												onclick={() => sendReset(user)}>Reset password</button
+												onclick={() => toggleBan(user)}
 											>
-											{#if user.id !== currentAdminId}
-												<button
-													class="btn"
-													disabled={busyId === user.id}
-													onclick={() => toggleBan(user)}
-												>
-													{user.banned ? 'Restore' : 'Suspend'}
-												</button>
-												<button
-													class="btn btn--danger"
-													disabled={busyId === user.id}
-													onclick={() => remove(user)}>Delete</button
-												>
-											{/if}
-										</div>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-		</div>
+												{user.banned ? 'Restore' : 'Suspend'}
+											</button>
+											<button
+												class="btn btn--danger"
+												disabled={busyId === user.id}
+												onclick={() => remove(user)}>Delete</button
+											>
+										{/if}
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</div>
 </AdminShell>
 
 <style lang="scss">

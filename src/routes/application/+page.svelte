@@ -6,6 +6,7 @@
 	import { loadUserSession } from '$lib/utils/userSession';
 	import { submitApplication } from '$lib/utils/applications';
 	import { clearDraft, loadDraft, saveDraft, savedAgo } from '$lib/utils/applicationDraft';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	const STEPS = [
 		{ n: 1, title: 'Founder Info' },
@@ -326,8 +327,14 @@
 		goto(resolve('/apply'));
 	}
 
-	function discardDraft() {
-		if (!confirm('Discard the saved draft and start this application again?')) return;
+	async function discardDraft() {
+		const ok = await askConfirm({
+			title: 'Start this application again?',
+			body: 'The saved draft is discarded and every step goes back to empty.',
+			confirmLabel: 'Discard draft',
+			tone: 'danger'
+		});
+		if (!ok) return;
 		clearDraft(userId);
 		restoredFrom = '';
 		location.reload();

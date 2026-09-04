@@ -11,6 +11,7 @@
 		type ApplicationStatus
 	} from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
 	import {
 		APPLICATION_SECTIONS,
 		DOCUMENT_LABELS,
@@ -44,12 +45,13 @@
 	}
 
 	async function remove() {
-		if (
-			!confirm(
-				`Permanently delete ${application.startup_name || 'this application'}? The uploaded documents are deleted too, and this cannot be undone.`
-			)
-		)
-			return;
+		const confirmed = await askConfirm({
+			title: `Permanently delete ${application.startup_name || 'this application'}?`,
+			body: 'The uploaded documents are deleted with it. This cannot be undone.',
+			confirmLabel: 'Delete application',
+			tone: 'danger'
+		});
+		if (!confirmed) return;
 		const ok = await adminDeleteApplication(application.id);
 		if (ok) goto(resolve('/tic-admin/applications'));
 		else message = { tone: 'err', text: 'Could not delete the application.' };
@@ -90,165 +92,166 @@
 </script>
 
 <svelte:head>
-	<title>{application ? `${application.startup_name} · TIC Admin` : 'Application · TIC Admin'}</title>
+	<title
+		>{application ? `${application.startup_name} · TIC Admin` : 'Application · TIC Admin'}</title
+	>
 </svelte:head>
 
 <AdminShell
-		brand="TIC Team Admin"
-		brandSub="Internal"
-		navItems={TIC_ADMIN_NAV}
-		title={application.startup_name || 'Untitled startup'}
-		eyebrow="Application"
-		user={adminName}
-		onLogout={handleLogout}
-	>
-		{#snippet actions()}
-			<a class="btn" href={resolve('/tic-admin/applications')}>← All applications</a>
-		{/snippet}
+	brand="TIC Team Admin"
+	brandSub="Internal"
+	navItems={TIC_ADMIN_NAV}
+	title={application.startup_name || 'Untitled startup'}
+	eyebrow="Application"
+	user={adminName}
+	onLogout={handleLogout}
+>
+	{#snippet actions()}
+		<a class="btn" href={resolve('/tic-admin/applications')}>← All applications</a>
+	{/snippet}
 
-		<div class="layout">
-			<div class="main">
-				{#each sectionsBeforeDocuments as section (section.step)}
-					<section class="card">
-						<header class="card__head">
-							<h2>
-								<span class="card__step">Step {section.step}</span>
-								{section.title}
-							</h2>
-						</header>
-						<dl class="answers">
-							{#each section.fields as field (field.key)}
-								<div class="answer" class:answer--long={field.long}>
-									<dt>{field.label}</dt>
-									<dd>{formatAnswer(application.answers[field.key])}</dd>
-								</div>
-							{/each}
-						</dl>
-					</section>
-				{/each}
-
+	<div class="layout">
+		<div class="main">
+			{#each sectionsBeforeDocuments as section (section.step)}
 				<section class="card">
 					<header class="card__head">
-						<h2><span class="card__step">Step 7</span> Documents</h2>
+						<h2>
+							<span class="card__step">Step {section.step}</span>
+							{section.title}
+						</h2>
 					</header>
-					{#if documentFields.length === 0}
-						<p class="none">No documents were attached.</p>
-					{:else}
-						<ul class="docs">
-							{#each documentFields as field (field)}
-								<li class="doc">
-									<div class="doc__meta">
-										<span class="doc__label">{DOCUMENT_LABELS[field] ?? field}</span>
-										<span class="doc__name">
-											{documentLinks[field].name}
-											{#if documentLinks[field].size}
-												· {fmtSize(documentLinks[field].size)}
-											{/if}
-										</span>
-									</div>
-									{#if documentLinks[field].url}
-										<!-- Absolute signed Supabase Storage URL, not an app route,
-										     so resolve() does not apply. -->
-										<!-- eslint-disable svelte/no-navigation-without-resolve -->
-										<a
-											class="btn"
-											href={documentLinks[field].url}
-											target="_blank"
-											rel="noopener noreferrer">Open</a
-										>
-										<!-- eslint-enable svelte/no-navigation-without-resolve -->
-									{:else}
-										<span class="doc__missing">File missing</span>
-									{/if}
-								</li>
-							{/each}
-						</ul>
-						<p class="docs__note">
-							Links are signed and expire after 10 minutes. Reload the page for fresh ones.
-						</p>
-					{/if}
-				</section>
-
-				{#each sectionsAfterDocuments as section (section.step)}
-					<section class="card">
-						<header class="card__head">
-							<h2>
-								<span class="card__step">Step {section.step}</span>
-								{section.title}
-							</h2>
-						</header>
-						<dl class="answers">
-							{#each section.fields as field (field.key)}
-								<div class="answer" class:answer--long={field.long}>
-									<dt>{field.label}</dt>
-									<dd>{formatAnswer(application.answers[field.key])}</dd>
-								</div>
-							{/each}
-						</dl>
-					</section>
-				{/each}
-			</div>
-
-			<aside class="side">
-				<div class="card card--sticky">
-					<header class="card__head">
-						<h2>Review</h2>
-					</header>
-
-					<div class="status-row">
-						<span class="badge badge--{application.status}">{statusLabel(application.status)}</span>
-						{#if application.reviewed_at}
-							<span class="status-row__when">Last updated {fmtDateTime(application.reviewed_at)}</span>
-						{/if}
-					</div>
-
-					<label class="field">
-						<span>Internal note</span>
-						<textarea
-							value={reviewNote}
-							oninput={(e) => (noteDraft = (e.currentTarget as HTMLTextAreaElement).value)}
-							rows="4"
-							placeholder="Why this decision — visible to the TIC team only."
-						></textarea>
-					</label>
-
-					<div class="decision">
-						<button
-							class="btn btn--primary"
-							disabled={saving}
-							onclick={() => setStatus('accepted')}>Accept</button
-						>
-						<button class="btn" disabled={saving} onclick={() => setStatus('under-review')}
-							>Mark under review</button
-						>
-						<button class="btn btn--danger" disabled={saving} onclick={() => setStatus('rejected')}
-							>Reject</button
-						>
-					</div>
-
-					{#if message}
-						<p class="msg msg--{message.tone}" role="status">{message.text}</p>
-					{/if}
-
-					<dl class="meta">
-						<div>
-							<dt>Applicant</dt>
-							<dd>{application.full_name || '—'}</dd>
-						</div>
-						<div>
-							<dt>Email</dt>
-							<dd>{application.email}</dd>
-						</div>
-						<div>
-							<dt>Submitted</dt>
-							<dd>{fmtDateTime(application.created_at)}</dd>
-						</div>
+					<dl class="answers">
+						{#each section.fields as field (field.key)}
+							<div class="answer" class:answer--long={field.long}>
+								<dt>{field.label}</dt>
+								<dd>{formatAnswer(application.answers[field.key])}</dd>
+							</div>
+						{/each}
 					</dl>
+				</section>
+			{/each}
 
-					<button class="btn btn--danger delete" onclick={remove}>Delete application</button>
-				</div>
-			</aside>
+			<section class="card">
+				<header class="card__head">
+					<h2><span class="card__step">Step 7</span> Documents</h2>
+				</header>
+				{#if documentFields.length === 0}
+					<p class="none">No documents were attached.</p>
+				{:else}
+					<ul class="docs">
+						{#each documentFields as field (field)}
+							<li class="doc">
+								<div class="doc__meta">
+									<span class="doc__label">{DOCUMENT_LABELS[field] ?? field}</span>
+									<span class="doc__name">
+										{documentLinks[field].name}
+										{#if documentLinks[field].size}
+											· {fmtSize(documentLinks[field].size)}
+										{/if}
+									</span>
+								</div>
+								{#if documentLinks[field].url}
+									<!-- Absolute signed Supabase Storage URL, not an app route,
+										     so resolve() does not apply. -->
+									<!-- eslint-disable svelte/no-navigation-without-resolve -->
+									<a
+										class="btn"
+										href={documentLinks[field].url}
+										target="_blank"
+										rel="noopener noreferrer">Open</a
+									>
+									<!-- eslint-enable svelte/no-navigation-without-resolve -->
+								{:else}
+									<span class="doc__missing">File missing</span>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+					<p class="docs__note">
+						Links are signed and expire after 10 minutes. Reload the page for fresh ones.
+					</p>
+				{/if}
+			</section>
+
+			{#each sectionsAfterDocuments as section (section.step)}
+				<section class="card">
+					<header class="card__head">
+						<h2>
+							<span class="card__step">Step {section.step}</span>
+							{section.title}
+						</h2>
+					</header>
+					<dl class="answers">
+						{#each section.fields as field (field.key)}
+							<div class="answer" class:answer--long={field.long}>
+								<dt>{field.label}</dt>
+								<dd>{formatAnswer(application.answers[field.key])}</dd>
+							</div>
+						{/each}
+					</dl>
+				</section>
+			{/each}
 		</div>
+
+		<aside class="side">
+			<div class="card card--sticky">
+				<header class="card__head">
+					<h2>Review</h2>
+				</header>
+
+				<div class="status-row">
+					<span class="badge badge--{application.status}">{statusLabel(application.status)}</span>
+					{#if application.reviewed_at}
+						<span class="status-row__when">Last updated {fmtDateTime(application.reviewed_at)}</span
+						>
+					{/if}
+				</div>
+
+				<label class="field">
+					<span>Internal note</span>
+					<textarea
+						value={reviewNote}
+						oninput={(e) => (noteDraft = (e.currentTarget as HTMLTextAreaElement).value)}
+						rows="4"
+						placeholder="Why this decision — visible to the TIC team only."
+					></textarea>
+				</label>
+
+				<div class="decision">
+					<button class="btn btn--primary" disabled={saving} onclick={() => setStatus('accepted')}
+						>Accept</button
+					>
+					<button class="btn" disabled={saving} onclick={() => setStatus('under-review')}
+						>Mark under review</button
+					>
+					<button class="btn btn--danger" disabled={saving} onclick={() => setStatus('rejected')}
+						>Reject</button
+					>
+				</div>
+
+				{#if message}
+					<p class="msg msg--{message.tone}" role="status">{message.text}</p>
+				{/if}
+
+				<dl class="meta">
+					<div>
+						<dt>Applicant</dt>
+						<dd>{application.full_name || '—'}</dd>
+					</div>
+					<div>
+						<dt>Email</dt>
+						<dd>{application.email}</dd>
+					</div>
+					<div>
+						<dt>Submitted</dt>
+						<dd>{fmtDateTime(application.created_at)}</dd>
+					</div>
+				</dl>
+
+				<button class="btn btn--danger delete" onclick={remove}>Delete application</button>
+			</div>
+		</aside>
+	</div>
 </AdminShell>
 
 <style lang="scss">

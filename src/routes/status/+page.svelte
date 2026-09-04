@@ -264,6 +264,12 @@
 			note: 'Every section of the public site editable from the console — nested objects, reorderable lists, reset to default'
 		},
 		{
+			name: 'TIC team admin · Storage',
+			path: '/tic-admin/storage',
+			status: 'done',
+			note: 'What every bucket holds and how much of the plan allowance is left. Walks the buckets through the storage API, since Supabase keeps files in S3 and only their metadata in Postgres, then marks each object in use or unused by looking for its path in the content sections, the email templates, and the application and resume records — so a private document belonging to a real person is never mislabelled as safe to delete. Thumbnails, a lightbox preview, and a guarded delete'
+		},
+		{
 			name: 'TIC team admin · Email',
 			path: '/tic-admin/email',
 			status: 'done',
@@ -348,6 +354,11 @@
 			name: 'AdminShell (dashboard layout)',
 			status: 'done',
 			note: 'Shared light-theme shell — sidebar nav + topbar; used by TIC + company admins'
+		},
+		{
+			name: 'ConfirmDialog (app-wide)',
+			status: 'done',
+			note: 'One modal host mounted in the root layout, replacing every window.confirm() in the app. Built on <dialog> so showModal() supplies the focus trap, the inert background and Esc-to-dismiss that made the native one safe. askConfirm() returns a promise, since a custom dialog cannot block the thread the way confirm() did — the one call site that relied on blocking, the unsaved-changes guard in the content editor, cancels the navigation and replays it after the answer'
 		}
 	];
 
@@ -463,10 +474,10 @@
 	// belong to, so a migration landing is what moves a node here.
 	const backend: Milestone[] = [
 		{
-			date: '2026-09-03',
+			date: '2026-09-04',
 			title: 'Editable media',
-			status: 'in-progress',
-			note: 'Media in site content is becoming uploadable, not just its alt text. A public site-assets bucket plus /api/tic-admin/content/assets (admin-only, service-role) receives an upload; the content editor shows a preview and an upload button wherever a field reads as an image, and resolveMedia() lets an uploaded URL and a legacy bundled key coexist while content migrates. First surface: the Partners logos, which the home association marquee now mirrors, so one edit updates both. Still to do: the remaining {alt}-only placeholders (events, incubation, startups) and video.'
+			status: 'done',
+			note: 'Media in site content is uploadable, not just its alt text. The public site-assets bucket landed in 20260904000000_site_assets, so /api/tic-admin/content/assets (admin-only, service-role) now stores a file and hands back its public URL; the content editor shows a preview and an upload button wherever a field reads as an image, and resolveMedia() lets an uploaded URL and a legacy bundled key coexist while content migrates. First surface: the Partners logos, which the home association marquee now mirrors, so one edit updates both. What is left is content rather than plumbing — the remaining {alt}-only placeholders (events, incubation, startups) still need pictures, and video is a separate bucket and player.'
 		},
 		{
 			date: '2026-09-01',
@@ -621,8 +632,8 @@
 		},
 		{
 			name: 'Storage · site-assets',
-			status: 'in-progress',
-			note: 'Public bucket for images uploaded from the content editor; admin-only to write. Wired up for the Partners logos first — the rest of the placeholders and video still to migrate'
+			status: 'done',
+			note: 'Public bucket for images uploaded from the content editor; 5 MB cap, PNG/JPEG/GIF/WebP/SVG only, and no write policies, so the service-role route is the only way in — anon writes are refused'
 		},
 		{
 			name: 'Helper functions',
@@ -709,8 +720,13 @@
 			note: 'Uploads a picture or document for an image or file block; the body is compiled from blocks server-side, never taken from the browser'
 		},
 		{
+			name: 'GET / DELETE /api/tic-admin/storage',
+			status: 'done',
+			note: 'Signs a ten-minute link to one object in a private bucket, and removes an object. A delete is refused with 409 while a content section, an email template, an application or a resume record still points at the file — the console asks a second, blunter question and retries with force, so removing something in use stays possible but never accidental'
+		},
+		{
 			name: 'POST /api/tic-admin/content/assets',
-			status: 'in-progress',
+			status: 'done',
 			note: 'Uploads an image for a media field in the content editor into the public site-assets bucket; admin-only, returns the public URL saved into the section'
 		},
 		{

@@ -12,5 +12,6 @@ export const TIC_ADMIN_NAV = [
 	{ label: 'Activity', href: '/tic-admin/activity' },
 	{ separator: true as const },
 	{ label: 'Content', href: '/tic-admin/content' },
-	{ label: 'Email', href: '/tic-admin/email' }
+	{ label: 'Email', href: '/tic-admin/email' },
+	{ label: 'Storage', href: '/tic-admin/storage' }
 ];
