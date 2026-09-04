@@ -55,6 +55,7 @@ The public website, the company job portal, the incubation application, and the 
 | **Incubation application** | Eight-step wizard, 38 questions, four document uploads; autosaves a draft so a refresh does not lose progress                                                     | `/application`                                |
 | **TIC admin console**      | Companies, incubation applications, role applicants, posted jobs, users, activity, content                                                                        | `/tic-admin`                                  |
 | **Content editing**        | Every public page's copy, edited from the console and versioned in the audit log                                                                                  | `/tic-admin/content`                          |
+| **Media & storage**        | Upload an image for any page field from the content editor; a storage console shows every bucket's usage and refuses to delete a file still in use                | `/tic-admin/storage`                          |
 | **Applicant inbox**        | A verified company reads the applicants for roles it posted — contact details, answers, signed resume links, CSV export                                           | `/opportunities/job-posting-admin/applicants` |
 | **Transactional email**    | Resend-backed mail with editable templates, a delivery log you can preview, usage against the plan allowance, and bounce/complaint feedback from a signed webhook | `/tic-admin/email`                            |
 | **Analytics & audit**      | Page impressions with bot separation, plus a trigger-written audit trail                                                                                          | `/tic-admin/activity`                         |
@@ -95,9 +96,9 @@ flowchart LR
 
     subgraph SUPA["Supabase"]
         direction TB
-        DB[("Postgres<br/>8 tables · RLS on every one")]
+        DB[("Postgres<br/>14 tables · RLS on every one")]
         AU["Auth"]
-        ST["Storage<br/>2 private buckets"]
+        ST["Storage<br/>4 buckets · 2 private, 2 public"]
     end
 
     CF["Cloudflare<br/>Turnstile"]
@@ -184,7 +185,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `pnpm check`                     | Type-check with `svelte-check`                                                   |
 | `pnpm lint`                      | Prettier + ESLint check                                                          |
 | `pnpm format`                    | Format with Prettier                                                             |
-| `pnpm doctor`                    | Check `.env.local` can reach Supabase                                            |
+| `pnpm doctor`                    | Check `.env.local` can reach Supabase and that all four storage buckets exist    |
 | `pnpm backup`                    | Tables + storage to `./backups/` — see [Backups](#backups-and-the-restore-drill) |
 | `pnpm restore <dir> --dry-run`   | Rehearse a restore; drop the flag to actually write                              |
 | `node scripts/seed-content.js`   | Import `content.json` sections into `site_content`                               |
@@ -264,19 +265,20 @@ static/
 <details>
 <summary><b>TIC admin console</b> — <code>/tic-admin</code></summary>
 
-| Route                                   | Page                                                                          |
-| --------------------------------------- | ----------------------------------------------------------------------------- |
-| `/tic-admin/login`                      | Per-admin sign-in; offers first-admin setup while none exists                 |
-| `/tic-admin`                            | Overview — stat tiles and the queues that need attention                      |
-| `/tic-admin/companies`                  | Verify, reject with a reason, revert or delete an account                     |
-| `/tic-admin/applications` + `/[id]`     | Incubation review queue; full answers and signed document links               |
-| `/tic-admin/job-applications` + `/[id]` | Role applicants; status tabs, per-role filter, signed resume link             |
-| `/tic-admin/jobs`                       | Every seed and company-posted role; take one down                             |
-| `/tic-admin/users`                      | All accounts — role, last sign-in, suspend, password reset, delete, new admin |
-| `/tic-admin/activity`                   | Audit log with before/after diffs, plus per-page impressions                  |
-| `/tic-admin/content` + `/[...key]`      | Schema-driven editor for every content section                                |
-| `/tic-admin/email`                      | Usage against the plan, a 30-day trend, and the delivery log with previews    |
-| `/tic-admin/email/templates` + `/[key]` | Every template — live preview, test send, on/off, reset to the bundled copy   |
+| Route                                   | Page                                                                             |
+| --------------------------------------- | -------------------------------------------------------------------------------- |
+| `/tic-admin/login`                      | Per-admin sign-in; offers first-admin setup while none exists                    |
+| `/tic-admin`                            | Overview — stat tiles and the queues that need attention                         |
+| `/tic-admin/companies`                  | Verify, reject with a reason, revert or delete an account                        |
+| `/tic-admin/applications` + `/[id]`     | Incubation review queue; full answers and signed document links                  |
+| `/tic-admin/job-applications` + `/[id]` | Role applicants; status tabs, per-role filter, signed resume link                |
+| `/tic-admin/jobs`                       | Every seed and company-posted role; take one down                                |
+| `/tic-admin/users`                      | All accounts — role, last sign-in, suspend, password reset, delete, new admin    |
+| `/tic-admin/activity`                   | Audit log with before/after diffs, plus per-page impressions                     |
+| `/tic-admin/content` + `/[...key]`      | Schema-driven editor for every content section, with image upload per field      |
+| `/tic-admin/storage`                    | Every bucket's usage, each object marked in use or unused, with a guarded delete |
+| `/tic-admin/email`                      | Usage against the plan, a 30-day trend, and the delivery log with previews       |
+| `/tic-admin/email/templates` + `/[key]` | Every template — live preview, test send, on/off, reset to the bundled copy      |
 
 </details>
 
@@ -286,24 +288,26 @@ Everything the browser is allowed to ask the server to do. The `/api/tic-admin/*
 guarded by `requireAdmin()`, which returns a service-role client tagged with the acting
 admin's id.
 
-| Endpoint                            | Methods                       | Purpose                                                                                                                                                  |
-| ----------------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/api/turnstile`                    | `POST`                        | Verify a widget token against Cloudflare                                                                                                                 |
-| `/api/job-applications`             | `POST`                        | **Public** role application — Turnstile, role lookup, resume upload, insert                                                                              |
-| `/api/company-account`              | `POST` `DELETE`               | Signup receipt for a just-created account; a company closing its own account                                                                             |
-| `/api/tic-admin-login`              | `GET` `POST` `DELETE`         | Session state, sign-in, first-admin bootstrap, sign-out                                                                                                  |
-| `/api/tic-admin/companies`          | `PATCH` `DELETE`              | Verify / reject / delete an account                                                                                                                      |
-| `/api/tic-admin/applications`       | `PATCH` `DELETE`              | Move an incubation application through review                                                                                                            |
-| `/api/tic-admin/job-applications`   | `GET` `PATCH` `POST` `DELETE` | Shortlist, mark sent on, decline, delete; `GET` returns full records for the CSV export and `POST ?jobSlug=` clears a whole role, resumes first          |
-| `/api/tic-admin/jobs`               | `DELETE`                      | Take down a company-posted role                                                                                                                          |
-| `/api/tic-admin/users`              | `PATCH` `PUT` `POST` `DELETE` | Roles, suspend, reset mail, delete, create admin                                                                                                         |
-| `/api/tic-admin/activity`           | `GET`                         | Paged audit entries and impressions over 7d / 30d / all                                                                                                  |
-| `/api/tic-admin/content`            | `PUT` `DELETE`                | Save a section, or reset it to the bundled default                                                                                                       |
-| `/api/tic-admin/email`              | `GET` `PUT` `POST` `DELETE`   | Page the log, read one rendered message, save a template, send a test, reset a template                                                                  |
-| `/api/tic-admin/email/suppressions` | `DELETE`                      | Lift a bounce or complaint suppression so the address can be written to again                                                                            |
-| `/api/newsletter`                   | `POST`                        | **Public** footer subscribe — rate limited and validated; a repeat address is a plain success, so the form cannot be used to discover who is on the list |
-| `/api/tic-admin/newsletter`         | `GET` `DELETE`                | The subscriber list for export, and removal on request                                                                                                   |
-| `/api/resend-webhook`               | `POST`                        | **Public but Svix-signed** delivery feedback from Resend — records the event and suppresses the address on a permanent bounce or a complaint             |
+| Endpoint                            | Methods                       | Purpose                                                                                                                                                   |
+| ----------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/turnstile`                    | `POST`                        | Verify a widget token against Cloudflare                                                                                                                  |
+| `/api/job-applications`             | `POST`                        | **Public** role application — Turnstile, role lookup, resume upload, insert                                                                               |
+| `/api/company-account`              | `POST` `DELETE`               | Signup receipt for a just-created account; a company closing its own account                                                                              |
+| `/api/tic-admin-login`              | `GET` `POST` `DELETE`         | Session state, sign-in, first-admin bootstrap, sign-out                                                                                                   |
+| `/api/tic-admin/companies`          | `PATCH` `DELETE`              | Verify / reject / delete an account                                                                                                                       |
+| `/api/tic-admin/applications`       | `PATCH` `DELETE`              | Move an incubation application through review                                                                                                             |
+| `/api/tic-admin/job-applications`   | `GET` `PATCH` `POST` `DELETE` | Shortlist, mark sent on, decline, delete; `GET` returns full records for the CSV export and `POST ?jobSlug=` clears a whole role, resumes first           |
+| `/api/tic-admin/jobs`               | `DELETE`                      | Take down a company-posted role                                                                                                                           |
+| `/api/tic-admin/users`              | `PATCH` `PUT` `POST` `DELETE` | Roles, suspend, reset mail, delete, create admin                                                                                                          |
+| `/api/tic-admin/activity`           | `GET`                         | Paged audit entries and impressions over 7d / 30d / all                                                                                                   |
+| `/api/tic-admin/content`            | `PUT` `DELETE`                | Save a section, or reset it to the bundled default                                                                                                        |
+| `/api/tic-admin/content/assets`     | `POST`                        | Upload an image for a media field into the public `site-assets` bucket; returns the public URL saved into the section                                     |
+| `/api/tic-admin/storage`            | `GET` `DELETE`                | Sign a 10-minute link to one object, or delete one — refused with `409` while a content section, template, application or resume still points at the file |
+| `/api/tic-admin/email`              | `GET` `PUT` `POST` `DELETE`   | Page the log, read one rendered message, save a template, send a test, reset a template                                                                   |
+| `/api/tic-admin/email/suppressions` | `DELETE`                      | Lift a bounce or complaint suppression so the address can be written to again                                                                             |
+| `/api/newsletter`                   | `POST`                        | **Public** footer subscribe — rate limited and validated; a repeat address is a plain success, so the form cannot be used to discover who is on the list  |
+| `/api/tic-admin/newsletter`         | `GET` `DELETE`                | The subscriber list for export, and removal on request                                                                                                    |
+| `/api/resend-webhook`               | `POST`                        | **Public but Svix-signed** delivery feedback from Resend — records the event and suppresses the address on a permanent bounce or a complaint              |
 
 ## Data model
 
@@ -375,7 +379,7 @@ erDiagram
     companies ||--o{ jobs : "posts"
     profiles ||--o{ applications : "submits"
     jobs ||--o{ job_applications : "receives"
-    companies ||--o{ job_applications : "will read — planned"
+    companies ||--o{ job_applications : "reads its own — via policy"
 ```
 
 `audit_log`, `page_views`, `site_content`, `email_templates` and `email_log` carry no
@@ -388,12 +392,17 @@ foreign keys — they sit beside the domain tables and are readable only by the 
 | `application-documents` | No      | Pitch deck, founder CV, financials, incorporation certificate | One folder per user       |
 | `job-applications`      | No      | Resumes attached to a role application                        | One folder per role slug  |
 | `email-assets`          | **Yes** | Pictures and documents used inside an email                   | Flat, time-prefixed names |
+| `site-assets`           | **Yes** | Images uploaded for public pages from the content editor      | Flat, time-prefixed names |
 
 The two application buckets are never exposed directly. The admin review screens hand out
 **10-minute signed URLs** instead, and deleting a row deletes its objects first so nothing
-is orphaned. `email-assets` is the deliberate exception — an email client fetches an image
-unauthenticated, so anything shown inside a message has to be reachable without
-credentials. Writing to it is admin-only.
+is orphaned. The two public buckets are the deliberate exception — an email client fetches an
+image unauthenticated and a public page's `<img>` has no session, so anything shown has to be
+reachable without credentials. Both are admin-only to write: `site-assets` has no write
+policies at all, a 5 MB cap and an image-only MIME allow-list, so the service-role upload
+route is the only way in. The **storage console** at `/tic-admin/storage` walks every bucket,
+marks each object in use or unused by looking for its path in the content sections, templates
+and application/resume records, and refuses to delete one that is still referenced.
 
 ### Permissions at a glance
 
@@ -475,10 +484,13 @@ The TIC team works the queue at **/tic-admin/job-applications**: status tabs
 to each resume. Deleting an applicant removes the file from the bucket first, so nothing
 is orphaned.
 
-Nothing is emailed yet — neither the applicant nor the company — so the console is
-currently the only place an application is seen. `job_applications` records `job_id` and
-`company_id`, so letting a verified company read its own applicants is a policy and a page
-away.
+The applicant is emailed a "received" acknowledgement on submit, and again when TIC
+shortlists, sends the application to the company, or declines it — every one through the
+Resend layer, so a send never fails the request. Because `job_applications` records `job_id`
+and `company_id`, a verified company also reads its own applicants at
+**/opportunities/job-posting-admin/applicants** — an RLS policy opens the rows and a column
+grant holds TIC's review note back. The company inbox is pull-only: it is not yet notified
+when a new applicant arrives.
 
 ### Demo data
 
@@ -761,6 +773,14 @@ Two sections earn a mention:
   photographs arrive. Every save is audited with a before and after, and
   each section has a **Reset to default copy** button.
 
+**Editable images.** Wherever a field reads as an image (`image`, `logo`, `photo`, `avatar`,
+`icon`, …) the editor renders a preview and an **Upload image** button (and a paste-a-URL box)
+instead of a plain text input. The file is stored in the public `site-assets` bucket through
+`POST /api/tic-admin/content/assets` and its URL saved into the section. `resolveMedia()` in
+`$lib/media.ts` lets an uploaded URL and a legacy bundled key coexist, so content migrates
+gradually without anything breaking — the Partners logos, which the home association marquee
+mirrors from the same list, are the first surface to use it.
+
 > [!NOTE]
 > The `value` column is `json` rather than `jsonb` on purpose — `jsonb` sorts object keys, which
 > reordered the fields in the editor (an FAQ showed its answer above its question).
@@ -823,13 +843,13 @@ Deployed to Vercel via `@sveltejs/adapter-auto`. Pushes to `main` deploy automat
 The live checklist is at **[/status](https://frontend-iitgtic.vercel.app/status)** — every route,
 component and backend piece, with a frontend and a backend rail. The open items today:
 
-| Area                    | Gap                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sending domain          | Mail still leaves as `onboarding@resend.dev`, Resend's shared sandbox sender. The real domain is **`iitgtic.com`** — it resolves, and its MX is Google Workspace — but its DNS is not ours to edit yet, so the Resend records cannot be published. Separately the `RESEND_API_KEY` in `.env.local` is a **send-only** key, so the domain check in the console and in `pnpm doctor` gets a `restricted_api_key` 401 rather than a domain list; a full-access key is needed for that read |
-| Auth URL configuration  | Site URL on the linked project is still the dashboard default, so a confirmation link mailed from production points at `localhost`. The values are recorded in `supabase/config.toml`; applying them needs the dashboard, or a `supabase config push`                                                                                                                                                                                                                                   |
-| Backups                 | `pnpm backup` is complete — a real `pg_dump` of schema and data including `auth.users`, plus NDJSON and storage — and `pnpm restore --dry-run` passes. One thing left: rehearse the real restore once into a scratch project, which needs a project to throw away first                                                                                                                                                                                                                 |
-| Real content            | Partner logos, event and people photographs, startup logos are still placeholders. The `avatar { src, alt }` fields and the content console are ready for them                                                                                                                                                                                                                                                                                                                          |
-| Applicant notifications | A company sees its applicants but is not told when a new one arrives; the inbox is pull-only                                                                                                                                                                                                                                                                                                                                                                                            |
+| Area                    | Gap                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sending domain          | Mail still leaves as `onboarding@resend.dev`, Resend's shared sandbox sender, which only delivers to the address that owns the API key. The real domain is **`iitgtic.com`** — it resolves, and its MX is Google Workspace — but its DNS is not ours to edit yet, so the Resend verification records cannot be published. Until they are, no transactional mail reaches a real recipient |
+| Auth URL configuration  | Site URL on the linked project is still the dashboard default, so a confirmation link mailed from production points at `localhost`. The values are recorded in `supabase/config.toml`; applying them needs the dashboard, or a `supabase config push`                                                                                                                                    |
+| Backups                 | `pnpm backup` is complete — a real `pg_dump` of schema and data including `auth.users`, plus NDJSON and storage — and `pnpm restore --dry-run` passes. One thing left: rehearse the real restore once into a scratch project, which needs a project to throw away first                                                                                                                  |
+| Real content            | The upload path is done — image fields take a real file from the console into `site-assets`, and the Partners logos already use it. What remains is content, not plumbing: the other `{ alt }`-only placeholders (events, incubation, startups, people photos) still need pictures, and video would want its own bucket and player                                                       |
+| Applicant notifications | A company sees its applicants but is not told when a new one arrives; the inbox is pull-only                                                                                                                                                                                                                                                                                             |
 
 Deliberately **not** doing:
 

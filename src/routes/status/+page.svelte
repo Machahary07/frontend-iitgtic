@@ -13,6 +13,12 @@
 	// the top; the sort below keeps the order right if one lands out of place.
 	const milestones: Milestone[] = [
 		{
+			date: '2026-09-04',
+			title: 'Storage console + safe deletes',
+			status: 'done',
+			note: "A storage console at /tic-admin/storage walks every bucket through the storage API — Supabase keeps files in S3 and only their metadata in Postgres — and marks each object in use or unused by looking for its path across the content sections, the email templates, and the application and resume records, so a real person's document is never mislabelled as safe to delete. A delete is refused with 409 while something still points at the file. Alongside it, one ConfirmDialog host mounted in the root layout replaces every window.confirm() in the app, built on <dialog> so showModal() supplies the focus trap and Esc-to-dismiss."
+		},
+		{
 			date: '2026-09-01',
 			title: 'Hardening schema live',
 			status: 'done',
@@ -770,7 +776,7 @@
 		{
 			name: 'Email deliverability',
 			status: 'in-progress',
-			note: "The webhook is live: a bounce or a complaint arrives Svix-signed, is recorded once and takes the address out of circulation, and a suppressed address is refused before the next send rather than after. Verified end to end against the deployed schema — a forged, stale or tampered payload is rejected, a valid one suppresses, a replay is deduplicated. What is left is not code. Mail still goes out as onboarding@resend.dev, the shared sandbox sender, because iitgtic.com's DNS is not ours to edit yet; and the Resend key in use is send-only, so it cannot read the domain list the console and pnpm doctor ask for"
+			note: "The webhook is live: a bounce or a complaint arrives Svix-signed, is recorded once and takes the address out of circulation, and a suppressed address is refused before the next send rather than after. Verified end to end against the deployed schema — a forged, stale or tampered payload is rejected, a valid one suppresses, a replay is deduplicated. What is left is not code. Mail still goes out as onboarding@resend.dev, the shared sandbox sender that only delivers to the address owning the API key, because iitgtic.com's DNS is not ours to edit yet and the domain's verification records cannot be published"
 		},
 		{
 			name: 'Company-side applicant inbox',
