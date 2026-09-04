@@ -6,6 +6,13 @@
 
 	const page = content.pages.governingBody;
 	const ctaContent = content.cta.apply;
+
+	// Before a name is filled in, the role leads the card; once it is, the role
+	// and affiliation drop to a subtitle under the name.
+	function subtitle(m: { name: string; role: string; affiliation: string }): string {
+		if (!m.name) return m.affiliation;
+		return m.affiliation ? `${m.role} · ${m.affiliation}` : m.role;
+	}
 </script>
 
 <svelte:head>
@@ -45,8 +52,8 @@
 							<div class="card__avatar" aria-hidden="true"></div>
 						{/if}
 					</div>
-					<p class="card__role">{member.role}</p>
-					<h2 class="card__name">{member.affiliation}</h2>
+					<h2 class="card__name">{member.name || member.role}</h2>
+					<p class="card__role">{subtitle(member)}</p>
 					<p class="card__bio">{member.bio}</p>
 				</article>
 			{/each}

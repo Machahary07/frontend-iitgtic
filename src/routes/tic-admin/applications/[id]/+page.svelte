@@ -12,6 +12,7 @@
 	} from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
+	import { showToast } from '$lib/utils/toast.svelte';
 	import {
 		APPLICATION_SECTIONS,
 		DOCUMENT_LABELS,
@@ -29,19 +30,18 @@
 	const reviewNote = $derived(noteDraft ?? application.review_note ?? '');
 
 	let saving = $state(false);
-	let message = $state<{ tone: 'ok' | 'err'; text: string } | null>(null);
 
 	async function setStatus(status: ApplicationStatus) {
 		saving = true;
 		const ok = await adminSetApplicationStatus(application.id, status, reviewNote);
 		saving = false;
 		if (!ok) {
-			message = { tone: 'err', text: 'Could not save. Please try again.' };
+			showToast('Could not save. Please try again.', 'err');
 			return;
 		}
 		noteDraft = null;
 		await invalidateAll();
-		message = { tone: 'ok', text: `Marked ${statusLabel(status)}.` };
+		showToast(`Marked ${statusLabel(status)}.`);
 	}
 
 	async function remove() {
@@ -54,7 +54,7 @@
 		if (!confirmed) return;
 		const ok = await adminDeleteApplication(application.id);
 		if (ok) goto(resolve('/tic-admin/applications'));
-		else message = { tone: 'err', text: 'Could not delete the application.' };
+		else showToast('Could not delete the application.', 'err');
 	}
 
 	async function handleLogout() {
@@ -229,10 +229,6 @@
 					>
 				</div>
 
-				{#if message}
-					<p class="msg msg--{message.tone}" role="status">{message.text}</p>
-				{/if}
-
 				<dl class="meta">
 					<div>
 						<dt>Applicant</dt>
@@ -256,6 +252,7 @@
 
 <style lang="scss">
 	@use '$styles/variables' as *;
+	@use '$styles/admin' as *;
 
 	.layout {
 		display: grid;
@@ -273,8 +270,9 @@
 
 	.card {
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 		padding: 20px;
 		font-family: $font-family-base;
 	}
@@ -290,7 +288,7 @@
 	.card__head {
 		margin-bottom: 14px;
 		padding-bottom: 12px;
-		border-bottom: 1px solid #f1f2f4;
+		border-bottom: 1px solid $admin-line-soft;
 
 		h2 {
 			display: flex;
@@ -337,7 +335,7 @@
 			font-weight: $font-weight-semibold;
 			letter-spacing: 0.07em;
 			text-transform: uppercase;
-			color: #888;
+			color: $admin-ink-3;
 		}
 
 		dd {
@@ -353,7 +351,7 @@
 	.none {
 		margin: 0;
 		font-size: 13px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.docs {
@@ -371,9 +369,9 @@
 		justify-content: space-between;
 		gap: 16px;
 		padding: 10px 12px;
-		background: #fafbfc;
-		border: 1px solid #eef0f3;
-		border-radius: 8px;
+		background: $admin-sunken;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-md;
 	}
 
 	.doc__meta {
@@ -391,7 +389,7 @@
 
 	.doc__name {
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 		overflow-wrap: anywhere;
 	}
 
@@ -467,8 +465,8 @@
 			font-size: 13px;
 			color: #111;
 			background: #fff;
-			border: 1px solid #d8dbe0;
-			border-radius: 6px;
+			border: 1px solid $admin-line;
+			border-radius: $admin-radius-sm;
 			resize: vertical;
 
 			&:focus {
@@ -485,33 +483,20 @@
 		gap: 6px;
 	}
 
-	.msg {
-		margin: 0;
-		font-size: 12px;
-
-		&--ok {
-			color: #0e6b2c;
-		}
-
-		&--err {
-			color: #a01515;
-		}
-	}
-
 	.meta {
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
 		margin: 0;
 		padding-top: 14px;
-		border-top: 1px solid #f1f2f4;
+		border-top: 1px solid $admin-line-soft;
 
 		dt {
 			font-size: 10px;
 			font-weight: $font-weight-semibold;
 			letter-spacing: 0.07em;
 			text-transform: uppercase;
-			color: #888;
+			color: $admin-ink-3;
 		}
 
 		dd {
@@ -537,14 +522,9 @@
 		text-decoration: none;
 		color: #111;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 6px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
-
-		&:hover {
-			background: #f3f4f6;
-		}
-
 		&:disabled {
 			opacity: 0.5;
 			cursor: not-allowed;
@@ -554,20 +534,12 @@
 			color: #fff;
 			background: #111;
 			border-color: #111;
-
-			&:hover {
-				background: #000;
-			}
 		}
 
 		&--danger {
 			color: #a01515;
 			border-color: #f5c2c2;
 			background: #fff;
-
-			&:hover {
-				background: #fdecec;
-			}
 		}
 	}
 

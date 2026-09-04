@@ -1,8 +1,13 @@
 <script lang="ts">
 	import { navigating, page } from '$app/state';
+	import { browser } from '$app/environment';
 	import type { Snippet } from 'svelte';
-
-	type NavItem = { label: string; href: string } | { separator: true };
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
+	import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
+	import Sprout from '@lucide/svelte/icons/sprout';
+	import type { NavItem } from '$lib/utils/adminNavTypes';
 
 	interface Props {
 		brand: string;
@@ -30,6 +35,34 @@
 
 	let mobileOpen = $state(false);
 
+	// Two separate things: below the sidebar breakpoint the sidebar is a drawer
+	// that slides over the page (`mobileOpen`), and above it the sidebar is a
+	// column that narrows to an icon rail (`collapsed`). Collapsing is a per-person
+	// preference, so it is remembered; the drawer always starts shut.
+	const COLLAPSE_KEY = 'tic-admin:sidebar-collapsed';
+
+	function readCollapsed() {
+		if (!browser) return false;
+		// Private windows and blocked site data throw on access rather than
+		// returning null, so a failed read just means "use the default".
+		try {
+			return localStorage.getItem(COLLAPSE_KEY) === '1';
+		} catch {
+			return false;
+		}
+	}
+
+	let collapsed = $state(readCollapsed());
+
+	function toggleCollapsed() {
+		collapsed = !collapsed;
+		try {
+			localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
+		} catch {
+			// Not being able to remember the choice is not a reason to refuse it.
+		}
+	}
+
 	const activeHref = $derived.by(() => {
 		const path = page.url.pathname;
 		let best = '';
@@ -41,37 +74,205 @@
 		}
 		return best;
 	});
+
+	const activeItem = $derived(
+		navItems.find((item) => !('separator' in item) && item.href === activeHref) ?? null
+	);
+
+	const homeItem = $derived(navItems.find((item) => !('separator' in item)) ?? null);
+
+	// The breadcrumb is what tells the reader which layer they are standing on:
+	// root section → nav section → this screen. Entries that would repeat the one
+	// before them are dropped so a top-level page reads "Admin › Overview", not
+	// "Admin › Overview › Overview".
+	const crumbs = $derived.by(() => {
+		const trail: { label: string; href?: string }[] = [];
+		if (homeItem && !('separator' in homeItem)) {
+			trail.push({ label: brand, href: homeItem.href });
+		}
+		if (activeItem && !('separator' in activeItem) && activeItem.label !== title) {
+			trail.push({ label: activeItem.label, href: activeItem.href });
+		}
+		trail.push({ label: title });
+		return trail;
+	});
+
+	const userInitial = $derived((user ?? '').trim().charAt(0).toUpperCase() || '?');
+
+	// The clock is client-only: rendering server time would hydrate to whatever
+	// hour the server sits in, and then jump. It stays null until mounted.
+	let now = $state<Date | null>(null);
+
+	// Each tick lands on the next half-second boundary rather than half a second
+	// after the last one, so the seconds digit and the blinking colon both turn
+	// over with the real clock instead of drifting off it.
+	$effect(() => {
+		let timer: ReturnType<typeof setTimeout>;
+		const tick = () => {
+			now = new Date();
+			timer = setTimeout(tick, 500 - (Date.now() % 500));
+		};
+		tick();
+		return () => clearTimeout(timer);
+	});
+
+	// Seven bands rather than the usual three, because "Good morning" at 00:59 is
+	// plainly wrong to whoever is reading it at 00:59. `from` is the first hour of
+	// the band; the last one runs to midnight.
+	const GREETINGS: { from: number; lines: string[] }[] = [
+		{
+			from: 0,
+			lines: [
+				'Hey, night owl',
+				'Burning the midnight oil',
+				'The quiet hours are yours',
+				'Still up? Respect',
+				'Just you and the cursor'
+			]
+		},
+		{
+			from: 5,
+			lines: [
+				'Up before the sun',
+				'Early bird hours',
+				'First light, first edit',
+				'Dawn patrol',
+				'Beating the sunrise'
+			]
+		},
+		{
+			from: 7,
+			lines: [
+				'Good morning',
+				'Morning! Kettle on?',
+				'Fresh page, fresh day',
+				'Rise and shine',
+				'Top of the morning'
+			]
+		},
+		{
+			from: 12,
+			lines: [
+				'Good afternoon',
+				"Lunch o'clock",
+				'Midday checkpoint',
+				'Halfway through the day',
+				'Fed and back at it?'
+			]
+		},
+		{
+			from: 14,
+			lines: [
+				'Good afternoon',
+				'Afternoon stretch',
+				'The post-lunch push',
+				"Chai o'clock",
+				'Second wind time'
+			]
+		},
+		{
+			from: 17,
+			lines: [
+				'Good evening',
+				'Golden hour',
+				'Evening shift',
+				'Winding down?',
+				'Nearly clocking off?'
+			]
+		},
+		{
+			from: 21,
+			lines: [
+				'Good night — still at it?',
+				'Late shift',
+				'The building is asleep',
+				'One last thing before bed?',
+				'Owl mode'
+			]
+		}
+	];
+
+	// The line is picked by the date rather than at random, so it holds still while
+	// someone moves around the console and turns over the next day instead.
+	const greeting = $derived.by(() => {
+		if (!now) return '';
+		const hour = now.getHours();
+		let band = GREETINGS[0];
+		for (const candidate of GREETINGS) {
+			if (hour >= candidate.from) band = candidate;
+		}
+		const rotation = now.getDate() + now.getMonth() + band.from;
+		return band.lines[rotation % band.lines.length];
+	});
+
+	// The colon is its own element so it can blink, and everything after it is one
+	// string: a line break between separate spans would render as a space and put
+	// a gap in the middle of the clock.
+	const clock = $derived.by(() => {
+		if (!now) return null;
+		const pad = (value: number) => String(value).padStart(2, '0');
+		const hours = now.getHours();
+		return {
+			hour: pad(hours % 12 || 12),
+			minute: pad(now.getMinutes()),
+			rest: `${pad(now.getSeconds())} ${hours < 12 ? 'AM' : 'PM'}`,
+			// On for the first half of every second, off for the second half.
+			colonLit: now.getMilliseconds() < 500
+		};
+	});
+
+	const today = $derived(
+		now ? now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : ''
+	);
+
+	function toneVars(item: NavItem) {
+		const tone = 'separator' in item ? 'neutral' : (item.tone ?? 'neutral');
+		return `--tile-bg: var(--admin-tone-${tone}-bg); --tile-fg: var(--admin-tone-${tone}-fg);`;
+	}
 </script>
 
-<div class="shell">
+<div class="shell" class:shell--collapsed={collapsed}>
 	<aside class="sidebar" class:sidebar--open={mobileOpen}>
 		<div class="brand">
-			<a href="/" class="brand__logo">IITG TIC</a>
-			<div class="brand__role">
-				<span class="brand__role-title">{brand}</span>
-				{#if brandSub}<span class="brand__role-sub">{brandSub}</span>{/if}
+			<a href="/" class="brand__mark" aria-label="IITG TIC home">
+				<Sprout size={19} strokeWidth={1.8} />
+			</a>
+			<div class="brand__text">
+				<span class="brand__name">IITG TIC</span>
+				<span class="brand__role">{brand}</span>
 			</div>
+			{#if brandSub}<span class="brand__tag">{brandSub}</span>{/if}
 		</div>
 
 		<nav class="nav">
-			{#each navItems as item}
+			{#each navItems as item, i (i)}
 				{#if 'separator' in item}
 					<hr class="nav__sep" />
 				{:else}
+					{@const Icon = item.icon}
 					<a
 						href={item.href}
 						class="nav__link"
 						class:nav__link--active={activeHref === item.href}
+						style={toneVars(item)}
+						aria-current={activeHref === item.href ? 'page' : undefined}
+						title={collapsed ? item.label : undefined}
 						onclick={() => (mobileOpen = false)}
 					>
-						{item.label}
+						<span class="nav__icon">
+							{#if Icon}<Icon size={16} strokeWidth={1.9} />{/if}
+						</span>
+						<span class="nav__label">{item.label}</span>
 					</a>
 				{/if}
 			{/each}
 		</nav>
 
 		<div class="sidebar__foot">
-			<a href="/" class="foot-link">← Back to public site</a>
+			<a href="/" class="foot-link" title={collapsed ? 'Back to public site' : undefined}>
+				<ArrowLeft size={14} strokeWidth={2} />
+				<span class="foot-link__label">Back to public site</span>
+			</a>
 		</div>
 	</aside>
 
@@ -86,22 +287,65 @@
 				<span></span><span></span><span></span>
 			</button>
 
-			<div class="topbar__title">
-				{#if eyebrow}<p class="topbar__eyebrow">{eyebrow}</p>{/if}
-				<h1>{title}</h1>
-			</div>
-
-			<div class="topbar__right">
-				{#if actions}{@render actions()}{/if}
-				{#if user}
-					<div class="user">
-						<span class="user__label">{user}</span>
-						{#if onLogout}
-							<button type="button" class="user__logout" onclick={onLogout}>Sign out</button>
-						{/if}
-					</div>
+			<!-- The desktop counterpart to the hamburger. It lives in the topbar
+			     rather than on the sidebar so it stays in the same place whether the
+			     sidebar is a full column or a narrow rail. -->
+			<button
+				type="button"
+				class="collapse"
+				aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+				aria-expanded={!collapsed}
+				title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+				onclick={toggleCollapsed}
+			>
+				{#if collapsed}
+					<PanelLeftOpen size={17} strokeWidth={1.9} />
+				{:else}
+					<PanelLeftClose size={17} strokeWidth={1.9} />
 				{/if}
-			</div>
+			</button>
+
+			<nav class="crumbs" aria-label="Breadcrumb">
+				{#each crumbs as crumb, i (crumb.label + i)}
+					{#if i > 0}
+						<span class="crumbs__sep" aria-hidden="true">
+							<ChevronRight size={13} strokeWidth={2} />
+						</span>
+					{/if}
+					{#if crumb.href && i < crumbs.length - 1}
+						<a href={crumb.href} class="crumbs__item">{crumb.label}</a>
+					{:else}
+						<span class="crumbs__item crumbs__item--current" aria-current="page">
+							{crumb.label}
+						</span>
+					{/if}
+				{/each}
+			</nav>
+
+			{#if user}
+				{#if greeting}
+					<p class="greeting">
+						{greeting}
+						<span class="greeting__sep greeting__sep--date" aria-hidden="true">·</span>
+						<span class="greeting__date">{today}</span>
+						<span class="greeting__sep" aria-hidden="true">·</span>
+						{#if clock}
+							<time class="greeting__time" class:greeting__time--colons-off={!clock.colonLit}
+								>{clock.hour}<span class="greeting__colon">:</span>{clock.minute}<span
+									class="greeting__colon">:</span
+								>{clock.rest}</time
+							>
+						{/if}
+					</p>
+				{/if}
+				<div class="user">
+					<span class="user__avatar" aria-hidden="true">{userInitial}</span>
+					<span class="user__label">{user}</span>
+					{#if onLogout}
+						<button type="button" class="user__logout" onclick={onLogout}>Sign out</button>
+					{/if}
+				</div>
+			{/if}
 		</header>
 
 		{#if navigating.to}
@@ -109,6 +353,16 @@
 		{/if}
 
 		<div class="content">
+			<div class="pagehead">
+				<div class="pagehead__text">
+					{#if eyebrow}<p class="pagehead__eyebrow">{eyebrow}</p>{/if}
+					<h1>{title}</h1>
+				</div>
+				{#if actions}
+					<div class="pagehead__actions">{@render actions()}</div>
+				{/if}
+			</div>
+
 			{#key page.url.pathname}
 				<div class="content__inner">
 					{@render children()}
@@ -130,45 +384,78 @@
 <style lang="scss">
 	@use '$styles/variables' as *;
 	@use '$styles/mixins' as *;
+	@use '$styles/admin' as *;
+
+	// The ambient ground: a near-white base lit by three soft colour blooms, so
+	// the white panels above it read as floating rather than as flat regions of
+	// the same sheet.
+	$admin-ground:
+		radial-gradient(900px 520px at 10% -8%, #e9ecfa 0%, rgba(233, 236, 250, 0) 62%),
+		radial-gradient(820px 470px at 92% -4%, #fceee4 0%, rgba(252, 238, 228, 0) 60%),
+		radial-gradient(760px 520px at 82% 100%, #e6f3ec 0%, rgba(230, 243, 236, 0) 58%), $admin-bg;
 
 	:global(body:has(.shell)) {
-		background: #f6f7f9;
+		background: $admin-bg;
 	}
 
 	.shell {
+		@include admin-tone-vars;
+
+		// One variable drives the column, the sidebar and everything that has to
+		// reflow with it, so collapsing is a single value change.
+		--sidebar-w: 256px;
+
 		display: grid;
-		grid-template-columns: 240px 1fr;
+		grid-template-columns: var(--sidebar-w) 1fr;
+		gap: 0;
 		min-height: 100svh;
-		background: #f6f7f9;
-		color: #111;
+		padding: 14px;
+		background: $admin-ground;
+		background-attachment: fixed;
+		color: $admin-ink;
 		font-family: $font-family-base;
+		transition: grid-template-columns $transition-base;
+
+		&--collapsed {
+			--sidebar-w: 78px;
+		}
 
 		@include breakpoint-down($bp-md) {
+			// The drawer overlays the page down here, so the column it would have
+			// occupied collapses away entirely and the rail width is irrelevant.
+			--sidebar-w: 0;
 			grid-template-columns: 1fr;
+			padding: 0;
 		}
 	}
 
+	// ---- Sidebar -------------------------------------------------------------
+
 	.sidebar {
 		grid-column: 1;
-		background: #fff;
-		border-right: 1px solid #e6e8ec;
 		display: flex;
 		flex-direction: column;
-		padding: 20px 18px;
-		gap: 24px;
+		gap: 22px;
+		padding: 20px 16px;
+		background: $admin-surface;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 		position: sticky;
-		top: 0;
-		height: 100svh;
+		top: 14px;
+		height: calc(100svh - 28px);
 
 		@include breakpoint-down($bp-md) {
 			position: fixed;
 			top: 0;
 			left: 0;
-			width: 260px;
+			width: 272px;
+			height: 100svh;
+			border-radius: 0 $admin-radius-lg $admin-radius-lg 0;
 			z-index: 50;
 			transform: translateX(-100%);
-			transition: transform 0.22s ease;
-			box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06);
+			transition: transform 0.24s ease;
+			box-shadow: $admin-shadow-raised;
 		}
 
 		&--open {
@@ -178,95 +465,175 @@
 		}
 	}
 
-	.brand {
-		display: flex;
-		flex-direction: column;
-		gap: 4px;
-		padding-bottom: 16px;
-		border-bottom: 1px solid #eef0f3;
+	// ---- Collapsed rail ------------------------------------------------------
+	// Desktop only. The drawer below $bp-md always shows full labels, so every
+	// rule here is scoped to the wide layout — a collapsed preference set on a
+	// laptop must not produce an icon-only drawer on a phone.
+	@include breakpoint-up($bp-md) {
+		.shell--collapsed {
+			.sidebar {
+				padding-inline: 12px;
+				align-items: center;
+			}
+
+			.brand {
+				justify-content: center;
+				padding-inline: 0;
+			}
+
+			// Hidden rather than removed: keeping them in the tree means no reflow
+			// of the nav when the labels come back.
+			.brand__text,
+			.brand__tag,
+			.nav__label,
+			.foot-link__label {
+				display: none;
+			}
+
+			.nav {
+				width: 100%;
+			}
+
+			.nav__link {
+				justify-content: center;
+				padding: 6px;
+			}
+
+			.nav__sep {
+				margin-inline: 6px;
+			}
+
+			.sidebar__foot {
+				width: 100%;
+				display: flex;
+				justify-content: center;
+			}
+
+			.foot-link {
+				padding: 6px;
+			}
+		}
 	}
 
-	.brand__logo {
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: 11px;
+		padding: 2px 6px 18px;
+		border-bottom: 1px solid $admin-line-soft;
+	}
+
+	.brand__mark {
+		@include admin-icon-tile('good', 38px);
+		text-decoration: none;
+		@include admin-focus-ring;
+	}
+
+	.brand__text {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		min-width: 0;
+	}
+
+	.brand__name {
 		font-family: $font-family-serif;
 		font-weight: $font-weight-bold;
-		font-size: 18px;
-		color: #111;
-		text-decoration: none;
+		font-size: 16px;
 		letter-spacing: -0.01em;
+		color: $admin-ink;
 	}
 
 	.brand__role {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	.brand__role-title {
 		font-size: 11px;
-		font-weight: $font-weight-bold;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: #555;
+		color: $admin-ink-3;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
-	.brand__role-sub {
-		font-size: 12px;
-		color: #888;
+	.brand__tag {
+		margin-left: auto;
+		padding: 3px 8px;
+		font-size: 9px;
+		font-weight: $font-weight-bold;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: $admin-ink-3;
+		background: $admin-sunken;
+		border-radius: $admin-radius-pill;
 	}
 
 	.nav {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
+		gap: 3px;
 		flex: 1;
+		min-height: 0;
+		overflow-y: auto;
 	}
 
 	.nav__link {
-		display: block;
-		padding: 8px 10px;
+		display: flex;
+		align-items: center;
+		gap: 11px;
+		padding: 6px 10px 6px 6px;
 		font-size: 13px;
 		font-weight: $font-weight-medium;
-		color: #444;
+		color: $admin-ink-2;
 		text-decoration: none;
-		border-radius: 6px;
-		transition: background 0.12s ease, color 0.12s ease;
-
-		&:hover {
-			background: #f1f3f5;
-			color: #111;
-		}
+		border-radius: $admin-radius-md;
+		@include admin-focus-ring;
 
 		&--active {
-			background: #111;
-			color: #fff;
-
-			&:hover {
-				background: #111;
-				color: #fff;
-			}
+			color: $color-white;
+			background: $admin-ink;
+			font-weight: $font-weight-semibold;
 		}
 	}
 
+	.nav__icon {
+		@include admin-icon-tile('neutral', 30px);
+		background: var(--tile-bg);
+		color: var(--tile-fg);
+		border-radius: $admin-radius-sm;
+
+		.nav__link--active & {
+			background: rgba(255, 255, 255, 0.16);
+			color: $color-white;
+		}
+	}
+
+	.nav__label {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
 	.nav__sep {
-		margin: 10px 4px;
+		margin: 9px 10px;
 		border: 0;
-		border-top: 1px solid #eef0f3;
+		border-top: 1px solid $admin-line-soft;
 	}
 
 	.sidebar__foot {
 		padding-top: 16px;
-		border-top: 1px solid #eef0f3;
+		border-top: 1px solid $admin-line-soft;
 	}
 
 	.foot-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		padding: 0 6px;
 		font-size: 12px;
-		color: #666;
+		color: $admin-ink-2;
 		text-decoration: none;
-
-		&:hover {
-			color: #111;
-		}
+		@include admin-focus-ring;
 	}
+
+	// ---- Main column ---------------------------------------------------------
 
 	.main {
 		grid-column: 2;
@@ -282,36 +649,40 @@
 	.topbar {
 		display: flex;
 		align-items: center;
-		gap: 16px;
-		padding: 18px 32px;
-		background: #fff;
-		border-bottom: 1px solid #e6e8ec;
-		position: sticky;
-		top: 0;
-		z-index: 5;
+		gap: 14px;
+		padding: 10px 26px;
+		min-height: 58px;
 
 		@include breakpoint-down($bp-md) {
-			padding: 14px 18px;
+			padding: 12px 16px;
+			background: rgba(255, 255, 255, 0.72);
+			backdrop-filter: blur(10px);
+			border-bottom: 1px solid $admin-line-soft;
+			position: sticky;
+			top: 0;
+			z-index: 5;
 		}
 	}
 
 	.hamburger {
 		display: none;
 		flex-direction: column;
+		justify-content: center;
 		gap: 4px;
-		width: 32px;
-		height: 32px;
-		padding: 6px;
-		background: transparent;
-		border: 1px solid #e6e8ec;
-		border-radius: 6px;
+		width: 36px;
+		height: 36px;
+		padding: 8px;
+		background: $admin-surface;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
+		@include admin-focus-ring;
 
 		span {
 			display: block;
 			width: 100%;
 			height: 1.5px;
-			background: #111;
+			background: $admin-ink;
 		}
 
 		@include breakpoint-down($bp-md) {
@@ -319,51 +690,133 @@
 		}
 	}
 
-	.topbar__title {
+	// The wide-layout twin of .hamburger: same size and shape, shown exactly
+	// where the hamburger is not.
+	.collapse {
+		display: none;
+		align-items: center;
+		justify-content: center;
+		flex: none;
+		width: 36px;
+		height: 36px;
+		padding: 0;
+		color: $admin-ink-2;
+		background: $admin-surface;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
+		cursor: pointer;
+		@include admin-focus-ring;
+
+		&:active {
+			transform: translateY(0.5px);
+		}
+
+		@include breakpoint-up($bp-md) {
+			display: inline-flex;
+		}
+	}
+
+	.crumbs {
 		flex: 1;
 		min-width: 0;
 		display: flex;
-		flex-direction: column;
-		gap: 2px;
+		align-items: center;
+		gap: 4px;
+		overflow: hidden;
 	}
 
-	.topbar__eyebrow {
-		margin: 0;
-		font-size: 11px;
-		font-weight: $font-weight-semibold;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-		color: #888;
+	.crumbs__item {
+		font-size: 12px;
+		font-weight: $font-weight-medium;
+		color: $admin-ink-3;
+		text-decoration: none;
+		white-space: nowrap;
+		@include admin-focus-ring;
+
+		&--current {
+			font-weight: $font-weight-semibold;
+			color: $admin-ink;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
 	}
 
-	.topbar h1 {
-		margin: 0;
-		font-size: 18px;
-		font-weight: $font-weight-semibold;
-		letter-spacing: -0.01em;
-		color: #111;
-		font-family: $font-family-base;
+	.crumbs__sep {
+		display: inline-flex;
+		color: rgba(17, 20, 24, 0.25);
 	}
 
-	.topbar__right {
+	.greeting {
 		display: flex;
 		align-items: center;
-		gap: 14px;
+		gap: 6px;
+		margin: 0;
+		font-size: 12px;
+		font-weight: $font-weight-medium;
+		color: $admin-ink-3;
+		white-space: nowrap;
+
+		@include breakpoint-down($bp-sm) {
+			display: none;
+		}
+	}
+
+	.greeting__sep {
+		color: rgba(17, 20, 24, 0.25);
+	}
+
+	.greeting__time {
+		color: $admin-ink-2;
+		font-variant-numeric: tabular-nums;
+	}
+
+	// Below the sidebar breakpoint the topbar also carries a hamburger, so the
+	// date steps aside — with its separator — leaving the greeting and the clock.
+	.greeting__date,
+	.greeting__sep--date {
+		@include breakpoint-down($bp-md) {
+			display: none;
+		}
+	}
+
+	.greeting__date {
+		color: $admin-ink-2;
+	}
+
+	.greeting__colon {
+		// Fading rather than hiding: display:none would collapse the character and
+		// shuffle the digits sideways twice a second. Both colons are driven from
+		// the one class on the clock so they cannot fall out of step with it.
+		opacity: 1;
+		transition: opacity 0.12s linear;
+	}
+
+	.greeting__time--colons-off .greeting__colon {
+		opacity: 0;
 	}
 
 	.user {
 		display: flex;
 		align-items: center;
-		gap: 10px;
+		gap: 9px;
+		padding: 5px 6px 5px 5px;
+		background: $admin-surface;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-pill;
+		box-shadow: $admin-shadow-card;
+	}
 
-		@include breakpoint-down($bp-sm) {
-			gap: 6px;
-		}
+	.user__avatar {
+		@include admin-icon-tile('info', 28px);
+		border-radius: $admin-radius-pill;
+		font-size: 12px;
+		font-weight: $font-weight-bold;
 	}
 
 	.user__label {
 		font-size: 12px;
-		color: #555;
+		font-weight: $font-weight-medium;
+		color: $admin-ink-2;
 		max-width: 180px;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -375,17 +828,20 @@
 	}
 
 	.user__logout {
-		padding: 6px 12px;
+		padding: 6px 13px;
+		font: inherit;
+		font-family: $font-family-base;
 		font-size: 12px;
 		font-weight: $font-weight-semibold;
-		color: #111;
-		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 6px;
+		color: $color-white;
+		background: $admin-ink;
+		border: 0;
+		border-radius: $admin-radius-pill;
 		cursor: pointer;
+		@include admin-focus-ring;
 
-		&:hover {
-			background: #f3f4f6;
+		&:active {
+			transform: translateY(0.5px);
 		}
 	}
 
@@ -395,16 +851,22 @@
 	.progress {
 		position: relative;
 		height: 2px;
+		margin: 0 26px;
 		overflow: hidden;
-		background: #eef0f3;
+		border-radius: $admin-radius-pill;
+		background: rgba(17, 20, 24, 0.07);
 
 		&::after {
 			content: '';
 			position: absolute;
 			inset: 0;
 			width: 40%;
-			background: #111;
+			background: $admin-ink;
 			animation: progress-slide 0.9s ease-in-out infinite;
+		}
+
+		@include breakpoint-down($bp-md) {
+			margin: 0 16px;
 		}
 	}
 
@@ -415,6 +877,57 @@
 		100% {
 			transform: translateX(350%);
 		}
+	}
+
+	.content {
+		flex: 1;
+		padding: 8px 26px 48px;
+		max-width: 1280px;
+		width: 100%;
+
+		@include breakpoint-down($bp-md) {
+			padding: 16px 16px 40px;
+		}
+	}
+
+	// The page header sits on the ground rather than inside a panel, so the
+	// title reads as a label for the layer below it.
+	.pagehead {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 18px;
+		flex-wrap: wrap;
+		margin-bottom: 22px;
+	}
+
+	.pagehead__text {
+		min-width: 0;
+	}
+
+	.pagehead__eyebrow {
+		@include admin-eyebrow;
+	}
+
+	.pagehead h1 {
+		margin: 0;
+		font-size: 30px;
+		font-weight: $font-weight-bold;
+		letter-spacing: -0.03em;
+		line-height: 1.1;
+		color: $admin-ink;
+		font-family: $font-family-base;
+
+		@include breakpoint-down($bp-sm) {
+			font-size: 24px;
+		}
+	}
+
+	.pagehead__actions {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
 	}
 
 	.content__inner {
@@ -433,6 +946,11 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
+		.greeting__time--colons-off .greeting__colon {
+			opacity: 1;
+			transition: none;
+		}
+
 		.progress::after {
 			animation: none;
 			width: 100%;
@@ -442,16 +960,13 @@
 		.content__inner {
 			animation: none;
 		}
-	}
 
-	.content {
-		flex: 1;
-		padding: 28px 32px 48px;
-		max-width: 1200px;
-		width: 100%;
+		.sidebar {
+			transition: none;
+		}
 
-		@include breakpoint-down($bp-md) {
-			padding: 22px 18px 40px;
+		.shell {
+			transition: none;
 		}
 	}
 
@@ -459,7 +974,7 @@
 		display: none;
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.32);
+		background: rgba(10, 12, 16, 0.35);
 		border: 0;
 		z-index: 40;
 		cursor: pointer;

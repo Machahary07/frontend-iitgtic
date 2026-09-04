@@ -1,111 +1,252 @@
 // Shared dashboard primitives used by /tic-admin and /opportunities/job-posting-admin.
-// Light theme, dashboard look — small typography, soft borders, neutral palette.
+// Soft-surface dashboard look: near-white ambient ground, floating white panels on
+// generous radii, hairline borders and low-spread shadows carrying the depth.
+//
+// Hover is deliberately absent everywhere in the admin. Interactive elements are
+// signalled by shape, weight and the pointer cursor; :focus-visible carries the
+// keyboard affordance and :active the press. Do not add :hover rules here.
 
+@use 'sass:list';
+@use 'sass:map';
 @use 'variables' as *;
 @use 'mixins' as *;
 
+// ---- Surfaces & ink ---------------------------------------------------------
+$admin-bg: #f1f2f5;
+$admin-surface: #ffffff;
+$admin-sunken: #f4f5f8;
+$admin-line: rgba(17, 20, 24, 0.08);
+$admin-line-soft: rgba(17, 20, 24, 0.05);
+// Deliberately stronger than $admin-line: form controls have to announce
+// themselves at rest, where a decorative hairline may not.
+$admin-field-border: #cdd2da;
+$admin-ink: #14171a;
+$admin-ink-2: #4d545c;
+$admin-ink-3: #878e97;
+$admin-accent: #2050d4;
+
+// ---- Shape ------------------------------------------------------------------
+$admin-radius-lg: 22px; // panels, cards
+$admin-radius-md: 14px; // inputs, buttons, icon tiles
+$admin-radius-sm: 10px; // inner chips
+$admin-radius-pill: 999px;
+
+// ---- Depth ------------------------------------------------------------------
+// Two steps only. Flat = the page ground, card = a panel sitting on it, raised =
+// a panel that owns the work (a detail editor beside a list).
+$admin-shadow-card:
+	0 1px 2px rgba(16, 24, 40, 0.04),
+	0 10px 28px -14px rgba(16, 24, 40, 0.16);
+$admin-shadow-raised:
+	0 2px 4px rgba(16, 24, 40, 0.04),
+	0 20px 44px -20px rgba(16, 24, 40, 0.22);
+
+// ---- Tonal pairs ------------------------------------------------------------
+// Background + foreground for each status tint, so a status reads the same
+// wherever it appears — badge, icon tile or message strip.
+$admin-tones: (
+	'good': (
+		#e3f7ea,
+		#0b6b36
+	),
+	'warn': (
+		#fdf1da,
+		#7a5405
+	),
+	'bad': (
+		#fde7e7,
+		#9a201f
+	),
+	'info': (
+		#e6edfd,
+		#1d3f96
+	),
+	'violet': (
+		#eee9fd,
+		#4b2f9e
+	),
+	'neutral': (
+		#eef0f4,
+		#454b54
+	)
+);
+
+@function admin-tone-bg($tone) {
+	@return list.nth(map.get($admin-tones, $tone), 1);
+}
+
+@function admin-tone-fg($tone) {
+	@return list.nth(map.get($admin-tones, $tone), 2);
+}
+
+// Emits --admin-tone-<name>-bg / -fg for every tone. Call this on an admin root
+// element so markup can pick a tint at runtime (`var(--admin-tone-#{tone}-bg)`)
+// without Svelte's CSS scoping pruning class names it cannot see statically.
+@mixin admin-tone-vars {
+	@each $name, $pair in $admin-tones {
+		--admin-tone-#{$name}-bg: #{list.nth($pair, 1)};
+		--admin-tone-#{$name}-fg: #{list.nth($pair, 2)};
+	}
+}
+
+@mixin admin-focus-ring($color: $admin-ink) {
+	&:focus-visible {
+		outline: 2px solid $color;
+		outline-offset: 2px;
+	}
+}
+
+// ---- Cards & panels ---------------------------------------------------------
+
 @mixin admin-card {
 	padding: 22px;
-	background: #fff;
-	border: 1px solid #e6e8ec;
-	border-radius: 10px;
+	background: $admin-surface;
+	border: 1px solid $admin-line-soft;
+	border-radius: $admin-radius-lg;
+	box-shadow: $admin-shadow-card;
 	display: flex;
 	flex-direction: column;
 	gap: 14px;
 	font-family: $font-family-base;
 }
 
+@mixin admin-panel {
+	background: $admin-surface;
+	border: 1px solid $admin-line-soft;
+	border-radius: $admin-radius-lg;
+	box-shadow: $admin-shadow-card;
+	overflow: hidden;
+}
+
+// A panel that carries the working surface — the detail editor next to a list.
+@mixin admin-panel-raised {
+	@include admin-panel;
+	box-shadow: $admin-shadow-raised;
+}
+
+// Rounded pastel square holding a section icon, as in the sidebar and list rows.
+@mixin admin-icon-tile($tone: 'neutral', $size: 38px) {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+	width: $size;
+	height: $size;
+	border-radius: $admin-radius-md;
+	background: admin-tone-bg($tone);
+	color: admin-tone-fg($tone);
+}
+
+// ---- Forms ------------------------------------------------------------------
+
+// A field must read as a field before it is touched. White well + a border with
+// real contrast, so it stands out whether it sits on a white card or on one of
+// the tinted group panels — an input that only reveals itself on click is not a
+// form, it is a guessing game.
 @mixin admin-input {
-	padding: 10px 12px;
+	padding: 11px 14px;
 	font: inherit;
 	font-family: $font-family-base;
 	font-size: 14px;
-	color: #111;
-	background: #fff;
-	border: 1px solid #d8dbe0;
-	border-radius: 6px;
+	color: $admin-ink;
+	background: $admin-surface;
+	border: 1px solid $admin-field-border;
+	border-radius: $admin-radius-md;
+	box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.04);
+	transition:
+		border-color $transition-fast,
+		box-shadow $transition-fast;
 
 	&:focus {
 		outline: none;
-		border-color: #111;
-		box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
+		border-color: $admin-accent;
+		box-shadow: 0 0 0 3px rgba(32, 80, 212, 0.14);
 	}
 
 	&::placeholder {
-		color: #aaa;
+		color: $admin-ink-3;
+	}
+
+	&:disabled {
+		background: $admin-sunken;
+		color: $admin-ink-3;
+		cursor: not-allowed;
 	}
 }
 
 @mixin admin-field-label {
-	font-size: 11px;
+	font-size: 12px;
 	font-weight: $font-weight-semibold;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-	color: #444;
+	letter-spacing: 0.01em;
+	color: $admin-ink;
 }
 
+// ---- Buttons ----------------------------------------------------------------
+
 @mixin admin-btn-base {
-	padding: 9px 16px;
+	padding: 10px 18px;
 	font: inherit;
 	font-family: $font-family-base;
 	font-size: 13px;
 	font-weight: $font-weight-semibold;
-	color: #111;
-	background: #fff;
-	border: 1px solid #d8dbe0;
-	border-radius: 6px;
+	color: $admin-ink;
+	background: $admin-surface;
+	border: 1px solid $admin-line;
+	border-radius: $admin-radius-pill;
 	cursor: pointer;
 	text-decoration: none;
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	gap: 7px;
 	line-height: 1.2;
+	@include admin-focus-ring;
 
-	&:hover {
-		background: #f3f4f6;
+	&:active {
+		transform: translateY(0.5px);
+	}
+
+	&:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
 	}
 }
 
 @mixin admin-btn-primary {
 	@include admin-btn-base;
-	color: #fff;
-	background: #111;
-	border-color: #111;
-
-	&:hover {
-		background: #000;
-	}
+	color: $color-white;
+	background: $admin-ink;
+	border-color: $admin-ink;
+	box-shadow: 0 1px 2px rgba(16, 24, 40, 0.12);
 }
 
 @mixin admin-btn-danger {
 	@include admin-btn-base;
-	color: #a01515;
-	border-color: #f5c2c2;
+	color: admin-tone-fg('bad');
+	background: admin-tone-bg('bad');
+	border-color: transparent;
+}
 
-	&:hover {
-		background: #fdecec;
-	}
+// ---- Message strips ---------------------------------------------------------
+
+@mixin admin-msg($tone) {
+	margin: 0;
+	padding: 11px 14px;
+	font-size: 13px;
+	color: admin-tone-fg($tone);
+	background: admin-tone-bg($tone);
+	border: 0;
+	border-radius: $admin-radius-md;
 }
 
 @mixin admin-msg-ok {
-	margin: 0;
-	padding: 9px 12px;
-	font-size: 13px;
-	color: #0e6b2c;
-	background: #e8f7ee;
-	border: 1px solid #c2eacd;
-	border-radius: 6px;
+	@include admin-msg('good');
 }
 
 @mixin admin-msg-err {
-	margin: 0;
-	padding: 9px 12px;
-	font-size: 13px;
-	color: #a01515;
-	background: #fdecec;
-	border: 1px solid #f5c2c2;
-	border-radius: 6px;
+	@include admin-msg('bad');
 }
+
+// ---- Headings ---------------------------------------------------------------
 
 @mixin admin-eyebrow {
 	margin: 0 0 6px;
@@ -113,27 +254,26 @@
 	font-weight: $font-weight-bold;
 	letter-spacing: 0.16em;
 	text-transform: uppercase;
-	color: #888;
+	color: $admin-ink-3;
 }
 
 @mixin admin-section-title {
 	margin: 0;
-	font-size: 14px;
+	font-size: 15px;
 	font-weight: $font-weight-semibold;
-	letter-spacing: 0;
-	color: #111;
+	letter-spacing: -0.01em;
+	color: $admin-ink;
 	font-family: $font-family-base;
 }
 
 // --- list-screen primitives -------------------------------------------------
 // The Companies / Applications / Jobs / Users screens are all the same shape:
-// filter pills over a bordered panel holding one table. These were copied by
-// hand into each page before; new screens should pull them from here.
+// filter pills over a panel holding one table.
 
 @mixin admin-tabs {
 	display: flex;
-	gap: 4px;
-	margin-bottom: 16px;
+	gap: 6px;
+	margin-bottom: 18px;
 	flex-wrap: wrap;
 }
 
@@ -141,50 +281,40 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
-	padding: 8px 14px;
+	padding: 9px 16px;
 	font: inherit;
 	font-family: $font-family-base;
 	font-size: 13px;
 	font-weight: $font-weight-medium;
-	color: #555;
-	background: #fff;
-	border: 1px solid #e6e8ec;
-	border-radius: 999px;
+	color: $admin-ink-2;
+	background: $admin-surface;
+	border: 1px solid $admin-line-soft;
+	border-radius: $admin-radius-pill;
+	box-shadow: $admin-shadow-card;
 	cursor: pointer;
-
-	&:hover {
-		background: #f6f7f9;
-	}
+	@include admin-focus-ring;
 
 	&--active {
-		color: #fff;
-		background: #111;
-		border-color: #111;
-
-		&:hover {
-			background: #000;
-		}
+		color: $color-white;
+		background: $admin-ink;
+		border-color: $admin-ink;
 	}
 }
 
 @mixin admin-tab-count {
 	font-size: 11px;
-	opacity: 0.7;
-}
-
-@mixin admin-panel {
-	background: #fff;
-	border: 1px solid #e6e8ec;
-	border-radius: 10px;
-	overflow: hidden;
+	font-weight: $font-weight-semibold;
+	padding: 1px 7px;
+	border-radius: $admin-radius-pill;
+	background: rgba(17, 20, 24, 0.06);
 }
 
 @mixin admin-empty {
 	margin: 0;
-	padding: 40px 18px;
+	padding: 48px 18px;
 	text-align: center;
 	font-size: 13px;
-	color: #777;
+	color: $admin-ink-3;
 }
 
 @mixin admin-table($min-width: 760px) {
@@ -197,19 +327,19 @@
 
 @mixin admin-thead {
 	text-align: left;
-	padding: 10px 14px;
+	padding: 12px 18px;
 	font-size: 11px;
 	font-weight: $font-weight-semibold;
-	letter-spacing: 0.08em;
+	letter-spacing: 0.06em;
 	text-transform: uppercase;
-	color: #666;
-	background: #fafbfc;
-	border-bottom: 1px solid #eef0f3;
+	color: $admin-ink-3;
+	background: $admin-sunken;
+	border-bottom: 1px solid $admin-line-soft;
 }
 
 @mixin admin-td {
-	padding: 12px 14px;
-	border-bottom: 1px solid #f1f2f4;
+	padding: 15px 18px;
+	border-bottom: 1px solid $admin-line-soft;
 	vertical-align: top;
 }
 
@@ -217,83 +347,66 @@
 	margin: 0;
 	font-size: 13px;
 	font-weight: $font-weight-semibold;
-	color: #111;
+	color: $admin-ink;
 }
 
 @mixin admin-cell-sub {
-	margin: 2px 0 0;
+	margin: 3px 0 0;
 	font-size: 12px;
-	color: #777;
+	color: $admin-ink-3;
 }
 
 @mixin admin-badge {
 	display: inline-block;
-	padding: 3px 10px;
+	padding: 4px 11px;
 	font-size: 11px;
 	font-weight: $font-weight-semibold;
-	letter-spacing: 0.04em;
+	letter-spacing: 0.03em;
 	text-transform: uppercase;
-	border-radius: 999px;
-	background: #eef0f3;
-	color: #444;
+	border-radius: $admin-radius-pill;
+	background: admin-tone-bg('neutral');
+	color: admin-tone-fg('neutral');
 }
 
 @mixin admin-badge-tone($tone) {
-	@if $tone == 'good' {
-		background: #d6f5e1;
-		color: #0e6b2c;
-	} @else if $tone == 'warn' {
-		background: #fff4d4;
-		color: #6a4f00;
-	} @else if $tone == 'bad' {
-		background: #fde0e0;
-		color: #9a1515;
-	} @else if $tone == 'info' {
-		background: #e2e8f5;
-		color: #24427e;
-	}
+	background: admin-tone-bg($tone);
+	color: admin-tone-fg($tone);
 }
 
 @mixin admin-btn-small {
-	padding: 6px 12px;
+	padding: 7px 14px;
 	font: inherit;
 	font-family: $font-family-base;
 	font-size: 12px;
 	font-weight: $font-weight-semibold;
-	color: #111;
-	background: #fff;
-	border: 1px solid #d8dbe0;
-	border-radius: 6px;
+	color: $admin-ink;
+	background: $admin-surface;
+	border: 1px solid $admin-line;
+	border-radius: $admin-radius-pill;
 	cursor: pointer;
 	text-decoration: none;
 	display: inline-block;
 	text-align: center;
+	@include admin-focus-ring;
 
-	&:hover {
-		background: #f3f4f6;
+	&:active {
+		transform: translateY(0.5px);
 	}
 
 	&:disabled {
-		opacity: 0.5;
+		opacity: 0.45;
 		cursor: not-allowed;
 	}
 
 	&--primary {
-		color: #fff;
-		background: #111;
-		border-color: #111;
-
-		&:hover {
-			background: #000;
-		}
+		color: $color-white;
+		background: $admin-ink;
+		border-color: $admin-ink;
 	}
 
 	&--danger {
-		color: #a01515;
-		border-color: #f5c2c2;
-
-		&:hover {
-			background: #fdecec;
-		}
+		color: admin-tone-fg('bad');
+		background: admin-tone-bg('bad');
+		border-color: transparent;
 	}
 }

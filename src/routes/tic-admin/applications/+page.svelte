@@ -58,137 +58,137 @@
 </svelte:head>
 
 <AdminShell
-		brand="TIC Team Admin"
-		brandSub="Internal"
-		navItems={TIC_ADMIN_NAV}
-		title="Applications"
-		eyebrow="Incubation"
-		user={adminName}
-		onLogout={handleLogout}
-	>
-		<div class="tabs">
-			<button
-				class="tab"
-				class:tab--active={filter === 'submitted'}
-				onclick={() => (filter = 'submitted')}
-			>
-				New <span class="tab__count">{counts.submitted}</span>
-			</button>
-			<button
-				class="tab"
-				class:tab--active={filter === 'under-review'}
-				onclick={() => (filter = 'under-review')}
-			>
-				Under review <span class="tab__count">{counts['under-review']}</span>
-			</button>
-			<button
-				class="tab"
-				class:tab--active={filter === 'accepted'}
-				onclick={() => (filter = 'accepted')}
-			>
-				Accepted <span class="tab__count">{counts.accepted}</span>
-			</button>
-			<button
-				class="tab"
-				class:tab--active={filter === 'rejected'}
-				onclick={() => (filter = 'rejected')}
-			>
-				Rejected <span class="tab__count">{counts.rejected}</span>
-			</button>
-			<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
-				All <span class="tab__count">{counts.all}</span>
-			</button>
-		</div>
+	brand="TIC Team Admin"
+	brandSub="Internal"
+	navItems={TIC_ADMIN_NAV}
+	title="Applications"
+	eyebrow="Incubation"
+	user={adminName}
+	onLogout={handleLogout}
+>
+	<div class="tabs">
+		<button
+			class="tab"
+			class:tab--active={filter === 'submitted'}
+			onclick={() => (filter = 'submitted')}
+		>
+			New <span class="tab__count">{counts.submitted}</span>
+		</button>
+		<button
+			class="tab"
+			class:tab--active={filter === 'under-review'}
+			onclick={() => (filter = 'under-review')}
+		>
+			Under review <span class="tab__count">{counts['under-review']}</span>
+		</button>
+		<button
+			class="tab"
+			class:tab--active={filter === 'accepted'}
+			onclick={() => (filter = 'accepted')}
+		>
+			Accepted <span class="tab__count">{counts.accepted}</span>
+		</button>
+		<button
+			class="tab"
+			class:tab--active={filter === 'rejected'}
+			onclick={() => (filter = 'rejected')}
+		>
+			Rejected <span class="tab__count">{counts.rejected}</span>
+		</button>
+		<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
+			All <span class="tab__count">{counts.all}</span>
+		</button>
+	</div>
 
-		<div class="panel">
-			{#if filtered.length === 0}
-				{#if applications.length === 0}
-					<div class="empty-state">
-						<p class="empty-state__title">No applications yet</p>
-						<p class="empty-state__body">
-							Submissions from <a href={resolve('/application')}>the incubation form</a> land here the
-							moment
-							a founder completes all eight steps.
-						</p>
-					</div>
-				{:else}
-					<p class="empty">No applications in this view.</p>
-				{/if}
-			{:else}
-				<div class="table-wrap">
-					<table class="table">
-						<thead>
-							<tr>
-								<th>Startup</th>
-								<th>Founder</th>
-								<th>Submitted</th>
-								<th>Status</th>
-								<th class="actions-col">Actions</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each filtered as application (application.id)}
-								<tr>
-									<td>
-										<p class="cell__name">{application.startup_name || 'Untitled startup'}</p>
-										<p class="cell__sub">
-											<a
-												class="link"
-												href={resolve('/tic-admin/applications/[id]', { id: application.id })}
-											>
-												Open full application →
-											</a>
-										</p>
-									</td>
-									<td>
-										<p class="cell__name">{application.full_name || '—'}</p>
-										<p class="cell__sub">{application.email}</p>
-									</td>
-									<td><p class="cell__sub">{fmtDate(application.created_at)}</p></td>
-									<td>
-										<span class="badge badge--{application.status}">
-											{statusLabel(application.status)}
-										</span>
-										{#if application.review_note}
-											<p class="cell__reason">{application.review_note}</p>
-										{/if}
-									</td>
-									<td class="actions-col">
-										<div class="actions">
-											{#if application.status !== 'under-review'}
-												<button class="btn" onclick={() => setStatus(application.id, 'under-review')}>
-													Review
-												</button>
-											{/if}
-											{#if application.status !== 'accepted'}
-												<button
-													class="btn btn--primary"
-													onclick={() => setStatus(application.id, 'accepted')}
-												>
-													Accept
-												</button>
-											{/if}
-											{#if application.status !== 'rejected'}
-												<button
-													class="btn btn--danger"
-													onclick={() => setStatus(application.id, 'rejected')}
-												>
-													Reject
-												</button>
-											{/if}
-										</div>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
+	<div class="panel">
+		{#if filtered.length === 0}
+			{#if applications.length === 0}
+				<div class="empty-state">
+					<p class="empty-state__title">No applications yet</p>
+					<p class="empty-state__body">
+						Submissions from <a href={resolve('/application')}>the incubation form</a> land here the moment
+						a founder completes all eight steps.
+					</p>
 				</div>
+			{:else}
+				<p class="empty">No applications in this view.</p>
 			{/if}
-		</div>
+		{:else}
+			<div class="table-wrap">
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Startup</th>
+							<th>Founder</th>
+							<th>Submitted</th>
+							<th>Status</th>
+							<th class="actions-col">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each filtered as application (application.id)}
+							<tr>
+								<td>
+									<p class="cell__name">{application.startup_name || 'Untitled startup'}</p>
+									<p class="cell__sub">
+										<a
+											class="link"
+											href={resolve('/tic-admin/applications/[id]', { id: application.id })}
+										>
+											Open full application →
+										</a>
+									</p>
+								</td>
+								<td>
+									<p class="cell__name">{application.full_name || '—'}</p>
+									<p class="cell__sub">{application.email}</p>
+								</td>
+								<td><p class="cell__sub">{fmtDate(application.created_at)}</p></td>
+								<td>
+									<span class="badge badge--{application.status}">
+										{statusLabel(application.status)}
+									</span>
+									{#if application.review_note}
+										<p class="cell__reason">{application.review_note}</p>
+									{/if}
+								</td>
+								<td class="actions-col">
+									<div class="actions">
+										{#if application.status !== 'under-review'}
+											<button class="btn" onclick={() => setStatus(application.id, 'under-review')}>
+												Review
+											</button>
+										{/if}
+										{#if application.status !== 'accepted'}
+											<button
+												class="btn btn--primary"
+												onclick={() => setStatus(application.id, 'accepted')}
+											>
+												Accept
+											</button>
+										{/if}
+										{#if application.status !== 'rejected'}
+											<button
+												class="btn btn--danger"
+												onclick={() => setStatus(application.id, 'rejected')}
+											>
+												Reject
+											</button>
+										{/if}
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</div>
 </AdminShell>
 
 <style lang="scss">
 	@use '$styles/variables' as *;
+	@use '$styles/admin' as *;
 
 	.tabs {
 		display: flex;
@@ -208,22 +208,13 @@
 		font-weight: $font-weight-medium;
 		color: #555;
 		background: #fff;
-		border: 1px solid #e6e8ec;
+		border: 1px solid $admin-line-soft;
 		border-radius: 999px;
 		cursor: pointer;
-
-		&:hover {
-			background: #f6f7f9;
-		}
-
 		&--active {
 			color: #fff;
 			background: #111;
 			border-color: #111;
-
-			&:hover {
-				background: #000;
-			}
 		}
 	}
 
@@ -234,8 +225,9 @@
 
 	.panel {
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 		overflow: hidden;
 	}
 
@@ -244,7 +236,7 @@
 		padding: 40px 18px;
 		text-align: center;
 		font-size: 13px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.empty-state {
@@ -264,7 +256,7 @@
 		max-width: 380px;
 		font-size: 13px;
 		line-height: 1.6;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.table-wrap {
@@ -286,14 +278,14 @@
 		font-weight: $font-weight-semibold;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #666;
-		background: #fafbfc;
-		border-bottom: 1px solid #eef0f3;
+		color: $admin-ink-2;
+		background: $admin-sunken;
+		border-bottom: 1px solid $admin-line-soft;
 	}
 
 	tbody td {
 		padding: 12px 14px;
-		border-bottom: 1px solid #f1f2f4;
+		border-bottom: 1px solid $admin-line-soft;
 		vertical-align: top;
 	}
 
@@ -311,13 +303,13 @@
 	.cell__sub {
 		margin: 2px 0 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.cell__reason {
 		margin: 6px 0 0;
 		font-size: 11px;
-		color: #666;
+		color: $admin-ink-2;
 		max-width: 220px;
 	}
 
@@ -325,10 +317,6 @@
 		color: #2050d4;
 		font-size: 12px;
 		text-decoration: none;
-
-		&:hover {
-			text-decoration: underline;
-		}
 	}
 
 	.badge {
@@ -381,32 +369,19 @@
 		font-weight: $font-weight-semibold;
 		color: #111;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 6px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
-
-		&:hover {
-			background: #f3f4f6;
-		}
-
 		&--primary {
 			color: #fff;
 			background: #111;
 			border-color: #111;
-
-			&:hover {
-				background: #000;
-			}
 		}
 
 		&--danger {
 			color: #a01515;
 			border-color: #f5c2c2;
 			background: #fff;
-
-			&:hover {
-				background: #fdecec;
-			}
 		}
 	}
 </style>

@@ -4,10 +4,12 @@
 // message in one fixed region in the corner instead, so it reads the same on
 // every screen and never moves the page under someone.
 
-export type ToastTone = 'ok' | 'err';
+export type ToastTone = 'ok' | 'err' | 'info';
 export type ToastItem = { id: number; tone: ToastTone; text: string };
 
-const LIFE: Record<ToastTone, number> = { ok: 4000, err: 6000 };
+// An orientation note is read rather than glanced at, so 'info' stays up longer
+// than the tick that only confirms what someone just did.
+const LIFE: Record<ToastTone, number> = { ok: 4000, err: 6000, info: 7000 };
 
 class ToastHost {
 	items = $state<ToastItem[]>([]);
@@ -36,5 +38,5 @@ class ToastHost {
 
 export const toasts = new ToastHost();
 
-/** Show a corner toast. `ok` for a success, `err` for a failure. */
+/** Show a corner toast. `ok` for a success, `err` for a failure, `info` for a notice. */
 export const showToast = (text: string, tone: ToastTone = 'ok') => toasts.show(text, tone);

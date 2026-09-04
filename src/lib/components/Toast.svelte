@@ -25,6 +25,19 @@
 					>
 						<path d="M20 6 9 17l-5-5" />
 					</svg>
+				{:else if toast.tone === 'info'}
+					<svg
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2.2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path d="M12 8h.01" />
+						<path d="M12 11v5" />
+						<circle cx="12" cy="12" r="9" />
+					</svg>
 				{:else}
 					<svg
 						viewBox="0 0 24 24"
@@ -88,10 +101,10 @@
 		width: min(384px, calc(100vw - 32px));
 		padding: 12px 12px 12px 14px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 12px;
+		border: 1px solid rgb(17 20 24 / 0.06);
+		border-radius: 16px;
 		box-shadow:
-			0 12px 32px rgb(12 14 18 / 0.15),
+			0 18px 42px -12px rgb(12 14 18 / 0.22),
 			0 2px 6px rgb(12 14 18 / 0.06);
 		font-family: $font-family-base;
 	}
@@ -120,6 +133,11 @@
 		color: #b0181c;
 	}
 
+	.toast--info .toast__icon {
+		background: #e8eefc;
+		color: #2050d4;
+	}
+
 	.toast__text {
 		flex: 1;
 		min-width: 0;
@@ -145,11 +163,6 @@
 		svg {
 			width: 14px;
 			height: 14px;
-		}
-
-		&:hover {
-			background: #f1f3f5;
-			color: #444;
 		}
 
 		&:focus-visible {

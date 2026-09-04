@@ -175,6 +175,7 @@
 
 <style lang="scss">
 	@use '$styles/variables' as *;
+	@use '$styles/admin' as *;
 
 	.tabs {
 		display: flex;
@@ -194,22 +195,13 @@
 		font-weight: $font-weight-medium;
 		color: #555;
 		background: #fff;
-		border: 1px solid #e6e8ec;
+		border: 1px solid $admin-line-soft;
 		border-radius: 999px;
 		cursor: pointer;
-
-		&:hover {
-			background: #f6f7f9;
-		}
-
 		&--active {
 			color: #fff;
 			background: #111;
 			border-color: #111;
-
-			&:hover {
-				background: #000;
-			}
 		}
 	}
 
@@ -221,18 +213,19 @@
 	.note {
 		margin: 0 0 16px;
 		font-size: 12px;
-		color: #666;
+		color: $admin-ink-2;
 		padding: 10px 12px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
+		border: 1px solid $admin-line-soft;
 		border-left: 3px solid #2050d4;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 	}
 
 	.panel {
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 		overflow: hidden;
 	}
 
@@ -241,7 +234,7 @@
 		padding: 40px 18px;
 		text-align: center;
 		font-size: 13px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.table-wrap {
@@ -263,14 +256,14 @@
 		font-weight: $font-weight-semibold;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #666;
-		background: #fafbfc;
-		border-bottom: 1px solid #eef0f3;
+		color: $admin-ink-2;
+		background: $admin-sunken;
+		border-bottom: 1px solid $admin-line-soft;
 	}
 
 	tbody td {
 		padding: 12px 14px;
-		border-bottom: 1px solid #f1f2f4;
+		border-bottom: 1px solid $admin-line-soft;
 		vertical-align: top;
 	}
 
@@ -288,7 +281,7 @@
 	.cell__sub {
 		margin: 2px 0 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.badge {
@@ -352,27 +345,18 @@
 		font-weight: $font-weight-semibold;
 		color: #111;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 6px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
-
-		&:hover {
-			background: #f3f4f6;
-		}
-
 		&--danger {
 			color: #a01515;
 			border-color: #f5c2c2;
-
-			&:hover {
-				background: #fdecec;
-			}
 		}
 	}
 
 	.note code {
 		font-size: 11px;
-		background: #f1f2f4;
+		background: $admin-line-soft;
 		padding: 1px 5px;
 		border-radius: 3px;
 	}
@@ -387,9 +371,5 @@
 		font-weight: $font-weight-semibold;
 		color: #2050d4;
 		text-decoration: none;
-
-		&:hover {
-			text-decoration: underline;
-		}
 	}
 </style>

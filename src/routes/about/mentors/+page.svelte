@@ -45,7 +45,8 @@
 							<div class="card__avatar" aria-hidden="true"></div>
 						{/if}
 					</div>
-					<h2 class="card__name">{track.track}</h2>
+					<h2 class="card__name">{track.name || track.track}</h2>
+					{#if track.name}<p class="card__role">{track.track}</p>{/if}
 					<p class="card__bio">{track.bio}</p>
 				</article>
 			{/each}
@@ -161,6 +162,16 @@
 	.card__avatar--photo {
 		object-fit: cover;
 		display: block;
+	}
+
+	.card__role {
+		margin: 0;
+		font-family: $font-family-base;
+		font-size: $font-size-xs;
+		font-weight: $font-weight-semibold;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: rgba($color-black, 0.55);
 	}
 
 	.card__name {

@@ -542,14 +542,10 @@
 		font-weight: $font-weight-semibold;
 		color: #111;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 6px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
 		text-decoration: none;
 		white-space: nowrap;
-
-		&:hover {
-			background: #f3f4f6;
-		}
 	}
 
 	// --- banners --------------------------------------------------------------
@@ -558,9 +554,9 @@
 		margin: 0 0 20px;
 		padding: 14px 16px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
+		border: 1px solid $admin-line-soft;
 		border-left: 3px solid #004ebb;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 
 		&--warn {
 			border-left-color: #c98a00;
@@ -589,7 +585,7 @@
 
 	.banner code {
 		font-size: 11px;
-		background: #f1f2f4;
+		background: $admin-line-soft;
 		padding: 1px 5px;
 		border-radius: 3px;
 	}
@@ -606,8 +602,9 @@
 	.meter {
 		padding: 18px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 
 		&--warn .bar__fill {
 			background: #c98a00;
@@ -631,12 +628,12 @@
 		font-weight: $font-weight-semibold;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
-		color: #888;
+		color: $admin-ink-3;
 	}
 
 	.meter__plan {
 		font-size: 11px;
-		color: #aaa;
+		color: $admin-ink-3;
 	}
 
 	.meter__value {
@@ -652,13 +649,13 @@
 		margin-left: 8px;
 		font-size: 13px;
 		font-weight: $font-weight-regular;
-		color: #888;
+		color: $admin-ink-3;
 		letter-spacing: 0;
 	}
 
 	.bar {
 		height: 6px;
-		background: #eef0f3;
+		background: $admin-line-soft;
 		border-radius: 999px;
 		overflow: hidden;
 	}
@@ -673,7 +670,7 @@
 	.meter__foot {
 		margin: 10px 0 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 
 		strong {
 			color: #111;
@@ -684,8 +681,9 @@
 	.plan {
 		padding: 18px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 	}
 
 	.plan__label {
@@ -694,7 +692,7 @@
 		font-weight: $font-weight-semibold;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
-		color: #888;
+		color: $admin-ink-3;
 	}
 
 	.plan__name {
@@ -708,7 +706,7 @@
 		margin: 0 0 12px;
 		font-size: 12px;
 		line-height: 1.5;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.plan__rows {
@@ -717,7 +715,7 @@
 		flex-direction: column;
 		gap: 5px;
 		padding-top: 10px;
-		border-top: 1px solid #f1f2f4;
+		border-top: 1px solid $admin-line-soft;
 
 		div {
 			display: flex;
@@ -751,8 +749,9 @@
 	.stat {
 		padding: 16px 18px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 	}
 
 	.stat__label {
@@ -761,7 +760,7 @@
 		font-weight: $font-weight-semibold;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #888;
+		color: $admin-ink-3;
 	}
 
 	.stat__value {
@@ -787,10 +786,6 @@
 		font-weight: $font-weight-semibold;
 		color: #2050d4;
 		text-decoration: none;
-
-		&:hover {
-			text-decoration: underline;
-		}
 	}
 
 	// --- trend ----------------------------------------------------------------
@@ -806,7 +801,7 @@
 		justify-content: space-between;
 		gap: 12px;
 		padding: 14px 18px;
-		border-bottom: 1px solid #eef0f3;
+		border-bottom: 1px solid $admin-line-soft;
 
 		h2 {
 			@include admin-section-title;
@@ -818,7 +813,7 @@
 		align-items: center;
 		gap: 6px;
 		font-size: 11px;
-		color: #888;
+		color: $admin-ink-3;
 	}
 
 	.key {
@@ -867,7 +862,7 @@
 		flex-direction: column;
 		border-radius: 2px;
 		overflow: hidden;
-		background: #eef0f3;
+		background: $admin-line-soft;
 	}
 
 	.trend__seg {
@@ -919,7 +914,7 @@
 		gap: 7px;
 		margin-left: 6px;
 		font-size: 12px;
-		color: #666;
+		color: $admin-ink-2;
 		cursor: pointer;
 
 		input {
@@ -1012,7 +1007,7 @@
 			padding: 6px 10px 6px 0;
 			font-weight: $font-weight-semibold;
 			color: #555;
-			border-bottom: 1px solid #e6e8ec;
+			border-bottom: 1px solid $admin-line-soft;
 			white-space: nowrap;
 		}
 
@@ -1045,7 +1040,7 @@
 	.panel__note {
 		margin: 0;
 		font-size: 12px;
-		color: #666;
+		color: $admin-ink-2;
 		text-align: right;
 		max-width: 42ch;
 	}
@@ -1063,7 +1058,7 @@
 			padding: 12px 18px;
 
 			& + li {
-				border-top: 1px solid #eef0f3;
+				border-top: 1px solid $admin-line-soft;
 			}
 		}
 	}
@@ -1082,7 +1077,7 @@
 		gap: 8px;
 		margin: 4px 0 0;
 		font-size: 12px;
-		color: #666;
+		color: $admin-ink-2;
 		overflow-wrap: anywhere;
 	}
 
@@ -1110,7 +1105,7 @@
 
 	.more {
 		padding: 14px 18px;
-		border-top: 1px solid #f1f2f4;
+		border-top: 1px solid $admin-line-soft;
 		text-align: center;
 	}
 
@@ -1162,7 +1157,7 @@
 		justify-content: space-between;
 		gap: 16px;
 		padding: 16px 18px;
-		border-bottom: 1px solid #eef0f3;
+		border-bottom: 1px solid $admin-line-soft;
 
 		h2 {
 			margin: 0;
@@ -1176,7 +1171,7 @@
 	.modal__eyebrow {
 		margin: 0 0 3px;
 		font-size: 11px;
-		color: #888;
+		color: $admin-ink-3;
 	}
 
 	.modal__frame {
@@ -1184,6 +1179,6 @@
 		width: 100%;
 		min-height: 60svh;
 		border: 0;
-		background: #f6f7f9;
+		background: $admin-sunken;
 	}
 </style>

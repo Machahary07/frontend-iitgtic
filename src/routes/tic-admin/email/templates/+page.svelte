@@ -92,14 +92,10 @@
 		font-weight: $font-weight-semibold;
 		color: #111;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 6px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
 		text-decoration: none;
 		white-space: nowrap;
-
-		&:hover {
-			background: #f3f4f6;
-		}
 	}
 
 	.note {
@@ -109,9 +105,9 @@
 		line-height: 1.6;
 		color: #555;
 		background: #fff;
-		border: 1px solid #e6e8ec;
+		border: 1px solid $admin-line-soft;
 		border-left: 3px solid #2050d4;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 	}
 
 	.group {
@@ -133,17 +129,12 @@
 		display: block;
 		padding: 16px 18px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
 		text-decoration: none;
 		transition:
 			border-color 0.12s ease,
 			box-shadow 0.12s ease;
-
-		&:hover {
-			border-color: #c9ced6;
-			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-		}
 	}
 
 	.card__head {
@@ -184,7 +175,7 @@
 		margin: 6px 0 0;
 		font-size: 12px;
 		line-height: 1.55;
-		color: #666;
+		color: $admin-ink-2;
 	}
 
 	.card__subject {
@@ -192,8 +183,8 @@
 		padding: 7px 10px;
 		font-size: 12px;
 		color: #333;
-		background: #fafbfc;
-		border: 1px solid #eef0f3;
+		background: $admin-sunken;
+		border: 1px solid $admin-line-soft;
 		border-radius: 5px;
 		overflow: hidden;
 		text-overflow: ellipsis;

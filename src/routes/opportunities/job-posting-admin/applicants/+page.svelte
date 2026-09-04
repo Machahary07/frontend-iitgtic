@@ -11,6 +11,7 @@
 	} from '$lib/utils/jobApplicants';
 	import { COMPANY_PORTAL_NAV } from '$lib/utils/companyNav';
 	import { downloadCsv, stampedFileName, toCsv } from '$lib/utils/csv';
+	import { showToast } from '$lib/utils/toast.svelte';
 
 	// The company's own applicants. Read-only by design: a status is TIC's to
 	// set, and the schema backs that up — the company has a select grant on this
@@ -24,7 +25,6 @@
 	let filter = $state<Filter>('all');
 	let role = $state('all');
 	let openId = $state('');
-	let resumeError = $state('');
 
 	const isVerified = $derived(account?.status === 'verified');
 
@@ -71,12 +71,11 @@
 	// Signed on demand rather than up front: a link is good for ten minutes, and
 	// signing every row on load would spend them all before anyone clicked.
 	async function openResume(applicant: CompanyApplicant) {
-		resumeError = '';
 		if (!applicant.resumePath) return;
 
 		const url = await resumeUrl(applicant.resumePath);
 		if (!url) {
-			resumeError = 'That resume could not be opened. Try again in a moment.';
+			showToast('That resume could not be opened. Try again in a moment.', 'err');
 			return;
 		}
 		window.open(url, '_blank', 'noopener');
@@ -214,10 +213,6 @@
 				{/if}
 			</div>
 
-			{#if resumeError}
-				<p class="error" role="alert">{resumeError}</p>
-			{/if}
-
 			{#if filtered.length === 0}
 				<div class="empty">
 					<p>No applicants in this view.</p>
@@ -341,7 +336,7 @@
 		display: grid;
 		place-items: center;
 		font-family: $font-family-base;
-		color: #666;
+		color: $admin-ink-2;
 	}
 
 	.gate {
@@ -349,7 +344,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: #f6f7f9;
+		background: $admin-sunken;
 		padding: 32px 20px;
 		font-family: $font-family-base;
 	}
@@ -359,8 +354,9 @@
 		max-width: 420px;
 		padding: 32px 28px 28px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 		text-align: center;
 	}
 
@@ -426,11 +422,6 @@
 		@include admin-empty;
 	}
 
-	.error {
-		@include admin-msg-err;
-		margin-bottom: 16px;
-	}
-
 	.table-wrap {
 		overflow-x: auto;
 	}
@@ -489,7 +480,7 @@
 	}
 
 	.detail-row td {
-		background: #fafbfc;
+		background: $admin-sunken;
 	}
 
 	.detail {
@@ -520,10 +511,6 @@
 		a {
 			color: #2050d4;
 			text-decoration: none;
-
-			&:hover {
-				text-decoration: underline;
-			}
 		}
 	}
 

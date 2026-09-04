@@ -8,6 +8,7 @@
 // and it is what lets page views and audit entries name the person responsible.
 
 import { supabase } from '$lib/supabaseClient';
+import { clearAdminSeenFlags } from '$lib/utils/adminSeen';
 
 export type AdminIdentity = { userId: string; email: string; name: string };
 
@@ -81,6 +82,9 @@ export async function bootstrapFirstAdmin(input: {
 }
 
 export async function logoutTicAdmin(): Promise<void> {
+	// The one-time notices are scoped to a login, so whoever signs in next — the
+	// same person or another admin — sees them once again.
+	clearAdminSeenFlags();
 	try {
 		await fetch('/api/tic-admin-login', { method: 'DELETE' });
 	} catch {

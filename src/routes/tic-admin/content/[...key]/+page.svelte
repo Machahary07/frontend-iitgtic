@@ -189,7 +189,7 @@
 		color: #6a4f00;
 		background: #fff4d4;
 		border: 1px solid #f0e0b0;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 		padding: 8px 12px;
 	}
 
@@ -200,18 +200,18 @@
 		flex-wrap: wrap;
 		margin-top: 24px;
 		padding-top: 18px;
-		border-top: 1px solid #e6e8ec;
+		border-top: 1px solid $admin-line-soft;
 	}
 
 	.foot__note {
 		margin: 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 		max-width: 58ch;
 
 		code {
 			font-size: 11px;
-			background: #eef0f3;
+			background: $admin-line-soft;
 			padding: 1px 5px;
 			border-radius: 3px;
 		}

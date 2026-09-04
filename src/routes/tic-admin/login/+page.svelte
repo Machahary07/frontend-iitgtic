@@ -220,13 +220,14 @@
 
 <style lang="scss">
 	@use '$styles/variables' as *;
+	@use '$styles/admin' as *;
 
 	.login {
 		min-height: 100svh;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: #f6f7f9;
+		background: $admin-sunken;
 		padding: 24px;
 		font-family: $font-family-base;
 	}
@@ -236,8 +237,8 @@
 		max-width: 380px;
 		padding: 32px 28px 28px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
 		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 	}
 
@@ -252,7 +253,7 @@
 		font-weight: $font-weight-bold;
 		letter-spacing: 0.16em;
 		text-transform: uppercase;
-		color: #888;
+		color: $admin-ink-3;
 	}
 
 	h1 {
@@ -295,8 +296,8 @@
 			font-size: 14px;
 			color: #111;
 			background: #fff;
-			border: 1px solid #d8dbe0;
-			border-radius: 6px;
+			border: 1px solid $admin-line;
+			border-radius: $admin-radius-sm;
 
 			&:focus {
 				outline: none;
@@ -313,7 +314,7 @@
 		color: #a01515;
 		background: #fdecec;
 		border: 1px solid #f5c2c2;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 	}
 
 	.checklist {
@@ -322,9 +323,9 @@
 		font-size: 13px;
 		line-height: 1.55;
 		color: #3f4652;
-		background: #f6f7f9;
-		border: 1px solid #e6e8ec;
-		border-radius: 6px;
+		background: $admin-sunken;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-sm;
 
 		p {
 			margin: 0;
@@ -355,7 +356,7 @@
 
 	.checklist__foot {
 		padding-top: 8px;
-		border-top: 1px solid #e6e8ec;
+		border-top: 1px solid $admin-line-soft;
 	}
 
 	button {
@@ -366,12 +367,8 @@
 		color: #fff;
 		background: #111;
 		border: 1px solid #111;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
-
-		&:hover {
-			background: #000;
-		}
 	}
 
 	.notice {
@@ -381,7 +378,7 @@
 		color: #0e6b2c;
 		background: #e8f7ee;
 		border: 1px solid #bfe6cd;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 	}
 
 	button:disabled {
@@ -392,7 +389,7 @@
 	.hint {
 		margin: 18px 0 0;
 		font-size: 12px;
-		color: #888;
+		color: $admin-ink-3;
 		text-align: center;
 	}
 </style>

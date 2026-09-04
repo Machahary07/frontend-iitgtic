@@ -240,10 +240,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: #f6f7f9;
+		background: $admin-sunken;
 		font-family: $font-family-base;
 		font-size: 13px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.login {
@@ -251,7 +251,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: #f6f7f9;
+		background: $admin-sunken;
 		padding: 24px;
 		font-family: $font-family-base;
 	}
@@ -261,8 +261,8 @@
 		max-width: 380px;
 		padding: 32px 28px 28px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
 		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 	}
 
@@ -320,17 +320,13 @@
 	.hint {
 		margin: 18px 0 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 		text-align: center;
 
 		a {
 			color: #2050d4;
 			text-decoration: none;
 			font-weight: $font-weight-semibold;
-
-			&:hover {
-				text-decoration: underline;
-			}
 		}
 	}
 
@@ -338,8 +334,8 @@
 		padding: 14px 16px;
 		margin-bottom: 18px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 8px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-md;
 		display: flex;
 		flex-direction: column;
 		gap: 6px;
@@ -364,10 +360,6 @@
 			color: #2050d4;
 			text-decoration: none;
 			font-weight: $font-weight-semibold;
-
-			&:hover {
-				text-decoration: underline;
-			}
 		}
 	}
 
@@ -387,8 +379,9 @@
 	.empty {
 		padding: 40px 22px;
 		background: #fff;
-		border: 1px dashed #d8dbe0;
-		border-radius: 10px;
+		border: 1px dashed $admin-line;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 		text-align: center;
 		display: flex;
 		flex-direction: column;
@@ -405,8 +398,9 @@
 
 	.panel {
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 		overflow: hidden;
 	}
 
@@ -429,14 +423,14 @@
 		font-weight: $font-weight-semibold;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #666;
-		background: #fafbfc;
-		border-bottom: 1px solid #eef0f3;
+		color: $admin-ink-2;
+		background: $admin-sunken;
+		border-bottom: 1px solid $admin-line-soft;
 	}
 
 	tbody td {
 		padding: 12px 14px;
-		border-bottom: 1px solid #f1f2f4;
+		border-bottom: 1px solid $admin-line-soft;
 		vertical-align: middle;
 	}
 
@@ -454,7 +448,7 @@
 	.cell__sub {
 		margin: 2px 0 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.type {
@@ -467,7 +461,7 @@
 		border-radius: 999px;
 
 		&--full {
-			background: #eef0f3;
+			background: $admin-line-soft;
 			color: #333;
 		}
 
@@ -499,11 +493,6 @@
 		color: #2050d4;
 		text-decoration: none;
 		cursor: pointer;
-
-		&:hover {
-			text-decoration: underline;
-		}
-
 		&--danger {
 			color: #a01515;
 		}

@@ -407,7 +407,7 @@
 
 	.tile__sub {
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.panel {
@@ -424,7 +424,7 @@
 	.meter {
 		height: 10px;
 		border-radius: 999px;
-		background: #eef0f3;
+		background: $admin-line-soft;
 		overflow: hidden;
 	}
 
@@ -437,7 +437,7 @@
 	.meter__caption {
 		margin: 10px 0 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.buckets {
@@ -466,7 +466,7 @@
 	.bucket__stat {
 		margin-left: auto;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.bucket__bar {
@@ -566,9 +566,9 @@
 		padding: 0;
 		display: grid;
 		place-items: center;
-		background: #f6f7f9;
-		border: 1px solid #e6e8ec;
-		border-radius: 8px;
+		background: $admin-sunken;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-md;
 		overflow: hidden;
 		cursor: pointer;
 
@@ -610,7 +610,7 @@
 
 	.file__sub {
 		font-size: 11.5px;
-		color: #888;
+		color: $admin-ink-3;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -674,7 +674,7 @@
 		align-items: flex-start;
 		gap: 16px;
 		padding: 16px 18px;
-		border-bottom: 1px solid #eef0f3;
+		border-bottom: 1px solid $admin-line-soft;
 	}
 
 	.lightbox__id {
@@ -690,7 +690,7 @@
 
 		span {
 			font-size: 12px;
-			color: #888;
+			color: $admin-ink-3;
 		}
 	}
 
@@ -703,14 +703,9 @@
 		font-size: 14px;
 		color: #444;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 8px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-md;
 		cursor: pointer;
-
-		&:hover {
-			background: #eef0f3;
-		}
-
 		&:focus-visible {
 			outline: 2px solid #111;
 			outline-offset: 2px;
@@ -723,7 +718,7 @@
 		display: grid;
 		place-items: center;
 		padding: 20px;
-		background: #f6f7f9;
+		background: $admin-sunken;
 		overflow: auto;
 
 		img {

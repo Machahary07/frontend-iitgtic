@@ -12,6 +12,7 @@
 		type PostedJob
 	} from '$lib/utils/jobPostings';
 	import { onMount } from 'svelte';
+	import { showToast } from '$lib/utils/toast.svelte';
 
 	const id = $derived(page.params.id ?? '');
 	const isNew = $derived(id === 'new' || id === '');
@@ -27,7 +28,6 @@
 	let sector = $state('');
 	let description = $state('');
 	let applyLink = $state('');
-	let error = $state('');
 
 	onMount(async () => {
 		account = await getCurrentCompany();
@@ -75,10 +75,9 @@
 			? await createJob(account.id, payload)
 			: await updateJob(id, account.id, payload);
 		if (!result.ok) {
-			error = result.error;
+			showToast(result.error, 'err');
 			return;
 		}
-		error = '';
 		goto('/opportunities/job-posting-admin');
 	}
 
@@ -167,10 +166,6 @@
 				/>
 			</label>
 
-			{#if error}
-				<p class="error" role="alert">{error}</p>
-			{/if}
-
 			<div class="actions">
 				<button type="submit" class="btn-primary">
 					{isNew ? 'Publish role' : 'Save changes'}
@@ -194,7 +189,7 @@
 	.card__sub {
 		margin: 0;
 		font-size: 13px;
-		color: #666;
+		color: $admin-ink-2;
 		line-height: 1.5;
 	}
 
@@ -232,10 +227,6 @@
 			min-height: 120px;
 			font-family: $font-family-base;
 		}
-	}
-
-	.error {
-		@include admin-msg-err;
 	}
 
 	.actions {

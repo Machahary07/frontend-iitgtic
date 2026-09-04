@@ -4,6 +4,13 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
+	import Clock from '@lucide/svelte/icons/clock';
+	import BadgeCheck from '@lucide/svelte/icons/badge-check';
+	import CircleX from '@lucide/svelte/icons/circle-x';
+	import Briefcase from '@lucide/svelte/icons/briefcase';
+	import FileText from '@lucide/svelte/icons/file-text';
+	import UserSearch from '@lucide/svelte/icons/user-search';
+	import ArrowRight from '@lucide/svelte/icons/arrow-right';
 	import type { PageData } from './$types';
 
 	// Everything here arrives from +page.server.ts, so the section renders on the
@@ -22,6 +29,45 @@
 	const jobApplicants = $derived(data.jobApplications);
 	const newApplicants = $derived(jobApplicants.filter((a) => a.status === 'new'));
 
+	// The six headline counts, described once so the tile markup stays a loop.
+	// `tone` picks a tint from the shared admin palette.
+	const tiles = $derived([
+		{
+			label: 'Pending companies',
+			value: pending.length,
+			tone: 'warn',
+			icon: Clock,
+			href: '/tic-admin/companies',
+			cta: 'Review'
+		},
+		{ label: 'Verified companies', value: verified.length, tone: 'good', icon: BadgeCheck },
+		{ label: 'Rejected', value: rejected.length, tone: 'bad', icon: CircleX },
+		{
+			label: 'User-posted jobs',
+			value: userJobs.length,
+			tone: 'info',
+			icon: Briefcase,
+			href: '/tic-admin/jobs',
+			cta: 'View all'
+		},
+		{
+			label: 'New applications',
+			value: newApplications.length,
+			tone: 'good',
+			icon: FileText,
+			href: resolve('/tic-admin/applications'),
+			cta: 'Review'
+		},
+		{
+			label: 'New role applicants',
+			value: newApplicants.length,
+			tone: 'violet',
+			icon: UserSearch,
+			href: resolve('/tic-admin/job-applications'),
+			cta: 'Review'
+		}
+	]);
+
 	async function handleLogout() {
 		await logoutTicAdmin();
 		goto(resolve('/tic-admin/login'));
@@ -33,142 +79,128 @@
 </svelte:head>
 
 <AdminShell
-		brand="TIC Team Admin"
-		brandSub="Internal"
-		navItems={TIC_ADMIN_NAV}
-		title="Overview"
-		eyebrow="Dashboard"
-		user={adminName}
-		onLogout={handleLogout}
-	>
-		<div class="stats">
-			<div class="stat">
-				<p class="stat__label">Pending companies</p>
-				<p class="stat__value">{pending.length}</p>
-				<a href="/tic-admin/companies" class="stat__link">Review →</a>
+	brand="TIC Team Admin"
+	brandSub="Internal"
+	navItems={TIC_ADMIN_NAV}
+	title="Overview"
+	eyebrow="Dashboard"
+	user={adminName}
+	onLogout={handleLogout}
+>
+	<div class="stats">
+		{#each tiles as tile (tile.label)}
+			{@const Icon = tile.icon}
+			<div
+				class="stat"
+				style="--tile-bg: var(--admin-tone-{tile.tone}-bg); --tile-fg: var(--admin-tone-{tile.tone}-fg);"
+			>
+				<span class="stat__icon"><Icon size={17} strokeWidth={1.9} /></span>
+				<p class="stat__label">{tile.label}</p>
+				<p class="stat__value">{tile.value}</p>
+				{#if tile.href}
+					<a href={tile.href} class="stat__link">
+						{tile.cta}
+						<ArrowRight size={13} strokeWidth={2.2} />
+					</a>
+				{/if}
 			</div>
-			<div class="stat">
-				<p class="stat__label">Verified companies</p>
-				<p class="stat__value">{verified.length}</p>
-			</div>
-			<div class="stat">
-				<p class="stat__label">Rejected</p>
-				<p class="stat__value">{rejected.length}</p>
-			</div>
-			<div class="stat">
-				<p class="stat__label">User-posted jobs</p>
-				<p class="stat__value">{userJobs.length}</p>
-				<a href="/tic-admin/jobs" class="stat__link">View all →</a>
-			</div>
-			<div class="stat">
-				<p class="stat__label">New applications</p>
-				<p class="stat__value">{newApplications.length}</p>
-				<a href={resolve('/tic-admin/applications')} class="stat__link">Review →</a>
-			</div>
-			<div class="stat">
-				<p class="stat__label">New role applicants</p>
-				<p class="stat__value">{newApplicants.length}</p>
-				<a href={resolve('/tic-admin/job-applications')} class="stat__link">Review →</a>
-			</div>
-		</div>
+		{/each}
+	</div>
 
-		<section class="panel">
-			<header class="panel__head">
-				<h2>Recent pending signups</h2>
-				<a href="/tic-admin/companies" class="panel__more">All companies →</a>
-			</header>
-			{#if pending.length === 0}
-				<p class="empty">No companies waiting for verification.</p>
-			{:else}
-				<ul class="rows">
-					{#each pending.slice(0, 5) as company (company.id)}
-						<li class="row">
-							<div class="row__main">
-								<p class="row__title">{company.companyName}</p>
-								<p class="row__meta">
-									{company.email} · {new Date(company.createdAt).toLocaleDateString()}
-								</p>
-							</div>
-							<a href="/tic-admin/companies" class="row__cta">Review</a>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</section>
+	<section class="panel">
+		<header class="panel__head">
+			<h2>Recent pending signups</h2>
+			<a href="/tic-admin/companies" class="panel__more">All companies →</a>
+		</header>
+		{#if pending.length === 0}
+			<p class="empty">No companies waiting for verification.</p>
+		{:else}
+			<ul class="rows">
+				{#each pending.slice(0, 5) as company (company.id)}
+					<li class="row">
+						<div class="row__main">
+							<p class="row__title">{company.companyName}</p>
+							<p class="row__meta">
+								{company.email} · {new Date(company.createdAt).toLocaleDateString()}
+							</p>
+						</div>
+						<a href="/tic-admin/companies" class="row__cta">Review</a>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
 
-		<section class="panel">
-			<header class="panel__head">
-				<h2>New role applicants</h2>
-				<a href={resolve('/tic-admin/job-applications')} class="panel__more">All applicants →</a>
-			</header>
-			{#if newApplicants.length === 0}
-				<p class="empty">No one is waiting on a role application.</p>
-			{:else}
-				<ul class="rows">
-					{#each newApplicants.slice(0, 5) as applicant (applicant.id)}
-						<li class="row">
-							<div class="row__main">
-								<p class="row__title">{applicant.full_name}</p>
-								<p class="row__meta">
-									{applicant.job_role} · {applicant.job_company} · {new Date(
-										applicant.created_at
-									).toLocaleDateString()}
-								</p>
-							</div>
-							<a
-								href={resolve('/tic-admin/job-applications/[id]', { id: applicant.id })}
-								class="row__cta">Open</a
-							>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</section>
+	<section class="panel">
+		<header class="panel__head">
+			<h2>New role applicants</h2>
+			<a href={resolve('/tic-admin/job-applications')} class="panel__more">All applicants →</a>
+		</header>
+		{#if newApplicants.length === 0}
+			<p class="empty">No one is waiting on a role application.</p>
+		{:else}
+			<ul class="rows">
+				{#each newApplicants.slice(0, 5) as applicant (applicant.id)}
+					<li class="row">
+						<div class="row__main">
+							<p class="row__title">{applicant.full_name}</p>
+							<p class="row__meta">
+								{applicant.job_role} · {applicant.job_company} · {new Date(
+									applicant.created_at
+								).toLocaleDateString()}
+							</p>
+						</div>
+						<a
+							href={resolve('/tic-admin/job-applications/[id]', { id: applicant.id })}
+							class="row__cta">Open</a
+						>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
 
-		<section class="panel">
-			<header class="panel__head">
-				<h2>New applications</h2>
-				<a href={resolve('/tic-admin/applications')} class="panel__more">All applications →</a>
-			</header>
-			{#if newApplications.length === 0}
-				<p class="empty">No applications waiting for review.</p>
-			{:else}
-				<ul class="rows">
-					{#each newApplications.slice(0, 5) as application (application.id)}
-						<li class="row">
-							<div class="row__main">
-								<p class="row__title">{application.startup_name || 'Untitled startup'}</p>
-								<p class="row__meta">
-									{application.full_name || application.email} · {new Date(
-										application.created_at
-									).toLocaleDateString()}
-								</p>
-							</div>
-							<a
-								href={resolve('/tic-admin/applications/[id]', { id: application.id })}
-								class="row__cta">Open</a
-							>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</section>
+	<section class="panel">
+		<header class="panel__head">
+			<h2>New applications</h2>
+			<a href={resolve('/tic-admin/applications')} class="panel__more">All applications →</a>
+		</header>
+		{#if newApplications.length === 0}
+			<p class="empty">No applications waiting for review.</p>
+		{:else}
+			<ul class="rows">
+				{#each newApplications.slice(0, 5) as application (application.id)}
+					<li class="row">
+						<div class="row__main">
+							<p class="row__title">{application.startup_name || 'Untitled startup'}</p>
+							<p class="row__meta">
+								{application.full_name || application.email} · {new Date(
+									application.created_at
+								).toLocaleDateString()}
+							</p>
+						</div>
+						<a
+							href={resolve('/tic-admin/applications/[id]', { id: application.id })}
+							class="row__cta">Open</a
+						>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</section>
 </AdminShell>
 
 <style lang="scss">
 	@use '$styles/variables' as *;
 	@use '$styles/mixins' as *;
+	@use '$styles/admin' as *;
 
 	.stats {
 		display: grid;
-		// Five tiles: an even five-up on wide screens beats 4 + 1 orphaned.
-		grid-template-columns: repeat(5, 1fr);
-		gap: 14px;
+		// Six tiles: an even three-up on wide screens keeps two tidy rows.
+		grid-template-columns: repeat(3, 1fr);
+		gap: 16px;
 		margin-bottom: 28px;
-
-		@include breakpoint-down($bp-lg) {
-			grid-template-columns: repeat(3, 1fr);
-		}
 
 		@include breakpoint-down($bp-md) {
 			grid-template-columns: repeat(2, 1fr);
@@ -180,85 +212,80 @@
 	}
 
 	.stat {
-		padding: 16px;
-		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		font-family: $font-family-base;
+		@include admin-card;
+		padding: 18px;
+		gap: 8px;
+	}
+
+	.stat__icon {
+		@include admin-icon-tile('neutral', 36px);
+		background: var(--tile-bg);
+		color: var(--tile-fg);
+		margin-bottom: 2px;
 	}
 
 	.stat__label {
 		margin: 0;
-		font-size: 11px;
-		font-weight: $font-weight-semibold;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: #666;
+		font-size: 12px;
+		font-weight: $font-weight-medium;
+		color: $admin-ink-2;
 	}
 
 	.stat__value {
 		margin: 0;
-		font-size: 28px;
+		font-size: 34px;
 		font-weight: $font-weight-bold;
-		color: #111;
-		letter-spacing: -0.02em;
+		color: $admin-ink;
+		letter-spacing: -0.03em;
+		line-height: 1;
 	}
 
 	.stat__link {
-		margin-top: 4px;
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		margin-top: 6px;
 		font-size: 12px;
 		font-weight: $font-weight-semibold;
-		color: #2050d4;
+		color: $admin-accent;
 		text-decoration: none;
-
-		&:hover {
-			text-decoration: underline;
-		}
+		@include admin-focus-ring($admin-accent);
 	}
 
 	.panel {
-		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
-		overflow: hidden;
+		@include admin-panel;
+		margin-bottom: 18px;
+
+		&:last-of-type {
+			margin-bottom: 0;
+		}
 	}
 
 	.panel__head {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 16px 18px;
-		border-bottom: 1px solid #eef0f3;
+		gap: 12px;
+		padding: 18px 20px;
+		border-bottom: 1px solid $admin-line-soft;
 
 		h2 {
-			margin: 0;
-			font-size: 14px;
-			font-weight: $font-weight-semibold;
-			color: #111;
-			font-family: $font-family-base;
+			@include admin-section-title;
 		}
 	}
 
 	.panel__more {
 		font-size: 12px;
 		font-weight: $font-weight-semibold;
-		color: #2050d4;
+		color: $admin-accent;
 		text-decoration: none;
-
-		&:hover {
-			text-decoration: underline;
-		}
+		white-space: nowrap;
+		@include admin-focus-ring($admin-accent);
 	}
 
 	.empty {
-		margin: 0;
-		padding: 24px 18px;
-		font-size: 13px;
-		color: #777;
-		text-align: center;
+		@include admin-empty;
+		padding: 32px 18px;
 	}
 
 	.rows {
@@ -272,8 +299,8 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 14px;
-		padding: 12px 18px;
-		border-bottom: 1px solid #f1f2f4;
+		padding: 14px 20px;
+		border-bottom: 1px solid $admin-line-soft;
 
 		&:last-child {
 			border-bottom: 0;
@@ -289,26 +316,29 @@
 		margin: 0;
 		font-size: 13px;
 		font-weight: $font-weight-semibold;
-		color: #111;
+		color: $admin-ink;
 	}
 
 	.row__meta {
 		margin: 2px 0 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.row__cta {
+		flex: none;
+		padding: 7px 14px;
 		font-size: 12px;
 		font-weight: $font-weight-semibold;
-		color: #fff;
-		background: #111;
-		padding: 6px 12px;
-		border-radius: 6px;
+		color: $color-white;
+		background: $admin-ink;
+		border: 1px solid $admin-ink;
+		border-radius: $admin-radius-pill;
 		text-decoration: none;
+		@include admin-focus-ring;
 
-		&:hover {
-			background: #000;
+		&:active {
+			transform: translateY(0.5px);
 		}
 	}
 </style>

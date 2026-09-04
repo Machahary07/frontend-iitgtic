@@ -4,6 +4,10 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
+	import { showToast } from '$lib/utils/toast.svelte';
+	import { ADMIN_SEEN_PREFIX } from '$lib/utils/adminSeen';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -23,12 +27,28 @@
 		return order.map((group) => [group, byGroup[group]] as const);
 	});
 
-	const changedCount = $derived(data.sections.filter((s) => s.updatedBy).length);
-
 	async function handleLogout() {
 		await logoutTicAdmin();
 		goto(resolve('/tic-admin/login'));
 	}
+
+	// Orientation, not status: the note is worth reading on the first visit of a
+	// session and is noise on every one after it. The flag is cleared at sign-out,
+	// so the next admin to log in gets it once too.
+	onMount(() => {
+		const key = `${ADMIN_SEEN_PREFIX}content-intro:${data.admin?.userId ?? 'unknown'}`;
+		try {
+			if (localStorage.getItem(key)) return;
+			localStorage.setItem(key, '1');
+		} catch {
+			// Storage blocked (private window, cleared site data): showing the note
+			// again is the harmless way to be wrong.
+		}
+		showToast(
+			'Every word on the public site is editable here — saving publishes straight away.',
+			'info'
+		);
+	});
 
 	function fmtDate(iso: string | null) {
 		if (!iso) return null;
@@ -53,21 +73,21 @@
 	user={adminName}
 	onLogout={handleLogout}
 >
-	<p class="note">
-		Every word on the public site is editable here, and saving publishes straight away. Sections
-		marked green have been changed by someone; the rest still match the copy that ships with the
-		code. {changedCount} of {data.sections.length} sections have been changed; all are stored in the database — anything
-		missing falls back to <code>content.json</code>, so the site never depends on this table.
-	</p>
-
 	{#each groups as [group, sections] (group)}
 		<section class="block">
 			<h2 class="block__title">{group}</h2>
 			<div class="cards">
 				{#each sections as section (section.key)}
 					<a class="card" href={resolve('/tic-admin/content/[...key]', { key: section.key })}>
-						<span class="card__label">{section.label}</span>
-						<span class="card__key">{section.key}</span>
+						<span class="card__head">
+							<span class="card__text">
+								<span class="card__label">{section.label}</span>
+								<span class="card__key">{section.key}</span>
+							</span>
+							<span class="card__go" aria-hidden="true">
+								<ChevronRight size={15} strokeWidth={2} />
+							</span>
+						</span>
 						<span class="card__meta">
 							{#if section.updatedBy}
 								<span class="dot dot--edited"></span>
@@ -91,25 +111,6 @@
 	@use '$styles/variables' as *;
 	@use '$styles/admin' as *;
 
-	.note code {
-		font-size: 11px;
-		background: #eef0f3;
-		padding: 1px 5px;
-		border-radius: 3px;
-	}
-
-	.note {
-		margin: 0 0 20px;
-		font-size: 12px;
-		color: #666;
-		padding: 10px 12px;
-		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-left: 3px solid #2050d4;
-		border-radius: 6px;
-		max-width: 78ch;
-	}
-
 	.block {
 		margin-bottom: 26px;
 	}
@@ -120,7 +121,7 @@
 		font-size: 12px;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.cards {
@@ -130,37 +131,50 @@
 	}
 
 	.card {
+		@include admin-card;
+		gap: 3px;
+		padding: 16px 18px;
+		text-decoration: none;
+		@include admin-focus-ring;
+	}
+
+	// The chevron is the layer cue: this card opens the editor one level down.
+	.card__head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.card__text {
 		display: flex;
 		flex-direction: column;
 		gap: 3px;
-		padding: 16px 18px;
-		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
-		text-decoration: none;
-		font-family: $font-family-base;
+		min-width: 0;
+	}
 
-		&:hover {
-			border-color: #111;
-		}
+	.card__go {
+		@include admin-icon-tile('neutral', 24px);
+		border-radius: $admin-radius-sm;
+		margin-top: 1px;
 	}
 
 	.card__label {
 		font-size: 14px;
 		font-weight: $font-weight-semibold;
-		color: #111;
+		color: $admin-ink;
 	}
 
 	.card__key {
 		font-size: 11px;
-		color: #9aa1ab;
+		color: $admin-ink-3;
 	}
 
 	.card__meta {
 		margin-top: 10px;
 		font-size: 11px;
 		line-height: 1.5;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.dot {
@@ -172,11 +186,11 @@
 		background: #c8ccd3;
 
 		&--edited {
-			background: #0e6b2c;
+			background: admin-tone-fg('good');
 		}
 
 		&--stored {
-			background: #2050d4;
+			background: $admin-accent;
 		}
 	}
 </style>
