@@ -264,6 +264,12 @@
 			note: 'Every section of the public site editable from the console — nested objects, reorderable lists, reset to default'
 		},
 		{
+			name: 'TIC team admin · Storage',
+			path: '/tic-admin/storage',
+			status: 'done',
+			note: 'What every bucket holds and how much of the plan allowance is left. Walks the buckets through the storage API, since Supabase keeps files in S3 and only their metadata in Postgres, then marks each object in use or unused by looking for its path in the content sections, the email templates, and the application and resume records — so a private document belonging to a real person is never mislabelled as safe to delete. Thumbnails, a lightbox preview, and a guarded delete'
+		},
+		{
 			name: 'TIC team admin · Email',
 			path: '/tic-admin/email',
 			status: 'done',
@@ -348,6 +354,11 @@
 			name: 'AdminShell (dashboard layout)',
 			status: 'done',
 			note: 'Shared light-theme shell — sidebar nav + topbar; used by TIC + company admins'
+		},
+		{
+			name: 'ConfirmDialog (app-wide)',
+			status: 'done',
+			note: 'One modal host mounted in the root layout, replacing every window.confirm() in the app. Built on <dialog> so showModal() supplies the focus trap, the inert background and Esc-to-dismiss that made the native one safe. askConfirm() returns a promise, since a custom dialog cannot block the thread the way confirm() did — the one call site that relied on blocking, the unsaved-changes guard in the content editor, cancels the navigation and replays it after the answer'
 		}
 	];
 
@@ -709,8 +720,13 @@
 			note: 'Uploads a picture or document for an image or file block; the body is compiled from blocks server-side, never taken from the browser'
 		},
 		{
+			name: 'GET / DELETE /api/tic-admin/storage',
+			status: 'done',
+			note: 'Signs a ten-minute link to one object in a private bucket, and removes an object. A delete is refused with 409 while a content section, an email template, an application or a resume record still points at the file — the console asks a second, blunter question and retries with force, so removing something in use stays possible but never accidental'
+		},
+		{
 			name: 'POST /api/tic-admin/content/assets',
-			status: 'in-progress',
+			status: 'done',
 			note: 'Uploads an image for a media field in the content editor into the public site-assets bucket; admin-only, returns the public URL saved into the section'
 		},
 		{

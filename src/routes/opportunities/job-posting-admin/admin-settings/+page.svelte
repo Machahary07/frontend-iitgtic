@@ -11,6 +11,7 @@
 		type CompanyAccount
 	} from '$lib/utils/companyAuth';
 	import { onMount } from 'svelte';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	let mounted = $state(false);
 	let account = $state<CompanyAccount | null>(null);
@@ -66,12 +67,13 @@
 	}
 
 	async function handleDelete() {
-		if (
-			!confirm(
-				'Delete this company account? Your posted roles will be removed and this cannot be undone.'
-			)
-		)
-			return;
+		const ok = await askConfirm({
+			title: 'Delete this company account?',
+			body: 'Your posted roles are removed with it. This cannot be undone.',
+			confirmLabel: 'Delete account',
+			tone: 'danger'
+		});
+		if (!ok) return;
 		const removed = await deleteCurrentCompany();
 		if (!removed) {
 			profileMsg = { tone: 'err', text: 'Could not delete the account. Please try again.' };

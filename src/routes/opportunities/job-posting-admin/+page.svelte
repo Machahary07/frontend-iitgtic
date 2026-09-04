@@ -11,6 +11,7 @@
 	import Turnstile from '$lib/components/Turnstile.svelte';
 	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 	import { onMount } from 'svelte';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	let mounted = $state(false);
 	let account = $state<CompanyAccount | null>(null);
@@ -66,7 +67,13 @@
 
 	async function handleDelete(id: string, role: string) {
 		if (!account) return;
-		if (!confirm(`Remove "${role}"? This cannot be undone.`)) return;
+		const ok = await askConfirm({
+			title: `Remove "${role}"?`,
+			body: 'The role disappears from Opportunities straight away. This cannot be undone.',
+			confirmLabel: 'Remove role',
+			tone: 'danger'
+		});
+		if (!ok) return;
 		await deleteJob(id, account.id);
 		await refreshJobs();
 	}

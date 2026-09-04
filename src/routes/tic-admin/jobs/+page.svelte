@@ -8,7 +8,7 @@
 	import type { CompanyAccount } from '$lib/utils/companyAuth';
 	import { adminDeleteJob } from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
-
+	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	type Filter = 'all' | 'user' | 'seed';
 
@@ -52,7 +52,13 @@
 	});
 
 	async function removeJob(id: string, role: string) {
-		if (!confirm(`Remove "${role}"? The posting disappears from Opportunities immediately.`)) return;
+		const ok = await askConfirm({
+			title: `Remove "${role}"?`,
+			body: 'The posting disappears from Opportunities immediately.',
+			confirmLabel: 'Take down',
+			tone: 'danger'
+		});
+		if (!ok) return;
 		await adminDeleteJob(id);
 		await invalidateAll();
 	}
@@ -81,90 +87,90 @@
 </svelte:head>
 
 <AdminShell
-		brand="TIC Team Admin"
-		brandSub="Internal"
-		navItems={TIC_ADMIN_NAV}
-		title="Posted jobs"
-		eyebrow="Opportunities"
-		user={adminName}
-		onLogout={handleLogout}
-	>
-		<div class="tabs">
-			<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
-				All <span class="tab__count">{counts.all}</span>
-			</button>
-			<button class="tab" class:tab--active={filter === 'user'} onclick={() => (filter = 'user')}>
-				Company-posted <span class="tab__count">{counts.user}</span>
-			</button>
-			<button class="tab" class:tab--active={filter === 'seed'} onclick={() => (filter = 'seed')}>
-				Seed <span class="tab__count">{counts.seed}</span>
-			</button>
-		</div>
+	brand="TIC Team Admin"
+	brandSub="Internal"
+	navItems={TIC_ADMIN_NAV}
+	title="Posted jobs"
+	eyebrow="Opportunities"
+	user={adminName}
+	onLogout={handleLogout}
+>
+	<div class="tabs">
+		<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
+			All <span class="tab__count">{counts.all}</span>
+		</button>
+		<button class="tab" class:tab--active={filter === 'user'} onclick={() => (filter = 'user')}>
+			Company-posted <span class="tab__count">{counts.user}</span>
+		</button>
+		<button class="tab" class:tab--active={filter === 'seed'} onclick={() => (filter = 'seed')}>
+			Seed <span class="tab__count">{counts.seed}</span>
+		</button>
+	</div>
 
-		<p class="note">
-			Seed roles come from <code>content.json</code> and can only be changed in the codebase.
-			Company-posted roles can be removed here, or by the company from its own dashboard.
-		</p>
+	<p class="note">
+		Seed roles come from <code>content.json</code> and can only be changed in the codebase. Company-posted
+		roles can be removed here, or by the company from its own dashboard.
+	</p>
 
-		<div class="panel">
-			{#if filtered.length === 0}
-				<p class="empty">No jobs in this view.</p>
-			{:else}
-				<div class="table-wrap">
-					<table class="table">
-						<thead>
+	<div class="panel">
+		{#if filtered.length === 0}
+			<p class="empty">No jobs in this view.</p>
+		{:else}
+			<div class="table-wrap">
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Role</th>
+							<th>Company</th>
+							<th>Type</th>
+							<th>Posted</th>
+							<th>Source</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each filtered as job (job.id)}
 							<tr>
-								<th>Role</th>
-								<th>Company</th>
-								<th>Type</th>
-								<th>Posted</th>
-								<th>Source</th>
-								<th></th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each filtered as job (job.id)}
-								<tr>
-									<td>
-										<p class="cell__name">{job.role}</p>
-										<p class="cell__sub">{job.location} · {job.sector}</p>
-									</td>
-									<td>
-										<p class="cell__name">{job.company}</p>
-										{#if job.source === 'user'}
-											{@const status = companyStatus(job.companyId)}
-											{#if status}
-												<span class="badge badge--{status}">{status}</span>
-											{/if}
+								<td>
+									<p class="cell__name">{job.role}</p>
+									<p class="cell__sub">{job.location} · {job.sector}</p>
+								</td>
+								<td>
+									<p class="cell__name">{job.company}</p>
+									{#if job.source === 'user'}
+										{@const status = companyStatus(job.companyId)}
+										{#if status}
+											<span class="badge badge--{status}">{status}</span>
 										{/if}
-									</td>
-									<td><p class="cell__sub">{job.type}</p></td>
-									<td><p class="cell__sub">{fmtDate(job.posted)}</p></td>
-									<td>
-										<span class="src src--{job.source}">{job.source}</span>
-									</td>
-									<td class="actions-col">
-										<div class="actions">
-											<a
-												class="link"
-												href="/opportunities/{job.slug}"
-												target="_blank"
-												rel="noopener noreferrer">View →</a
-											>
-											{#if job.source === 'user'}
-												<button class="btn btn--danger" onclick={() => removeJob(job.id, job.role)}>
-													Remove
-												</button>
-											{/if}
-										</div>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-		</div>
+									{/if}
+								</td>
+								<td><p class="cell__sub">{job.type}</p></td>
+								<td><p class="cell__sub">{fmtDate(job.posted)}</p></td>
+								<td>
+									<span class="src src--{job.source}">{job.source}</span>
+								</td>
+								<td class="actions-col">
+									<div class="actions">
+										<a
+											class="link"
+											href="/opportunities/{job.slug}"
+											target="_blank"
+											rel="noopener noreferrer">View →</a
+										>
+										{#if job.source === 'user'}
+											<button class="btn btn--danger" onclick={() => removeJob(job.id, job.role)}>
+												Remove
+											</button>
+										{/if}
+									</div>
+								</td>
+							</tr>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</div>
 </AdminShell>
 
 <style lang="scss">

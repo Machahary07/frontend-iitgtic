@@ -8,6 +8,7 @@
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import type { PageData } from './$types';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -38,8 +39,29 @@
 		}
 	});
 
-	beforeNavigate(({ cancel }) => {
-		if (dirty && !confirm('You have unsaved changes. Leave without saving?')) cancel();
+	// A custom dialog cannot answer inside beforeNavigate the way a blocking
+	// confirm() could. So the navigation is always cancelled first and replayed
+	// once the question has been answered — leaving guards against the replay
+	// asking again.
+	let leaving = $state(false);
+
+	beforeNavigate((nav) => {
+		if (!dirty || leaving) return;
+		const to = nav.to?.url;
+		nav.cancel();
+		if (!to) return;
+
+		askConfirm({
+			title: 'Leave without saving?',
+			body: 'You have unsaved changes to this section.',
+			confirmLabel: 'Leave',
+			cancelLabel: 'Stay',
+			tone: 'danger'
+		}).then((ok) => {
+			if (!ok) return;
+			leaving = true;
+			goto(to);
+		});
 	});
 
 	async function save() {
@@ -68,24 +90,30 @@
 		}
 	}
 
-	function discard() {
-		if (!confirm('Discard your unsaved changes?')) return;
+	async function discard() {
+		const ok = await askConfirm({
+			title: 'Discard your unsaved changes?',
+			body: 'The section goes back to the last saved version.',
+			confirmLabel: 'Discard',
+			tone: 'danger'
+		});
+		if (!ok) return;
 		draft = { root: JSON.parse(saved) };
 		message = null;
 	}
 
 	async function resetToDefault() {
-		if (
-			!confirm(
-				`Reset ${data.section.label} to the copy shipped with the code? Your edits to this section are lost.`
-			)
-		)
-			return;
+		const ok = await askConfirm({
+			title: `Reset ${data.section.label} to the shipped copy?`,
+			body: 'Your edits to this section are lost.',
+			confirmLabel: 'Reset section',
+			tone: 'danger'
+		});
+		if (!ok) return;
 		saving = true;
-		const res = await fetch(
-			`/api/tic-admin/content?key=${encodeURIComponent(data.section.key)}`,
-			{ method: 'DELETE' }
-		);
+		const res = await fetch(`/api/tic-admin/content?key=${encodeURIComponent(data.section.key)}`, {
+			method: 'DELETE'
+		});
 		saving = false;
 		if (!res.ok) {
 			message = { tone: 'err', text: 'Could not reset the section.' };

@@ -7,6 +7,7 @@
 	import type { CompanyStatus } from '$lib/utils/companyAuth';
 	import { adminDeleteCompany, adminSetCompanyStatus } from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	type Filter = 'all' | CompanyStatus;
 
@@ -58,7 +59,13 @@
 	}
 
 	async function remove(id: string, name: string) {
-		if (!confirm(`Permanently delete the account for "${name}"? This cannot be undone.`)) return;
+		const ok = await askConfirm({
+			title: `Permanently delete the account for "${name}"?`,
+			body: 'The company, its roles and its sign-in all go. This cannot be undone.',
+			confirmLabel: 'Delete account',
+			tone: 'danger'
+		});
+		if (!ok) return;
 		await adminDeleteCompany(id);
 		await refresh();
 	}
@@ -87,148 +94,146 @@
 </svelte:head>
 
 <AdminShell
-		brand="TIC Team Admin"
-		brandSub="Internal"
-		navItems={TIC_ADMIN_NAV}
-		title="Companies"
-		eyebrow="Moderation"
-		user={adminName}
-		onLogout={handleLogout}
-	>
-		<div class="tabs">
-			<button
-				class="tab"
-				class:tab--active={filter === 'pending'}
-				onclick={() => (filter = 'pending')}
-			>
-				Pending <span class="tab__count">{counts.pending}</span>
-			</button>
-			<button
-				class="tab"
-				class:tab--active={filter === 'verified'}
-				onclick={() => (filter = 'verified')}
-			>
-				Verified <span class="tab__count">{counts.verified}</span>
-			</button>
-			<button
-				class="tab"
-				class:tab--active={filter === 'rejected'}
-				onclick={() => (filter = 'rejected')}
-			>
-				Rejected <span class="tab__count">{counts.rejected}</span>
-			</button>
-			<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
-				All <span class="tab__count">{counts.all}</span>
-			</button>
-		</div>
+	brand="TIC Team Admin"
+	brandSub="Internal"
+	navItems={TIC_ADMIN_NAV}
+	title="Companies"
+	eyebrow="Moderation"
+	user={adminName}
+	onLogout={handleLogout}
+>
+	<div class="tabs">
+		<button
+			class="tab"
+			class:tab--active={filter === 'pending'}
+			onclick={() => (filter = 'pending')}
+		>
+			Pending <span class="tab__count">{counts.pending}</span>
+		</button>
+		<button
+			class="tab"
+			class:tab--active={filter === 'verified'}
+			onclick={() => (filter = 'verified')}
+		>
+			Verified <span class="tab__count">{counts.verified}</span>
+		</button>
+		<button
+			class="tab"
+			class:tab--active={filter === 'rejected'}
+			onclick={() => (filter = 'rejected')}
+		>
+			Rejected <span class="tab__count">{counts.rejected}</span>
+		</button>
+		<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
+			All <span class="tab__count">{counts.all}</span>
+		</button>
+	</div>
 
-		<div class="panel">
-			{#if filtered.length === 0}
-				<p class="empty">No companies in this view.</p>
-			{:else}
-				<div class="table-wrap">
-					<table class="table">
-						<thead>
+	<div class="panel">
+		{#if filtered.length === 0}
+			<p class="empty">No companies in this view.</p>
+		{:else}
+			<div class="table-wrap">
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Company</th>
+							<th>Contact</th>
+							<th>Website</th>
+							<th>Signed up</th>
+							<th>Status</th>
+							<th class="actions-col">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						{#each filtered as company (company.id)}
 							<tr>
-								<th>Company</th>
-								<th>Contact</th>
-								<th>Website</th>
-								<th>Signed up</th>
-								<th>Status</th>
-								<th class="actions-col">Actions</th>
+								<td>
+									<p class="cell__name">{company.companyName}</p>
+									<p class="cell__sub">{company.email}</p>
+								</td>
+								<td>
+									{#if company.contactName}
+										<p class="cell__name">{company.contactName}</p>
+									{:else}
+										<p class="cell__sub">—</p>
+									{/if}
+								</td>
+								<td>
+									{#if company.website}
+										<a
+											class="link"
+											href={company.website}
+											target="_blank"
+											rel="noopener noreferrer"
+										>
+											{company.website.replace(/^https?:\/\//, '')}
+										</a>
+									{:else}
+										<p class="cell__sub">—</p>
+									{/if}
+								</td>
+								<td><p class="cell__sub">{fmtDate(company.createdAt)}</p></td>
+								<td>
+									<span class="badge badge--{company.status}">{company.status}</span>
+									{#if company.status === 'rejected' && company.rejectionReason}
+										<p class="cell__reason">Reason: {company.rejectionReason}</p>
+									{/if}
+								</td>
+								<td class="actions-col">
+									<div class="actions">
+										{#if company.status === 'pending'}
+											<button class="btn btn--primary" onclick={() => approve(company.id)}
+												>Approve</button
+											>
+											<button class="btn" onclick={() => openReject(company.id)}>Reject</button>
+										{:else if company.status === 'verified'}
+											<button class="btn" onclick={() => revertToPending(company.id)}>Revert</button
+											>
+											<button class="btn" onclick={() => openReject(company.id)}>Reject</button>
+										{:else}
+											<button class="btn" onclick={() => approve(company.id)}>Approve</button>
+											<button class="btn" onclick={() => revertToPending(company.id)}>Revert</button
+											>
+										{/if}
+										<button
+											class="btn btn--danger"
+											onclick={() => remove(company.id, company.companyName)}>Delete</button
+										>
+									</div>
+								</td>
 							</tr>
-						</thead>
-						<tbody>
-							{#each filtered as company (company.id)}
-								<tr>
-									<td>
-										<p class="cell__name">{company.companyName}</p>
-										<p class="cell__sub">{company.email}</p>
-									</td>
-									<td>
-										{#if company.contactName}
-											<p class="cell__name">{company.contactName}</p>
-										{:else}
-											<p class="cell__sub">—</p>
-										{/if}
-									</td>
-									<td>
-										{#if company.website}
-											<a
-												class="link"
-												href={company.website}
-												target="_blank"
-												rel="noopener noreferrer"
-											>
-												{company.website.replace(/^https?:\/\//, '')}
-											</a>
-										{:else}
-											<p class="cell__sub">—</p>
-										{/if}
-									</td>
-									<td><p class="cell__sub">{fmtDate(company.createdAt)}</p></td>
-									<td>
-										<span class="badge badge--{company.status}">{company.status}</span>
-										{#if company.status === 'rejected' && company.rejectionReason}
-											<p class="cell__reason">Reason: {company.rejectionReason}</p>
-										{/if}
-									</td>
-									<td class="actions-col">
-										<div class="actions">
-											{#if company.status === 'pending'}
-												<button class="btn btn--primary" onclick={() => approve(company.id)}
-													>Approve</button
-												>
-												<button class="btn" onclick={() => openReject(company.id)}>Reject</button>
-											{:else if company.status === 'verified'}
-												<button class="btn" onclick={() => revertToPending(company.id)}
-													>Revert</button
-												>
-												<button class="btn" onclick={() => openReject(company.id)}>Reject</button>
-											{:else}
-												<button class="btn" onclick={() => approve(company.id)}>Approve</button>
-												<button class="btn" onclick={() => revertToPending(company.id)}
-													>Revert</button
-												>
-											{/if}
-											<button
-												class="btn btn--danger"
-												onclick={() => remove(company.id, company.companyName)}>Delete</button
-											>
-										</div>
-									</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-		</div>
-	</AdminShell>
+						{/each}
+					</tbody>
+				</table>
+			</div>
+		{/if}
+	</div>
+</AdminShell>
 
-	{#if rejectingId}
-		<div class="modal-backdrop">
-			<button
-				type="button"
-				class="modal-close-area"
-				aria-label="Cancel rejection"
-				onclick={cancelReject}
-			></button>
-			<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
-				<h3>Reject company</h3>
-				<p class="modal__sub">Optionally add a reason — shown on the company's dashboard.</p>
-				<label class="field">
-					<span>Reason (optional)</span>
-					<textarea bind:value={rejectReason} rows="3" placeholder="e.g. Not affiliated with TIC"
-					></textarea>
-				</label>
-				<div class="modal__actions">
-					<button class="btn" onclick={cancelReject}>Cancel</button>
-					<button class="btn btn--danger" onclick={confirmReject}>Reject account</button>
-				</div>
+{#if rejectingId}
+	<div class="modal-backdrop">
+		<button
+			type="button"
+			class="modal-close-area"
+			aria-label="Cancel rejection"
+			onclick={cancelReject}
+		></button>
+		<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+			<h3>Reject company</h3>
+			<p class="modal__sub">Optionally add a reason — shown on the company's dashboard.</p>
+			<label class="field">
+				<span>Reason (optional)</span>
+				<textarea bind:value={rejectReason} rows="3" placeholder="e.g. Not affiliated with TIC"
+				></textarea>
+			</label>
+			<div class="modal__actions">
+				<button class="btn" onclick={cancelReject}>Cancel</button>
+				<button class="btn btn--danger" onclick={confirmReject}>Reject account</button>
 			</div>
 		</div>
-	{/if}
+	</div>
+{/if}
 
 <style lang="scss">
 	@use '$styles/variables' as *;

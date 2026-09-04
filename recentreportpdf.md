@@ -2,7 +2,7 @@
 
 **Project:** IIT Guwahati Technology Incubation Centre website & platform
 **Scope of this report:** Everything built from the backend onward — the backend itself and every update made after it.
-**Prepared:** 2026-09-01
+**Prepared:** 2026-09-01 · **Last updated:** 2026-09-04
 
 > This document is a running log. Every update made after the backend went in — including the backend work itself — is recorded here. Newest work sits at the top of each section.
 
@@ -164,7 +164,7 @@ Self-hosted checklist of every route, component and backend piece, with a fronte
 
 ### 3.9 Editable media — 3–4 Sep 2026 · **DONE (backend complete)**
 
-Until now the content editor only made **text** editable; images were either baked into the bundle as a key (`"image": "iitGuwahati"`, resolved against `src/lib/data/images.ts`) or existed as `{ alt }`-only placeholders with no real source. This change begins making the image itself uploadable from the console.
+Until now the content editor only made **text** editable; images were either baked into the bundle as a key (`"image": "iitGuwahati"`, resolved against `src/lib/data/images.ts`) or existed as `{ alt }`-only placeholders with no real source. The image itself is now uploadable from the console, end to end.
 
 **Done (frontend):**
 
@@ -226,8 +226,8 @@ Tracked live at `/status`. Open items:
 
 | Date | Commit | Summary |
 | --- | --- | --- |
-| 2026-09-04 | _(pending)_ | Editable media **completed**: `20260904000000_site_assets` migration creates the public `site-assets` bucket, upload path verified end to end (anon writes and non-image types both refused), `pnpm doctor` gained a storage-bucket check, status page updated. Also raised the dev server's max HTTP header size to 64 KB so an accumulated `localhost` cookie jar stops returning 431 |
-| 2026-09-03 | _(pending)_ | Editable media (frontend): media field in the content editor, `/api/tic-admin/content/assets` upload route, `resolveMedia()`, Partners⇄home-marquee connected; status page updated |
+| 2026-09-04 | `402ba41` | tic-admin v7 — editable media **completed**: `20260904000000_site_assets` migration creates the public `site-assets` bucket, upload path verified end to end (anon writes and non-image types both refused), `pnpm doctor` gained a storage-bucket check, status page updated. Also raised the dev server's max HTTP header size to 64 KB so an accumulated `localhost` cookie jar stops returning 431 |
+| 2026-09-03 | `b2884a1` | Editable media (frontend): media field in the content editor, `/api/tic-admin/content/assets` upload route, `resolveMedia()`, Partners⇄home-marquee connected; status page updated |
 | 2026-09-01 | _(pending)_ | Mark email system as **in progress** on the status page; fix confirmation-email localhost link |
 | 2026-07-13 | `a295b62` | Turnstile verification + server-side TIC admin auth |
 | 2026-08-28 | `dbc8e76` | Updated status page |
@@ -241,7 +241,7 @@ Tracked live at `/status`. Open items:
 | 2026-08-31 | `08db7af` | Remove application-link section; enhance mobile panel |
 | 2026-09-01 | `d9735b4` | ButtonReveal loading state + usages |
 
-_Migration timestamps span `20260829` → `20260901`; several were merged through PRs #1–#3 on `feature/tic-admin`._
+_Migration timestamps span `20260829` → `20260904`; several were merged through PRs #1–#3 on `feature/tic-admin`._
 
 ---
 

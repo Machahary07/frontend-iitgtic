@@ -5,6 +5,7 @@
 	// is driven by the data rather than by a hand-written form per section.
 	import Self from './ContentField.svelte';
 	import { resolveMedia } from '$lib/media';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	interface Props {
 		node: Record<string, unknown> | unknown[];
@@ -32,13 +33,15 @@
 	});
 
 	// Long-form copy deserves a textarea even when it is currently short.
-	const LONG_FIELDS = /^(body|bio|answer|excerpt|lede|citation|description|summary|intro|text|content|blurb|note)$/i;
+	const LONG_FIELDS =
+		/^(body|bio|answer|excerpt|lede|citation|description|summary|intro|text|content|blurb|note)$/i;
 	const isLong = $derived(kind === 'longtext' || LONG_FIELDS.test(String(field)));
 
 	// A string field whose name reads as an image gets an uploader with a preview
 	// instead of a bare text box. Takes priority over the long-text branch, since
 	// an uploaded URL can run past the length threshold.
-	const MEDIA_FIELDS = /^(image|logo|photo|avatar|icon|poster|cover|coverImage|thumbnail|background)$/i;
+	const MEDIA_FIELDS =
+		/^(image|logo|photo|avatar|icon|poster|cover|coverImage|thumbnail|background)$/i;
 	const isMedia = $derived(
 		(kind === 'text' || kind === 'longtext') && MEDIA_FIELDS.test(String(field))
 	);
@@ -100,10 +103,16 @@
 		list.push(list.length > 0 ? blankLike(list[0]) : '');
 	}
 
-	function removeItem(index: number) {
+	async function removeItem(index: number) {
 		const list = value as unknown[];
 		const what = itemLabel(list[index], index);
-		if (!confirm(`Remove ${what}?`)) return;
+		const ok = await askConfirm({
+			title: `Remove ${what}?`,
+			body: 'It leaves this section when you save.',
+			confirmLabel: 'Remove',
+			tone: 'danger'
+		});
+		if (!ok) return;
 		list.splice(index, 1);
 	}
 
@@ -134,7 +143,7 @@
 				node={value as Record<string, unknown>}
 				field={childKey}
 				label={humanise(childKey)}
-				depth={depth}
+				{depth}
 			/>
 		{/each}
 	</div>

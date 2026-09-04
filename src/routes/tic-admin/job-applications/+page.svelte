@@ -13,6 +13,7 @@
 	} from '$lib/utils/ticAdmin';
 	import { downloadCsv, stampedFileName, toCsv } from '$lib/utils/csv';
 	import type { PageData } from './$types';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	type Filter = 'all' | JobApplicationStatus;
 
@@ -121,13 +122,13 @@
 		const count = counts.all;
 		const label = roleLabel(role);
 
-		if (
-			!confirm(
-				`Delete all ${count} applicant${count === 1 ? '' : 's'} for "${label}", including their resumes?\n\nThis cannot be undone. Export first if you need a record.`
-			)
-		) {
-			return;
-		}
+		const ok = await askConfirm({
+			title: `Delete all ${count} applicant${count === 1 ? '' : 's'} for "${label}"?`,
+			body: 'Their resumes go too. This cannot be undone — export first if you need a record.',
+			confirmLabel: 'Delete all',
+			tone: 'danger'
+		});
+		if (!ok) return;
 
 		busy = 'clear';
 		notice = '';
