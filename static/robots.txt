@@ -10,4 +10,4 @@ Disallow: /status
 Disallow: /opportunities/job-posting-admin
 Disallow: /opportunities/job-posting-admin/
 
-Sitemap: https://frontend-iitgtic.vercel.app/sitemap.xml
+Sitemap: https://iitgtic.itsjeu.com/sitemap.xml

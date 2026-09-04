@@ -38,7 +38,7 @@ export const COMMON_VARIABLES: TemplateVariable[] = [
 	{
 		name: 'siteUrl',
 		description: 'Public site origin',
-		sample: 'https://frontend-iitgtic.vercel.app'
+		sample: 'https://iitgtic.itsjeu.com'
 	},
 	{ name: 'year', description: 'Current year', sample: String(new Date().getFullYear()) }
 ];

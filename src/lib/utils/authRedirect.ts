@@ -24,10 +24,7 @@ export const AFTER_PASSWORD_RESET = '/auth/reset-password';
 
 function siteOrigin(): string {
 	if (browser) return window.location.origin;
-	return (publicEnv.PUBLIC_SITE_URL?.trim() || 'https://frontend-iitgtic.vercel.app').replace(
-		/\/$/,
-		''
-	);
+	return (publicEnv.PUBLIC_SITE_URL?.trim() || 'https://iitgtic.itsjeu.com').replace(/\/$/, '');
 }
 
 export function authCallbackUrl(next: string): string {

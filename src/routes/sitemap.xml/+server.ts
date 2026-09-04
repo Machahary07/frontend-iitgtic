@@ -2,7 +2,7 @@ import { getSiteContent } from '$lib/server/siteContent';
 import type { SiteContent } from '$lib/content';
 import type { RequestHandler } from './$types';
 
-const SITE = 'https://frontend-iitgtic.vercel.app';
+const SITE = 'https://iitgtic.itsjeu.com';
 
 const STATIC_ROUTES = [
 	'/',

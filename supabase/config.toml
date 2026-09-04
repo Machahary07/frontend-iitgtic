@@ -158,7 +158,7 @@ enabled = true
 # Local development points at the dev server. The linked project must be set
 # from the dashboard (Authentication -> URL Configuration) to the deployed
 # origin, or a confirmation link mailed from production lands on localhost:
-#   Site URL       https://frontend-iitgtic.vercel.app
+#   Site URL       https://iitgtic.itsjeu.com
 #   Redirect URLs  the additional_redirect_urls list below
 site_url = "http://localhost:5173"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
@@ -166,8 +166,8 @@ site_url = "http://localhost:5173"
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
   "http://localhost:5173/**",
-  # Where the app is actually served today.
-  "https://frontend-iitgtic.vercel.app/**",
+  # Where the app is actually served today (development domain on Vercel).
+  "https://iitgtic.itsjeu.com/**",
   # Vercel preview deployments get a fresh host per commit.
   "https://*.vercel.app/**",
   # The organisation's own domain, for the eventual cutover. It resolves today

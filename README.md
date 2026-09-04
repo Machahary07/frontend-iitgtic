@@ -21,10 +21,10 @@ The public website, the company job portal, the incubation application, and the 
 </p>
 
 <p>
-  <a href="https://frontend-iitgtic.vercel.app"><b>Live site</b></a> ·
-  <a href="https://frontend-iitgtic.vercel.app/status">Project status</a> ·
-  <a href="https://frontend-iitgtic.vercel.app/opportunities">Opportunities</a> ·
-  <a href="https://frontend-iitgtic.vercel.app/application">Apply for incubation</a>
+  <a href="https://iitgtic.itsjeu.com"><b>Live site</b></a> ·
+  <a href="https://iitgtic.itsjeu.com/status">Project status</a> ·
+  <a href="https://iitgtic.itsjeu.com/opportunities">Opportunities</a> ·
+  <a href="https://iitgtic.itsjeu.com/application">Apply for incubation</a>
 </p>
 
 </div>
@@ -684,9 +684,12 @@ inside the current UTC month and day and compares them against the plan named by
 so a message that would bounce off the cap is recorded as `blocked` rather than spending an
 API call on a 429.
 
-**Before real mail goes out:** verify a domain in Resend and point `RESEND_FROM` at an
-address on it. The default `onboarding@resend.dev` is a sandbox sender that only delivers to
-the address owning the API key — the console shows a banner while it is in use.
+**Sending domain.** During development, mail goes out from `hello@itsjeu.com` on the
+**verified** `itsjeu.com` domain, so it reaches real recipients. The eventual cutover is to
+`iitgtic.com` with an official address, once that domain's DNS is ours to publish Resend's
+records to. If `RESEND_FROM` is ever left on the `onboarding@resend.dev` sandbox sender, it
+only delivers to the address owning the API key — the console shows a banner while any
+unverified/sandbox sender is in use.
 
 A send never fails a request. `sendTemplateEmail()` resolves whatever happens, so a company
 verification or an application submit completes even when mail is down; what went wrong is
@@ -829,7 +832,7 @@ After deploy, re-scrape social previews:
 - Twitter/X: https://cards-dev.twitter.com/validator
 - LinkedIn: https://www.linkedin.com/post-inspector/
 
-Submit `https://frontend-iitgtic.vercel.app/sitemap.xml` to:
+Submit `https://iitgtic.itsjeu.com/sitemap.xml` to:
 
 - Google Search Console: https://search.google.com/search-console
 - Bing Webmaster Tools: https://www.bing.com/webmasters
@@ -840,16 +843,16 @@ Deployed to Vercel via `@sveltejs/adapter-auto`. Pushes to `main` deploy automat
 
 ## Roadmap
 
-The live checklist is at **[/status](https://frontend-iitgtic.vercel.app/status)** — every route,
+The live checklist is at **[/status](https://iitgtic.itsjeu.com/status)** — every route,
 component and backend piece, with a frontend and a backend rail. The open items today:
 
-| Area                    | Gap                                                                                                                                                                                                                                                                                                                                                                                      |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sending domain          | Mail still leaves as `onboarding@resend.dev`, Resend's shared sandbox sender, which only delivers to the address that owns the API key. The real domain is **`iitgtic.com`** — it resolves, and its MX is Google Workspace — but its DNS is not ours to edit yet, so the Resend verification records cannot be published. Until they are, no transactional mail reaches a real recipient |
-| Auth URL configuration  | Site URL on the linked project is still the dashboard default, so a confirmation link mailed from production points at `localhost`. The values are recorded in `supabase/config.toml`; applying them needs the dashboard, or a `supabase config push`                                                                                                                                    |
-| Backups                 | `pnpm backup` is complete — a real `pg_dump` of schema and data including `auth.users`, plus NDJSON and storage — and `pnpm restore --dry-run` passes. One thing left: rehearse the real restore once into a scratch project, which needs a project to throw away first                                                                                                                  |
-| Real content            | The upload path is done — image fields take a real file from the console into `site-assets`, and the Partners logos already use it. What remains is content, not plumbing: the other `{ alt }`-only placeholders (events, incubation, startups, people photos) still need pictures, and video would want its own bucket and player                                                       |
-| Applicant notifications | A company sees its applicants but is not told when a new one arrives; the inbox is pull-only                                                                                                                                                                                                                                                                                             |
+| Area                     | Gap                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sending domain (cutover) | Development mail sends from `hello@itsjeu.com` on the **verified** `itsjeu.com` domain, so real recipients get it. The planned production identity is **`iitgtic.com`** with an official address — it resolves and its MX is Google Workspace, but its DNS is not ours to publish Resend's records to yet. Cutover is a domain verify + a `RESEND_FROM` change when that access lands |
+| Auth URL configuration   | Email confirmation is currently **off**, so new signups need no confirmation link. The linked project's Site URL should still be set to `https://iitgtic.itsjeu.com` (recorded in `supabase/config.toml`) so password-reset links resolve; applying it needs the dashboard or a `supabase config push`                                                                                |
+| Backups                  | `pnpm backup` is complete — a real `pg_dump` of schema and data including `auth.users`, plus NDJSON and storage — and `pnpm restore --dry-run` passes. One thing left: rehearse the real restore once into a scratch project, which needs a project to throw away first                                                                                                               |
+| Real content             | The upload path is done — image fields take a real file from the console into `site-assets`, and the Partners logos already use it. What remains is content, not plumbing: the other `{ alt }`-only placeholders (events, incubation, startups, people photos) still need pictures, and video would want its own bucket and player                                                    |
+| Applicant notifications  | A company sees its applicants but is not told when a new one arrives; the inbox is pull-only                                                                                                                                                                                                                                                                                          |
 
 Deliberately **not** doing:
 
@@ -860,5 +863,5 @@ Deliberately **not** doing:
 
 <div align="center">
 <br>
-<sub>IIT Guwahati Technology Incubation Centre · <a href="https://frontend-iitgtic.vercel.app">frontend-iitgtic.vercel.app</a></sub>
+<sub>IIT Guwahati Technology Incubation Centre · <a href="https://iitgtic.itsjeu.com">iitgtic.itsjeu.com</a></sub>
 </div>
