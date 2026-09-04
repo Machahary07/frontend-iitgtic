@@ -5,7 +5,6 @@
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import { showToast } from '$lib/utils/toast.svelte';
-	import { ADMIN_SEEN_PREFIX } from '$lib/utils/adminSeen';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
@@ -32,18 +31,9 @@
 		goto(resolve('/tic-admin/login'));
 	}
 
-	// Orientation, not status: the note is worth reading on the first visit of a
-	// session and is noise on every one after it. The flag is cleared at sign-out,
-	// so the next admin to log in gets it once too.
+	// Orientation note: shown on every visit to the content page so the reminder
+	// that saves publish straight away is always in front of whoever is editing.
 	onMount(() => {
-		const key = `${ADMIN_SEEN_PREFIX}content-intro:${data.admin?.userId ?? 'unknown'}`;
-		try {
-			if (localStorage.getItem(key)) return;
-			localStorage.setItem(key, '1');
-		} catch {
-			// Storage blocked (private window, cleared site data): showing the note
-			// again is the harmless way to be wrong.
-		}
 		showToast(
 			'Every word on the public site is editable here — saving publishes straight away.',
 			'info'

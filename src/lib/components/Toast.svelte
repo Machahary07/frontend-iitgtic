@@ -133,9 +133,28 @@
 		color: #b0181c;
 	}
 
-	.toast--info .toast__icon {
-		background: #e8eefc;
-		color: #2050d4;
+	// Info is an orientation notice, not a status tick — a dark card lifts it off
+	// the light admin page so it actually gets noticed.
+	.toast--info {
+		background: #17191d;
+		border-color: rgb(255 255 255 / 0.08);
+
+		.toast__icon {
+			background: rgb(255 255 255 / 0.12);
+			color: #fff;
+		}
+
+		.toast__text {
+			color: #fff;
+		}
+
+		.toast__close {
+			color: rgb(255 255 255 / 0.6);
+
+			&:focus-visible {
+				outline-color: #fff;
+			}
+		}
 	}
 
 	.toast__text {

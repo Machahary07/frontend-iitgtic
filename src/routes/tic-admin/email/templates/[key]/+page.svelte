@@ -32,6 +32,9 @@
 		type SpacerSize
 	} from '$lib/utils/emailBlocks';
 	import type { PageData } from './$types';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
+	import CircleSlash from '@lucide/svelte/icons/circle-slash';
+	import FilePenLine from '@lucide/svelte/icons/file-pen-line';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 	import { showToast } from '$lib/utils/toast.svelte';
 
@@ -440,11 +443,59 @@
 	onLogout={handleLogout}
 >
 	{#snippet actions()}
-		<a class="head-btn" href={resolve('/tic-admin/email/templates')}>← All templates</a>
+		<a class="head-btn" href={resolve('/tic-admin/email/templates')}>All templates</a>
 	{/snippet}
 
 	<p class="lede">{template.description}</p>
-	<p class="trigger"><span>Sent when</span> {template.trigger}</p>
+
+	<div class="meta">
+		<span class="meta__chip meta__chip--{enabled ? 'on' : 'off'}">
+			{#if enabled}
+				<CircleCheck size={13} strokeWidth={2.1} />
+			{:else}
+				<CircleSlash size={13} strokeWidth={2.1} />
+			{/if}
+			{enabled ? 'Sending' : 'Switched off'}
+		</span>
+		{#if template.customised}
+			<span class="meta__chip meta__chip--edited">
+				<FilePenLine size={13} strokeWidth={2.1} />
+				Edited
+			</span>
+		{/if}
+		<span class="meta__trigger"><span>Sent when</span> {template.trigger}</span>
+	</div>
+
+	<!-- Save used to sit in the middle card's footer, which on a long template
+	     meant scrolling away from your edit to find it. It rides the bottom of
+	     the viewport instead, and says what state the draft is in. -->
+	<div class="savebar" class:savebar--dirty={dirty}>
+		<span class="savebar__state">
+			{#if problems.length > 0}
+				<span class="savebar__dot savebar__dot--bad"></span>
+				{problems.length} thing{problems.length === 1 ? '' : 's'} to fix
+			{:else if dirty}
+				<span class="savebar__dot savebar__dot--warn"></span>
+				Unsaved changes
+			{:else}
+				<span class="savebar__dot savebar__dot--good"></span>
+				All changes saved
+			{/if}
+		</span>
+
+		{#if template.customised}
+			<button class="btn" onclick={reset} disabled={resetting}>
+				{resetting ? 'Restoring…' : 'Reset to bundled copy'}
+			</button>
+		{/if}
+		<button
+			class="btn btn--primary"
+			onclick={save}
+			disabled={saving || !dirty || problems.length > 0}
+		>
+			{saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
+		</button>
+	</div>
 
 	<div class="grid">
 		<!-- focusin rather than a listener per field: which field was last focused is
@@ -832,22 +883,6 @@
 						{/each}
 					</ul>
 				{/if}
-
-				<div class="card__foot">
-					<button
-						class="btn btn--primary"
-						onclick={save}
-						disabled={saving || !dirty || problems.length > 0}
-					>
-						{saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
-					</button>
-					{#if template.customised}
-						<button class="btn" onclick={reset} disabled={resetting}>
-							{resetting ? 'Restoring…' : 'Reset to bundled copy'}
-						</button>
-					{/if}
-					{#if dirty}<span class="dirty">Unsaved changes</span>{/if}
-				</div>
 			</section>
 
 			<section class="card">
@@ -950,15 +985,16 @@
 	@use '$styles/mixins' as *;
 
 	.head-btn {
-		padding: 6px 12px;
+		padding: 7px 14px;
 		font-size: 12px;
 		font-weight: $font-weight-semibold;
-		color: #111;
+		color: $admin-ink;
 		background: #fff;
 		border: 1px solid $admin-line;
-		border-radius: $admin-radius-sm;
+		border-radius: $admin-radius-pill;
 		text-decoration: none;
 		white-space: nowrap;
+		@include admin-focus-ring;
 	}
 
 	.lede {
@@ -969,8 +1005,40 @@
 		max-width: 68ch;
 	}
 
-	.trigger {
-		margin: 0 0 20px;
+	.meta {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+		margin: 12px 0 20px;
+	}
+
+	.meta__chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 5px 12px;
+		font-size: 11px;
+		font-weight: $font-weight-semibold;
+		border-radius: $admin-radius-pill;
+
+		&--on {
+			color: admin-tone-fg('good');
+			background: admin-tone-bg('good');
+		}
+
+		&--off {
+			color: admin-tone-fg('bad');
+			background: admin-tone-bg('bad');
+		}
+
+		&--edited {
+			color: admin-tone-fg('info');
+			background: admin-tone-bg('info');
+		}
+	}
+
+	.meta__trigger {
 		font-size: 12px;
 		color: $admin-ink-3;
 
@@ -981,6 +1049,58 @@
 			font-size: 10px;
 			color: $admin-ink-3;
 			margin-right: 6px;
+		}
+	}
+
+	// Sticky to the bottom of the viewport so the save control is reachable from
+	// anywhere in a long template, and the draft's state is always on screen.
+	.savebar {
+		position: sticky;
+		bottom: 14px;
+		z-index: 4;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+		margin-bottom: 18px;
+		padding: 10px 10px 10px 16px;
+		background: rgba(255, 255, 255, 0.86);
+		backdrop-filter: blur(10px);
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-pill;
+		box-shadow: $admin-shadow-raised;
+
+		&--dirty {
+			border-color: rgba(122, 84, 5, 0.28);
+		}
+	}
+
+	.savebar__state {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		margin-right: auto;
+		font-size: 12px;
+		font-weight: $font-weight-medium;
+		color: $admin-ink-2;
+	}
+
+	.savebar__dot {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		flex: none;
+
+		&--good {
+			background: admin-tone-fg('good');
+		}
+
+		&--warn {
+			background: admin-tone-fg('warn');
+		}
+
+		&--bad {
+			background: admin-tone-fg('bad');
 		}
 	}
 
@@ -1498,14 +1618,6 @@
 		}
 	}
 
-	.card__foot {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		flex-wrap: wrap;
-		padding-top: 4px;
-	}
-
 	.btn {
 		@include admin-btn-base;
 
@@ -1522,11 +1634,6 @@
 				cursor: not-allowed;
 			}
 		}
-	}
-
-	.dirty {
-		font-size: 11px;
-		color: #8a6100;
 	}
 
 	.vars {

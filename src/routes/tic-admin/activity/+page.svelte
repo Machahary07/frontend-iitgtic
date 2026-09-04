@@ -11,6 +11,11 @@
 		type Impression,
 		type PageViewEntry
 	} from '$lib/utils/ticAdmin';
+	import Plus from '@lucide/svelte/icons/plus';
+	import PencilLine from '@lucide/svelte/icons/pencil-line';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import Dot from '@lucide/svelte/icons/dot';
+	import Info from '@lucide/svelte/icons/info';
 	import type { PageData } from './$types';
 
 	type View = 'audit' | 'impressions';
@@ -29,6 +34,7 @@
 	let loadingMore = $state(false);
 	let exhausted = $state(false);
 	let expanded = $state<number | null>(null);
+	let showAbout = $state(false);
 
 	const entries = $derived(filteredEntries ?? [...(data.entries as AuditEntry[]), ...extraEntries]);
 
@@ -142,6 +148,54 @@
 		});
 	}
 
+	// Rows are grouped under a day heading, so each one only needs its clock time.
+	function fmtClock(iso: string) {
+		return new Date(iso).toLocaleTimeString('en-GB', {
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit'
+		});
+	}
+
+	function dayLabel(iso: string) {
+		const date = new Date(iso);
+		const midnight = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+		const days = Math.round((midnight(new Date()) - midnight(date)) / 86400000);
+		if (days === 0) return 'Today';
+		if (days === 1) return 'Yesterday';
+		return date.toLocaleDateString('en-GB', {
+			weekday: 'short',
+			day: 'numeric',
+			month: 'short',
+			year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric'
+		});
+	}
+
+	// A day at a time, because a flat list repeats the same date on every row and
+	// the eye has nothing to anchor on.
+	const days = $derived.by(() => {
+		const out: { key: string; label: string; items: AuditEntry[] }[] = [];
+		for (const entry of entries) {
+			const key = new Date(entry.occurred_at).toDateString();
+			const last = out[out.length - 1];
+			if (last?.key === key) last.items.push(entry);
+			else out.push({ key, label: dayLabel(entry.occurred_at), items: [entry] });
+		}
+		return out;
+	});
+
+	// `action` is free text written by the triggers, so the tint is read off the
+	// verb. Presentation only — nothing branches on this.
+	function actionTone(action: string): 'good' | 'warn' | 'bad' | 'info' {
+		const a = action.toLowerCase();
+		if (/\b(delete|deleted|remove|removed|drop)\b/.test(a)) return 'bad';
+		if (/\b(insert|create|created|add|added|new)\b/.test(a)) return 'good';
+		if (/\b(update|updated|change|changed|edit|edited|set)\b/.test(a)) return 'warn';
+		return 'info';
+	}
+
+	const TONE_ICONS = { good: Plus, warn: PencilLine, bad: Trash2, info: Dot } as const;
+
 	// The interesting part of an update is what actually moved, not the whole row.
 	function changedFields(entry: AuditEntry): { field: string; from: unknown; to: unknown }[] {
 		if (!entry.before || !entry.after) return [];
@@ -188,11 +242,6 @@
 	</div>
 
 	{#if view === 'audit'}
-		<p class="note">
-			Written by database triggers, so a row changed anywhere — this console, the company portal, or
-			the SQL editor — is recorded. Entries cannot be edited or deleted from the app.
-		</p>
-
 		<div class="filters">
 			{#each TABLES as table (table)}
 				<button
@@ -203,69 +252,111 @@
 					{table}
 				</button>
 			{/each}
+
+			<!-- The explanation is worth keeping but not worth permanent space: it is
+			     read once to understand the model, then never again. -->
+			<button
+				class="about-toggle"
+				aria-expanded={showAbout}
+				aria-controls="audit-about"
+				onclick={() => (showAbout = !showAbout)}
+			>
+				<Info size={14} strokeWidth={2} />
+				<span>How this log works</span>
+			</button>
 		</div>
+
+		{#if showAbout}
+			<p class="note" id="audit-about">
+				Written by database triggers, so a row changed anywhere — this console, the company portal,
+				or the SQL editor — is recorded. Entries cannot be edited or deleted from the app.
+			</p>
+		{/if}
 
 		<div class="panel">
 			{#if entries.length === 0}
 				<p class="empty">Nothing recorded yet.</p>
 			{:else}
-				<ul class="feed">
-					{#each entries as entry (entry.id)}
-						{@const changes = changedFields(entry)}
-						<li class="event">
-							<div class="event__main">
-								<div class="event__line">
-									<span class="who">{entry.actor_label}</span>
-									<span class="what">{entry.action}</span>
-									<span class="src src--{entry.source}">{entry.source}</span>
-								</div>
-								<p class="event__meta">
-									{fmtTime(entry.occurred_at)}
-									{#if entry.record_id}· <code>{entry.record_id.slice(0, 8)}</code>{/if}
-								</p>
-								{#if changes.length > 0 && expanded !== entry.id}
-									<p class="event__fields">
-										{changes
-											.slice(0, 4)
-											.map((c) => c.field)
-											.join(', ')}{changes.length > 4 ? ` +${changes.length - 4} more` : ''}
-									</p>
-								{/if}
-							</div>
-							{#if entry.before || entry.after}
-								<button
-									class="btn"
-									onclick={() => (expanded = expanded === entry.id ? null : entry.id)}
+				{#each days as day (day.key)}
+					<h3 class="daybar">
+						<span>{day.label}</span>
+						<span class="daybar__count">{day.items.length}</span>
+					</h3>
+					<ul class="feed">
+						{#each day.items as entry (entry.id)}
+							{@const changes = changedFields(entry)}
+							{@const tone = actionTone(entry.action)}
+							{@const ToneIcon = TONE_ICONS[tone]}
+							<li class="event">
+								<span
+									class="event__icon"
+									style="--tile-bg: var(--admin-tone-{tone}-bg); --tile-fg: var(--admin-tone-{tone}-fg);"
+									aria-hidden="true"
 								>
-									{expanded === entry.id ? 'Hide' : 'Detail'}
-								</button>
-							{/if}
+									<ToneIcon size={15} strokeWidth={2.1} />
+								</span>
 
-							{#if expanded === entry.id}
-								<div class="detail">
-									{#if changes.length > 0}
-										<table class="diff">
-											<thead>
-												<tr><th>Field</th><th>Before</th><th>After</th></tr>
-											</thead>
-											<tbody>
-												{#each changes as change (change.field)}
-													<tr>
-														<td class="diff__field">{change.field}</td>
-														<td class="diff__from">{preview(change.from)}</td>
-														<td class="diff__to">{preview(change.to)}</td>
-													</tr>
-												{/each}
-											</tbody>
-										</table>
-									{:else}
-										<pre>{JSON.stringify(entry.after ?? entry.before, null, 2)}</pre>
+								<div class="event__main">
+									<div class="event__line">
+										<span class="who" class:who--system={entry.actor_label === 'system'}>
+											{entry.actor_label}
+										</span>
+										<span class="what">{entry.action}</span>
+										<span class="src src--{entry.source}">{entry.source}</span>
+									</div>
+									<p class="event__meta">
+										<time datetime={entry.occurred_at} title={fmtTime(entry.occurred_at)}>
+											{fmtClock(entry.occurred_at)}
+										</time>
+										{#if entry.table_name}· {entry.table_name}{/if}
+										{#if entry.record_id}· <code>{entry.record_id.slice(0, 8)}</code>{/if}
+									</p>
+									{#if changes.length > 0 && expanded !== entry.id}
+										<p class="event__fields">
+											{changes
+												.slice(0, 4)
+												.map((c) => c.field)
+												.join(', ')}{changes.length > 4 ? ` +${changes.length - 4} more` : ''}
+										</p>
 									{/if}
 								</div>
-							{/if}
-						</li>
-					{/each}
-				</ul>
+
+								{#if entry.before || entry.after}
+									<button
+										class="btn"
+										aria-expanded={expanded === entry.id}
+										onclick={() => (expanded = expanded === entry.id ? null : entry.id)}
+									>
+										{expanded === entry.id ? 'Hide' : 'Detail'}
+									</button>
+								{/if}
+
+								{#if expanded === entry.id}
+									<div class="detail">
+										{#if changes.length > 0}
+											<table class="diff">
+												<thead>
+													<tr><th>Field</th><th>Before</th><th>After</th></tr>
+												</thead>
+												<tbody>
+													{#each changes as change (change.field)}
+														<tr>
+															<td class="diff__field">{change.field}</td>
+															<td class="diff__from">{preview(change.from)}</td>
+															<td class="diff__to">{preview(change.to)}</td>
+														</tr>
+													{/each}
+												</tbody>
+											</table>
+										{:else}
+											<pre>{JSON.stringify(entry.after ?? entry.before, null, 2)}</pre>
+										{/if}
+									</div>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				{/each}
 			{/if}
 		</div>
 
@@ -402,22 +493,47 @@
 	}
 
 	.note {
-		margin: 0 0 14px;
+		margin: 0 0 16px;
 		font-size: 12px;
+		line-height: 1.6;
 		color: $admin-ink-2;
-		padding: 10px 12px;
-		background: #fff;
-		border: 1px solid $admin-line-soft;
-		border-left: 3px solid #2050d4;
-		border-radius: $admin-radius-sm;
+		padding: 12px 16px;
+		background: admin-tone-bg('info');
+		border: 0;
+		border-radius: $admin-radius-md;
 		max-width: 78ch;
+	}
+
+	.about-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		margin-left: auto;
+		padding: 5px 12px;
+		font: inherit;
+		font-family: $font-family-base;
+		font-size: 12px;
+		font-weight: $font-weight-medium;
+		color: $admin-ink-3;
+		background: transparent;
+		border: 1px solid transparent;
+		border-radius: $admin-radius-pill;
+		cursor: pointer;
+		@include admin-focus-ring;
+
+		&[aria-expanded='true'] {
+			color: $admin-accent;
+			border-color: $admin-line;
+			background: #fff;
+		}
 	}
 
 	.filters {
 		display: flex;
+		align-items: center;
 		gap: 6px;
 		flex-wrap: wrap;
-		margin-bottom: 14px;
+		margin-bottom: 16px;
 	}
 
 	.chip {
@@ -429,13 +545,45 @@
 		color: #555;
 		background: #fff;
 		border: 1px solid $admin-line-soft;
-		border-radius: $admin-radius-sm;
+		border-radius: $admin-radius-pill;
 		cursor: pointer;
+		text-transform: capitalize;
+		@include admin-focus-ring;
+
 		&--active {
-			color: #111;
-			border-color: #111;
+			color: $color-white;
+			background: $admin-ink;
+			border-color: $admin-ink;
 			font-weight: $font-weight-semibold;
 		}
+	}
+
+	// Sticky so the day you are reading stays named while you scroll a long log.
+	.daybar {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 0;
+		padding: 9px 18px;
+		font-size: 11px;
+		font-weight: $font-weight-bold;
+		letter-spacing: 0.09em;
+		text-transform: uppercase;
+		color: $admin-ink-2;
+		background: $admin-sunken;
+		border-bottom: 1px solid $admin-line-soft;
+	}
+
+	.daybar__count {
+		padding: 1px 8px;
+		font-size: 10px;
+		letter-spacing: 0;
+		color: $admin-ink-3;
+		background: #fff;
+		border-radius: $admin-radius-pill;
 	}
 
 	.feed {
@@ -446,14 +594,25 @@
 
 	.event {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
-		gap: 8px 14px;
-		padding: 12px 14px;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		align-items: start;
+		gap: 8px 13px;
+		padding: 13px 18px;
 		border-bottom: 1px solid $admin-line-soft;
 
 		&:last-child {
 			border-bottom: 0;
 		}
+	}
+
+	// Tints the row by what happened, so deletes read differently from edits at
+	// a glance instead of every line looking the same.
+	.event__icon {
+		@include admin-icon-tile('neutral', 28px);
+		background: var(--tile-bg);
+		color: var(--tile-fg);
+		border-radius: $admin-radius-sm;
+		margin-top: 1px;
 	}
 
 	.event__main {
@@ -470,7 +629,14 @@
 	.who {
 		font-size: 13px;
 		font-weight: $font-weight-semibold;
-		color: #111;
+		color: $admin-ink;
+
+		// A trigger-written row is not a person; it should not look like one.
+		&--system {
+			font-weight: $font-weight-medium;
+			color: $admin-ink-3;
+			font-variant: small-caps;
+		}
 	}
 
 	.what {
@@ -500,7 +666,8 @@
 	.event__meta {
 		margin: 3px 0 0;
 		font-size: 11px;
-		color: #999;
+		color: $admin-ink-3;
+		font-variant-numeric: tabular-nums;
 
 		code {
 			font-size: 11px;
