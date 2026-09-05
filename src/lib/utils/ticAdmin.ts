@@ -300,6 +300,10 @@ export type Impression = {
 	admin_views: number;
 	is_admin: boolean;
 	last_seen: string;
+	/** Distinct human visitors across the whole window, repeated on every row.
+	 *  Summing the per-path `visitors` counts one person once per page they
+	 *  opened, so the site-wide figure has to come from the query itself. */
+	site_visitors: number;
 };
 
 export async function adminListAudit(

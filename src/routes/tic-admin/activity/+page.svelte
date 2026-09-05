@@ -72,9 +72,12 @@
 	const impressions = $derived(rangeImpressions ?? (data.impressions as Impression[]));
 	const recent = $derived(data.recent as PageViewEntry[]);
 
+	// Views and bots are hit counts, so they add up across pages. Visitors do not:
+	// one person reading five pages is a distinct visitor on each of them, and
+	// summing the column counted them five times. That figure comes from the query.
 	const totals = $derived({
 		views: impressions.reduce((sum, i) => sum + Number(i.total), 0),
-		visitors: impressions.reduce((sum, i) => sum + Number(i.visitors), 0),
+		visitors: Number(impressions[0]?.site_visitors ?? 0),
 		bots: impressions.reduce((sum, i) => sum + Number(i.bots), 0),
 		pages: impressions.length
 	});
@@ -419,13 +422,13 @@
 							{compact(row.total)}<span class="metric__unit">total</span>
 						</p>
 						<div class="metric__stats">
-							<span class="stat stat--people" title="Unique human visitors">
+							<span class="stat stat--people" title="Views by people, bots excluded">
 								<svg viewBox="0 0 16 16" aria-hidden="true"
 									><path
 										d="M8 8a3 3 0 100-6 3 3 0 000 6zm0 1.5c-3 0-5 1.6-5 3.3V14h10v-1.2c0-1.7-2-3.3-5-3.3z"
 									/></svg
 								>
-								{compact(row.visitors)}
+								{compact(row.total - row.bots)}
 							</span>
 							<span class="stat stat--bots" title="Requests from bots and crawlers">
 								<svg viewBox="0 0 16 16" aria-hidden="true"
