@@ -15,6 +15,7 @@
 	} from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
+	import { showToast } from '$lib/utils/toast.svelte';
 
 	type Filter = 'all' | UserRole | 'never' | 'suspended';
 
@@ -25,7 +26,6 @@
 	const currentAdminId = $derived(data.currentAdminId);
 
 	let filter = $state<Filter>('all');
-	let message = $state<{ tone: 'ok' | 'err'; text: string } | null>(null);
 	let busyId = $state<string | null>(null);
 
 	let showInvite = $state(false);
@@ -59,8 +59,12 @@
 		busyId = id;
 		const result = await work();
 		busyId = null;
-		message = result.ok ? { tone: 'ok', text: okText } : { tone: 'err', text: result.error };
-		if (result.ok) await refresh();
+		if (!result.ok) {
+			showToast(result.error, 'err');
+			return;
+		}
+		showToast(okText);
+		await refresh();
 	}
 
 	async function changeRole(user: ManagedUser, role: UserRole) {
@@ -116,7 +120,7 @@
 	async function createAdmin(e: Event) {
 		e.preventDefault();
 		if (newPassword.length < 8) {
-			message = { tone: 'err', text: 'Password must be at least 8 characters.' };
+			showToast('Password must be at least 8 characters.', 'err');
 			return;
 		}
 		busyId = 'new';
@@ -127,10 +131,10 @@
 		});
 		busyId = null;
 		if (!result.ok) {
-			message = { tone: 'err', text: result.error };
+			showToast(result.error, 'err');
 			return;
 		}
-		message = { tone: 'ok', text: `Admin account created for ${newEmail}.` };
+		showToast(`Admin account created for ${newEmail}.`);
 		newName = '';
 		newEmail = '';
 		newPassword = '';
@@ -168,7 +172,6 @@
 
 <AdminShell
 	brand="TIC Team Admin"
-	brandSub="Internal"
 	navItems={TIC_ADMIN_NAV}
 	title="Users"
 	eyebrow="Accounts"
@@ -206,10 +209,6 @@
 				{busyId === 'new' ? 'Creating…' : 'Create admin'}
 			</button>
 		</form>
-	{/if}
-
-	{#if message}
-		<p class="msg msg--{message.tone}" role="status">{message.text}</p>
 	{/if}
 
 	<div class="tabs">
@@ -434,8 +433,8 @@
 		font-weight: $font-weight-semibold;
 		color: #111;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 6px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
 
 		&:disabled {
@@ -478,17 +477,6 @@
 		@include admin-btn-small;
 	}
 
-	.msg {
-		margin: 0 0 16px;
-
-		&--ok {
-			@include admin-msg-ok;
-		}
-		&--err {
-			@include admin-msg-err;
-		}
-	}
-
 	.invite {
 		@include admin-card;
 		margin-bottom: 16px;
@@ -503,7 +491,7 @@
 	.invite__sub {
 		margin: 0;
 		font-size: 13px;
-		color: #666;
+		color: $admin-ink-2;
 		max-width: 60ch;
 	}
 

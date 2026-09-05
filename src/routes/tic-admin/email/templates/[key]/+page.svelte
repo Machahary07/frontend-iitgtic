@@ -32,7 +32,11 @@
 		type SpacerSize
 	} from '$lib/utils/emailBlocks';
 	import type { PageData } from './$types';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
+	import CircleSlash from '@lucide/svelte/icons/circle-slash';
+	import FilePenLine from '@lucide/svelte/icons/file-pen-line';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
+	import { showToast } from '$lib/utils/toast.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -53,7 +57,6 @@
 	let saving = $state(false);
 	let resetting = $state(false);
 	let testing = $state(false);
-	let message = $state<{ tone: 'ok' | 'err'; text: string } | null>(null);
 	let testTo = $state('');
 	let tab = $state<'preview' | 'text'>('preview');
 
@@ -205,13 +208,12 @@
 		if (!file) return;
 
 		uploading = index;
-		message = null;
 		const result = await adminUploadEmailAsset(file);
 		uploading = null;
 		input.value = '';
 
 		if (!result.ok) {
-			message = { tone: 'err', text: result.error };
+			showToast(result.error, 'err');
 			return;
 		}
 
@@ -296,7 +298,7 @@
 
 	async function save() {
 		if (problems.length > 0) {
-			message = { tone: 'err', text: problems[0] };
+			showToast(problems[0], 'err');
 			return;
 		}
 		if (mode === 'html' && composable) {
@@ -309,7 +311,6 @@
 		}
 
 		saving = true;
-		message = null;
 		const result = await adminSaveEmailTemplate(
 			mode === 'compose'
 				? { key: template.key, subject, enabled, blocks }
@@ -318,10 +319,10 @@
 		saving = false;
 
 		if (!result.ok) {
-			message = { tone: 'err', text: result.error };
+			showToast(result.error, 'err');
 			return;
 		}
-		message = { tone: 'ok', text: 'Saved. New sends use this copy straight away.' };
+		showToast('Saved. New sends use this copy straight away.');
 		await invalidateAll();
 	}
 
@@ -335,15 +336,14 @@
 		if (!ok) return;
 
 		resetting = true;
-		message = null;
 		const result = await adminResetEmailTemplate(template.key);
 		resetting = false;
 
 		if (!result.ok) {
-			message = { tone: 'err', text: result.error };
+			showToast(result.error, 'err');
 			return;
 		}
-		message = { tone: 'ok', text: 'Restored the bundled copy.' };
+		showToast('Restored the bundled copy.');
 		await invalidateAll();
 	}
 
@@ -358,13 +358,11 @@
 		}
 
 		testing = true;
-		message = null;
 		const result = await adminSendTestEmail(template.key, testTo.trim() || undefined);
 		testing = false;
 
-		message = result.ok
-			? { tone: 'ok', text: `Test sent to ${result.to}.` }
-			: { tone: 'err', text: result.error };
+		if (result.ok) showToast(`Test sent to ${result.to}.`);
+		else showToast(result.error, 'err');
 	}
 
 	async function handleLogout() {
@@ -438,7 +436,6 @@
 
 <AdminShell
 	brand="TIC Team Admin"
-	brandSub="Internal"
 	navItems={TIC_ADMIN_NAV}
 	title={template.name}
 	eyebrow="Email template"
@@ -446,15 +443,59 @@
 	onLogout={handleLogout}
 >
 	{#snippet actions()}
-		<a class="head-btn" href={resolve('/tic-admin/email/templates')}>← All templates</a>
+		<a class="head-btn" href={resolve('/tic-admin/email/templates')}>All templates</a>
 	{/snippet}
 
 	<p class="lede">{template.description}</p>
-	<p class="trigger"><span>Sent when</span> {template.trigger}</p>
 
-	{#if message}
-		<p class={message.tone === 'ok' ? 'msg-ok' : 'msg-err'}>{message.text}</p>
-	{/if}
+	<div class="meta">
+		<span class="meta__chip meta__chip--{enabled ? 'on' : 'off'}">
+			{#if enabled}
+				<CircleCheck size={13} strokeWidth={2.1} />
+			{:else}
+				<CircleSlash size={13} strokeWidth={2.1} />
+			{/if}
+			{enabled ? 'Sending' : 'Switched off'}
+		</span>
+		{#if template.customised}
+			<span class="meta__chip meta__chip--edited">
+				<FilePenLine size={13} strokeWidth={2.1} />
+				Edited
+			</span>
+		{/if}
+		<span class="meta__trigger"><span>Sent when</span> {template.trigger}</span>
+	</div>
+
+	<!-- Save used to sit in the middle card's footer, which on a long template
+	     meant scrolling away from your edit to find it. It rides the bottom of
+	     the viewport instead, and says what state the draft is in. -->
+	<div class="savebar" class:savebar--dirty={dirty}>
+		<span class="savebar__state">
+			{#if problems.length > 0}
+				<span class="savebar__dot savebar__dot--bad"></span>
+				{problems.length} thing{problems.length === 1 ? '' : 's'} to fix
+			{:else if dirty}
+				<span class="savebar__dot savebar__dot--warn"></span>
+				Unsaved changes
+			{:else}
+				<span class="savebar__dot savebar__dot--good"></span>
+				All changes saved
+			{/if}
+		</span>
+
+		{#if template.customised}
+			<button class="btn" onclick={reset} disabled={resetting}>
+				{resetting ? 'Restoring…' : 'Reset to bundled copy'}
+			</button>
+		{/if}
+		<button
+			class="btn btn--primary"
+			onclick={save}
+			disabled={saving || !dirty || problems.length > 0}
+		>
+			{saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
+		</button>
+	</div>
 
 	<div class="grid">
 		<!-- focusin rather than a listener per field: which field was last focused is
@@ -842,22 +883,6 @@
 						{/each}
 					</ul>
 				{/if}
-
-				<div class="card__foot">
-					<button
-						class="btn btn--primary"
-						onclick={save}
-						disabled={saving || !dirty || problems.length > 0}
-					>
-						{saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
-					</button>
-					{#if template.customised}
-						<button class="btn" onclick={reset} disabled={resetting}>
-							{resetting ? 'Restoring…' : 'Reset to bundled copy'}
-						</button>
-					{/if}
-					{#if dirty}<span class="dirty">Unsaved changes</span>{/if}
-				</div>
 			</section>
 
 			<section class="card">
@@ -960,19 +985,16 @@
 	@use '$styles/mixins' as *;
 
 	.head-btn {
-		padding: 6px 12px;
+		padding: 7px 14px;
 		font-size: 12px;
 		font-weight: $font-weight-semibold;
-		color: #111;
+		color: $admin-ink;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 6px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-pill;
 		text-decoration: none;
 		white-space: nowrap;
-
-		&:hover {
-			background: #f3f4f6;
-		}
+		@include admin-focus-ring;
 	}
 
 	.lede {
@@ -983,29 +1005,103 @@
 		max-width: 68ch;
 	}
 
-	.trigger {
-		margin: 0 0 20px;
+	.meta {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+		margin: 12px 0 20px;
+	}
+
+	.meta__chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 5px 12px;
+		font-size: 11px;
+		font-weight: $font-weight-semibold;
+		border-radius: $admin-radius-pill;
+
+		&--on {
+			color: admin-tone-fg('good');
+			background: admin-tone-bg('good');
+		}
+
+		&--off {
+			color: admin-tone-fg('bad');
+			background: admin-tone-bg('bad');
+		}
+
+		&--edited {
+			color: admin-tone-fg('info');
+			background: admin-tone-bg('info');
+		}
+	}
+
+	.meta__trigger {
 		font-size: 12px;
-		color: #888;
+		color: $admin-ink-3;
 
 		span {
 			font-weight: $font-weight-semibold;
 			letter-spacing: 0.06em;
 			text-transform: uppercase;
 			font-size: 10px;
-			color: #aaa;
+			color: $admin-ink-3;
 			margin-right: 6px;
 		}
 	}
 
-	.msg-ok {
-		@include admin-msg-ok;
-		margin-bottom: 16px;
+	// Sticky to the bottom of the viewport so the save control is reachable from
+	// anywhere in a long template, and the draft's state is always on screen.
+	.savebar {
+		position: sticky;
+		bottom: 14px;
+		z-index: 4;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		flex-wrap: wrap;
+		margin-bottom: 18px;
+		padding: 10px 10px 10px 16px;
+		background: rgba(255, 255, 255, 0.86);
+		backdrop-filter: blur(10px);
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-pill;
+		box-shadow: $admin-shadow-raised;
+
+		&--dirty {
+			border-color: rgba(122, 84, 5, 0.28);
+		}
 	}
 
-	.msg-err {
-		@include admin-msg-err;
-		margin-bottom: 16px;
+	.savebar__state {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		margin-right: auto;
+		font-size: 12px;
+		font-weight: $font-weight-medium;
+		color: $admin-ink-2;
+	}
+
+	.savebar__dot {
+		width: 7px;
+		height: 7px;
+		border-radius: 50%;
+		flex: none;
+
+		&--good {
+			background: admin-tone-fg('good');
+		}
+
+		&--warn {
+			background: admin-tone-fg('warn');
+		}
+
+		&--bad {
+			background: admin-tone-fg('bad');
+		}
 	}
 
 	.grid {
@@ -1056,7 +1152,7 @@
 		margin: 0;
 		font-size: 12px;
 		line-height: 1.6;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.card__warn {
@@ -1069,7 +1165,7 @@
 	.card__note code,
 	.card__warn code {
 		font-size: 11px;
-		background: #f1f2f4;
+		background: $admin-line-soft;
 		padding: 1px 5px;
 		border-radius: 3px;
 		color: #333;
@@ -1101,13 +1197,13 @@
 			font-weight: $font-weight-regular;
 			text-transform: none;
 			letter-spacing: 0;
-			color: #aaa;
+			color: $admin-ink-3;
 		}
 	}
 
 	.field__hint {
 		font-size: 11px;
-		color: #aaa;
+		color: $admin-ink-3;
 	}
 
 	.row {
@@ -1160,9 +1256,9 @@
 		text-align: center;
 		font-size: 12px;
 		color: #999;
-		background: #fafbfc;
+		background: $admin-sunken;
 		border: 1px dashed #dfe3e8;
-		border-radius: 8px;
+		border-radius: $admin-radius-md;
 	}
 
 	.block {
@@ -1170,9 +1266,9 @@
 		flex-direction: column;
 		gap: 8px;
 		padding: 12px;
-		background: #fafbfc;
-		border: 1px solid #eef0f3;
-		border-radius: 8px;
+		background: $admin-sunken;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-md;
 	}
 
 	.block__head {
@@ -1205,27 +1301,15 @@
 		align-items: center;
 		justify-content: center;
 		font-size: 12px;
-		color: #666;
+		color: $admin-ink-2;
 		background: #fff;
 		border: 1px solid #e0e3e8;
 		border-radius: 5px;
 		cursor: pointer;
 		line-height: 1;
-
-		&:hover:not(:disabled) {
-			background: #f1f3f5;
-			color: #111;
-		}
-
 		&:disabled {
 			opacity: 0.35;
 			cursor: not-allowed;
-		}
-
-		&--danger:hover:not(:disabled) {
-			background: #fdecec;
-			color: #a01515;
-			border-color: #f5c2c2;
 		}
 	}
 
@@ -1252,12 +1336,6 @@
 		border: 1px solid #dfe3e8;
 		border-radius: 999px;
 		cursor: pointer;
-
-		&:hover {
-			background: #f1f3f5;
-			border-color: #c9ced6;
-			color: #111;
-		}
 	}
 
 	.block__icon {
@@ -1267,8 +1345,8 @@
 		width: 18px;
 		height: 18px;
 		font-size: 10px;
-		color: #666;
-		background: #eef0f3;
+		color: $admin-ink-2;
+		background: $admin-line-soft;
 		border-radius: 4px;
 		letter-spacing: 0;
 	}
@@ -1301,7 +1379,7 @@
 		width: 16px;
 		text-align: right;
 		font-size: 12px;
-		color: #aaa;
+		color: $admin-ink-3;
 	}
 
 	// --- insert palette -------------------------------------------------------
@@ -1321,12 +1399,11 @@
 			left: 0;
 			right: 0;
 			height: 1px;
-			background: #e6e8ec;
+			background: $admin-line-soft;
 			opacity: 0;
 			transition: opacity 0.12s ease;
 		}
 
-		&:hover::before,
 		&:focus-within::before,
 		&--open::before {
 			opacity: 1;
@@ -1354,18 +1431,10 @@
 			color 0.12s ease,
 			border-color 0.12s ease;
 
-		.insert:hover &,
 		.insert:focus-within &,
 		.insert--open & {
 			opacity: 1;
-		}
-
-		&:hover {
-			color: #111;
-			border-color: #111;
-		}
-
-		// Touch has no hover to reveal it, so it simply stays visible there.
+		} // Touch has no hover to reveal it, so it simply stays visible there.
 		@media (hover: none) {
 			opacity: 1;
 		}
@@ -1386,7 +1455,7 @@
 		gap: 12px;
 		background: #fff;
 		border: 1px solid #e0e3e8;
-		border-radius: 10px;
+		border-radius: $admin-radius-lg;
 		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
 	}
 
@@ -1396,7 +1465,7 @@
 		font-weight: $font-weight-bold;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		color: #aaa;
+		color: $admin-ink-3;
 	}
 
 	.palette__items {
@@ -1417,15 +1486,10 @@
 		text-align: left;
 		background: transparent;
 		border: 1px solid transparent;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
 		font: inherit;
 		font-family: $font-family-base;
-
-		&:hover {
-			background: #f6f7f9;
-			border-color: #e6e8ec;
-		}
 	}
 
 	.palette__icon {
@@ -1437,7 +1501,7 @@
 		justify-content: center;
 		font-size: 11px;
 		color: #555;
-		background: #f1f2f4;
+		background: $admin-line-soft;
 		border-radius: 5px;
 	}
 
@@ -1477,15 +1541,10 @@
 		font-weight: $font-weight-semibold;
 		color: #111;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 6px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
 		white-space: nowrap;
-
-		&:hover {
-			background: #f3f4f6;
-		}
-
 		input {
 			display: none;
 		}
@@ -1500,7 +1559,7 @@
 	.picker__at {
 		margin: 0;
 		font-size: 11px;
-		color: #aaa;
+		color: $admin-ink-3;
 		word-break: break-all;
 	}
 
@@ -1521,7 +1580,7 @@
 		color: #8a6100;
 		background: #fffdf6;
 		border: 1px solid #f0e2bb;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 	}
 
 	.check {
@@ -1529,9 +1588,9 @@
 		align-items: flex-start;
 		gap: 10px;
 		padding: 11px 12px;
-		background: #fafbfc;
-		border: 1px solid #eef0f3;
-		border-radius: 6px;
+		background: $admin-sunken;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
 
 		input {
@@ -1554,17 +1613,9 @@
 			margin-top: 2px;
 			font-size: 11px;
 			font-style: normal;
-			color: #888;
+			color: $admin-ink-3;
 			line-height: 1.5;
 		}
-	}
-
-	.card__foot {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		flex-wrap: wrap;
-		padding-top: 4px;
 	}
 
 	.btn {
@@ -1583,11 +1634,6 @@
 				cursor: not-allowed;
 			}
 		}
-	}
-
-	.dirty {
-		font-size: 11px;
-		color: #8a6100;
 	}
 
 	.vars {
@@ -1616,11 +1662,6 @@
 		border: 1px solid #dbe3f5;
 		border-radius: 4px;
 		cursor: pointer;
-
-		&:hover:not(:disabled) {
-			background: #e2e9f8;
-		}
-
 		&:disabled {
 			opacity: 0.55;
 			cursor: not-allowed;
@@ -1629,7 +1670,7 @@
 
 	.var__desc {
 		font-size: 11px;
-		color: #888;
+		color: $admin-ink-3;
 		line-height: 1.5;
 	}
 
@@ -1649,8 +1690,8 @@
 
 	.switch {
 		display: inline-flex;
-		background: #f1f2f4;
-		border-radius: 6px;
+		background: $admin-line-soft;
+		border-radius: $admin-radius-sm;
 		padding: 2px;
 	}
 
@@ -1660,7 +1701,7 @@
 		font-family: $font-family-base;
 		font-size: 11px;
 		font-weight: $font-weight-semibold;
-		color: #666;
+		color: $admin-ink-2;
 		background: transparent;
 		border: 0;
 		border-radius: 4px;
@@ -1695,7 +1736,7 @@
 
 	.envelope {
 		padding: 0 18px 14px;
-		border-bottom: 1px solid #eef0f3;
+		border-bottom: 1px solid $admin-line-soft;
 	}
 
 	.envelope__row {
@@ -1711,7 +1752,7 @@
 		span {
 			flex-shrink: 0;
 			width: 52px;
-			color: #aaa;
+			color: $admin-ink-3;
 			font-size: 11px;
 		}
 	}
@@ -1720,7 +1761,7 @@
 		width: 100%;
 		height: 620px;
 		border: 0;
-		background: #f6f7f9;
+		background: $admin-sunken;
 		display: block;
 
 		@include breakpoint-down($bp-lg) {
@@ -1739,7 +1780,7 @@
 		color: #333;
 		white-space: pre-wrap;
 		word-break: break-word;
-		background: #fafbfc;
+		background: $admin-sunken;
 
 		@include breakpoint-down($bp-lg) {
 			height: 70svh;

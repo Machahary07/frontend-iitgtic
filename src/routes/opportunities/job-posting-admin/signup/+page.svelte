@@ -136,7 +136,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: #f6f7f9;
+		background: $admin-sunken;
 		padding: 32px 20px;
 		font-family: $font-family-base;
 	}
@@ -146,8 +146,8 @@
 		max-width: 480px;
 		padding: 32px 28px 28px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
 		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 	}
 
@@ -227,17 +227,13 @@
 	.hint {
 		margin: 8px 0 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 		text-align: center;
 
 		a {
 			color: #2050d4;
 			text-decoration: none;
 			font-weight: $font-weight-semibold;
-
-			&:hover {
-				text-decoration: underline;
-			}
 		}
 	}
 </style>

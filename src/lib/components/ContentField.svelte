@@ -40,7 +40,8 @@
 	// A string field whose name reads as an image gets an uploader with a preview
 	// instead of a bare text box. Takes priority over the long-text branch, since
 	// an uploaded URL can run past the length threshold.
-	const MEDIA_FIELDS = /^(image|logo|photo|avatar|icon|poster|cover|coverImage|thumbnail|background)$/i;
+	const MEDIA_FIELDS =
+		/^(image|logo|photo|avatar|icon|poster|cover|coverImage|thumbnail|background|src)$/i;
 	const isMedia = $derived(
 		(kind === 'text' || kind === 'longtext') && MEDIA_FIELDS.test(String(field))
 	);
@@ -328,9 +329,9 @@
 		display: grid;
 		place-items: center;
 		padding: 6px;
-		border: 1px solid #e6e8ec;
-		border-radius: 8px;
-		background: #f6f7f9;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-md;
+		background: $admin-sunken;
 		overflow: hidden;
 
 		img {
@@ -371,13 +372,8 @@
 		color: #fff;
 		background: #111;
 		border: 1px solid #111;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
-
-		&:hover {
-			background: #000;
-		}
-
 		&--busy {
 			opacity: 0.6;
 			cursor: default;
@@ -386,11 +382,7 @@
 		&--ghost {
 			color: #444;
 			background: #fff;
-			border-color: #d8dbe0;
-
-			&:hover {
-				background: #eef0f3;
-			}
+			border-color: $admin-line;
 		}
 	}
 
@@ -414,17 +406,27 @@
 		}
 	}
 
+	// Nesting used to be grey inside grey, so a group's boundary was invisible.
+	// A tinted accent rail on the left plus a coloured legend chip makes each
+	// level announce where it starts and how deep it sits.
 	.group {
 		grid-column: 1 / -1;
 		margin: 0;
-		padding: 16px;
-		border: 1px solid #e6e8ec;
-		border-radius: 8px;
+		padding: 18px 16px 16px;
+		border: 1px solid $admin-line-soft;
+		border-left: 3px solid admin-tone-fg('info');
+		border-radius: $admin-radius-md;
 		background: #fff;
+		box-shadow: $admin-shadow-card;
 		min-width: 0;
 
 		&--nested {
-			background: #fafbfc;
+			background: linear-gradient(180deg, admin-tone-bg('info') 0%, #fff 78px);
+			border-left-color: admin-tone-fg('violet');
+		}
+
+		&--list {
+			border-left-color: admin-tone-fg('good');
 		}
 	}
 
@@ -432,20 +434,34 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 8px;
-		padding: 0 6px;
+		margin-left: -2px;
+		padding: 4px 11px;
 		font-size: 11px;
-		font-weight: $font-weight-semibold;
-		letter-spacing: 0.07em;
+		font-weight: $font-weight-bold;
+		letter-spacing: 0.09em;
 		text-transform: uppercase;
-		color: #555;
+		color: admin-tone-fg('info');
+		background: admin-tone-bg('info');
+		border-radius: $admin-radius-pill;
+
+		.group--nested > & {
+			color: admin-tone-fg('violet');
+			background: admin-tone-bg('violet');
+		}
+
+		.group--list > & {
+			color: admin-tone-fg('good');
+			background: admin-tone-bg('good');
+		}
 	}
 
 	.group__count {
 		padding: 1px 7px;
 		font-size: 10px;
+		font-weight: $font-weight-bold;
 		letter-spacing: 0;
-		color: #555;
-		background: #eef0f3;
+		color: inherit;
+		background: rgba(255, 255, 255, 0.65);
 		border-radius: 999px;
 	}
 
@@ -462,10 +478,11 @@
 	}
 
 	.item {
-		border: 1px solid #e6e8ec;
-		border-radius: 8px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-md;
 		overflow: hidden;
 		background: #fff;
+		box-shadow: $admin-shadow-card;
 	}
 
 	.item__bar {
@@ -473,15 +490,16 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 12px;
-		padding: 8px 10px 8px 14px;
-		background: #f6f7f9;
-		border-bottom: 1px solid #eef0f3;
+		padding: 10px 10px 10px 14px;
+		color: admin-tone-fg('good');
+		background: admin-tone-bg('good');
+		border-bottom: 1px solid $admin-line-soft;
 	}
 
 	.item__title {
 		font-size: 12.5px;
-		font-weight: $font-weight-semibold;
-		color: #111;
+		font-weight: $font-weight-bold;
+		color: inherit;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -507,14 +525,9 @@
 		font-size: 12px;
 		color: #444;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 6px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
-
-		&:hover:not(:disabled) {
-			background: #eef0f3;
-		}
-
 		&:disabled {
 			opacity: 0.35;
 			cursor: not-allowed;
@@ -523,10 +536,6 @@
 		&--danger {
 			color: #a01515;
 			border-color: #f5c2c2;
-
-			&:hover:not(:disabled) {
-				background: #fdecec;
-			}
 		}
 	}
 
@@ -540,12 +549,7 @@
 		color: #111;
 		background: #fff;
 		border: 1px dashed #c8ccd3;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
-
-		&:hover {
-			background: #f3f4f6;
-			border-color: #111;
-		}
 	}
 </style>

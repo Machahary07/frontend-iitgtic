@@ -9,6 +9,7 @@
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import type { PageData } from './$types';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
+	import { showToast } from '$lib/utils/toast.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -26,7 +27,6 @@
 	const dirty = $derived(JSON.stringify(draft.root) !== saved);
 
 	let saving = $state(false);
-	let message = $state<{ tone: 'ok' | 'err'; text: string } | null>(null);
 
 	// Reload when navigating between sections.
 	let loadedKey = $state(untrack(() => data.section.key));
@@ -35,7 +35,6 @@
 			loadedKey = data.section.key;
 			draft = { root: structuredClone($state.snapshot(data.value)) };
 			saved = JSON.stringify(data.value);
-			message = null;
 		}
 	});
 
@@ -66,7 +65,6 @@
 
 	async function save() {
 		saving = true;
-		message = null;
 		try {
 			const res = await fetch('/api/tic-admin/content', {
 				method: 'PUT',
@@ -79,11 +77,11 @@
 			});
 			if (!res.ok) {
 				const body = (await res.json().catch(() => ({}))) as { message?: string };
-				message = { tone: 'err', text: body.message ?? 'Could not save.' };
+				showToast(body.message ?? 'Could not save.', 'err');
 				return;
 			}
 			saved = JSON.stringify($state.snapshot(draft.root));
-			message = { tone: 'ok', text: 'Saved. The public site is showing this now.' };
+			showToast('Saved. The public site is showing this now.', 'ok');
 			await invalidateAll();
 		} finally {
 			saving = false;
@@ -99,7 +97,7 @@
 		});
 		if (!ok) return;
 		draft = { root: JSON.parse(saved) };
-		message = null;
+		showToast('Changes discarded.', 'ok');
 	}
 
 	async function resetToDefault() {
@@ -116,13 +114,13 @@
 		});
 		saving = false;
 		if (!res.ok) {
-			message = { tone: 'err', text: 'Could not reset the section.' };
+			showToast('Could not reset the section.', 'err');
 			return;
 		}
 		await invalidateAll();
 		draft = { root: structuredClone($state.snapshot(data.value)) };
 		saved = JSON.stringify(data.value);
-		message = { tone: 'ok', text: 'Reset to the default copy.' };
+		showToast('Reset to the default copy.', 'ok');
 	}
 
 	async function handleLogout() {
@@ -137,7 +135,6 @@
 
 <AdminShell
 	brand="TIC Team Admin"
-	brandSub="Internal"
 	navItems={TIC_ADMIN_NAV}
 	title={data.section.label}
 	eyebrow="Content"
@@ -151,10 +148,6 @@
 			{saving ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
 		</button>
 	{/snippet}
-
-	{#if message}
-		<p class="msg msg--{message.tone}" role="status">{message.text}</p>
-	{/if}
 
 	{#if dirty}
 		<p class="dirty" role="status">Unsaved changes.</p>
@@ -188,17 +181,6 @@
 		@include admin-btn-small;
 	}
 
-	.msg {
-		margin: 0 0 14px;
-
-		&--ok {
-			@include admin-msg-ok;
-		}
-		&--err {
-			@include admin-msg-err;
-		}
-	}
-
 	.dirty {
 		margin: 0 0 14px;
 		font-size: 12px;
@@ -206,7 +188,7 @@
 		color: #6a4f00;
 		background: #fff4d4;
 		border: 1px solid #f0e0b0;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 		padding: 8px 12px;
 	}
 
@@ -217,18 +199,18 @@
 		flex-wrap: wrap;
 		margin-top: 24px;
 		padding-top: 18px;
-		border-top: 1px solid #e6e8ec;
+		border-top: 1px solid $admin-line-soft;
 	}
 
 	.foot__note {
 		margin: 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 		max-width: 58ch;
 
 		code {
 			font-size: 11px;
-			background: #eef0f3;
+			background: $admin-line-soft;
 			padding: 1px 5px;
 			border-radius: 3px;
 		}

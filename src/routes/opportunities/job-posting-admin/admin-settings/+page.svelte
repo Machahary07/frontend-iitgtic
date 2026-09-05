@@ -12,6 +12,7 @@
 	} from '$lib/utils/companyAuth';
 	import { onMount } from 'svelte';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
+	import { showToast } from '$lib/utils/toast.svelte';
 
 	let mounted = $state(false);
 	let account = $state<CompanyAccount | null>(null);
@@ -19,12 +20,10 @@
 	let companyName = $state('');
 	let contactName = $state('');
 	let website = $state('');
-	let profileMsg = $state<{ tone: 'ok' | 'err'; text: string } | null>(null);
 
 	let currentPw = $state('');
 	let newPw = $state('');
 	let confirmPw = $state('');
-	let pwMsg = $state<{ tone: 'ok' | 'err'; text: string } | null>(null);
 
 	onMount(async () => {
 		account = await getCurrentCompany();
@@ -42,28 +41,28 @@
 		e.preventDefault();
 		const updated = await updateCurrentCompany({ companyName, contactName, website });
 		if (!updated) {
-			profileMsg = { tone: 'err', text: 'Could not update profile.' };
+			showToast('Could not update profile.', 'err');
 			return;
 		}
 		account = updated;
-		profileMsg = { tone: 'ok', text: 'Profile saved.' };
+		showToast('Profile saved.');
 	}
 
 	async function handlePassword(e: Event) {
 		e.preventDefault();
 		if (newPw !== confirmPw) {
-			pwMsg = { tone: 'err', text: 'New passwords do not match.' };
+			showToast('New passwords do not match.', 'err');
 			return;
 		}
 		const result = await changePassword(currentPw, newPw);
 		if (!result.ok) {
-			pwMsg = { tone: 'err', text: result.error };
+			showToast(result.error, 'err');
 			return;
 		}
 		currentPw = '';
 		newPw = '';
 		confirmPw = '';
-		pwMsg = { tone: 'ok', text: 'Password updated.' };
+		showToast('Password updated.');
 	}
 
 	async function handleDelete() {
@@ -76,7 +75,7 @@
 		if (!ok) return;
 		const removed = await deleteCurrentCompany();
 		if (!removed) {
-			profileMsg = { tone: 'err', text: 'Could not delete the account. Please try again.' };
+			showToast('Could not delete the account. Please try again.', 'err');
 			return;
 		}
 		goto('/opportunities/job-posting-admin');
@@ -126,16 +125,6 @@
 					<input type="url" bind:value={website} placeholder="https://" />
 				</label>
 
-				{#if profileMsg}
-					<p
-						class="msg"
-						class:msg--ok={profileMsg.tone === 'ok'}
-						class:msg--err={profileMsg.tone === 'err'}
-					>
-						{profileMsg.text}
-					</p>
-				{/if}
-
 				<button type="submit" class="btn-primary">Save profile</button>
 			</form>
 
@@ -159,12 +148,6 @@
 					<span>Confirm new password</span>
 					<input type="password" bind:value={confirmPw} autocomplete="new-password" required />
 				</label>
-
-				{#if pwMsg}
-					<p class="msg" class:msg--ok={pwMsg.tone === 'ok'} class:msg--err={pwMsg.tone === 'err'}>
-						{pwMsg.text}
-					</p>
-				{/if}
 
 				<button type="submit" class="btn-primary">Update password</button>
 			</form>
@@ -216,7 +199,7 @@
 	.card__sub {
 		margin: 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 
 		strong {
 			color: #333;
@@ -235,16 +218,6 @@
 
 		input {
 			@include admin-input;
-		}
-	}
-
-	.msg {
-		&--ok {
-			@include admin-msg-ok;
-		}
-
-		&--err {
-			@include admin-msg-err;
 		}
 	}
 

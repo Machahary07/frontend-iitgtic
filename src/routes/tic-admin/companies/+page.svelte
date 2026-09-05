@@ -95,7 +95,6 @@
 
 <AdminShell
 	brand="TIC Team Admin"
-	brandSub="Internal"
 	navItems={TIC_ADMIN_NAV}
 	title="Companies"
 	eyebrow="Moderation"
@@ -238,6 +237,7 @@
 <style lang="scss">
 	@use '$styles/variables' as *;
 	@use '$styles/mixins' as *;
+	@use '$styles/admin' as *;
 
 	.tabs {
 		display: flex;
@@ -257,22 +257,13 @@
 		font-weight: $font-weight-medium;
 		color: #555;
 		background: #fff;
-		border: 1px solid #e6e8ec;
+		border: 1px solid $admin-line-soft;
 		border-radius: 999px;
 		cursor: pointer;
-
-		&:hover {
-			background: #f6f7f9;
-		}
-
 		&--active {
 			color: #fff;
 			background: #111;
 			border-color: #111;
-
-			&:hover {
-				background: #000;
-			}
 		}
 	}
 
@@ -283,8 +274,9 @@
 
 	.panel {
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 		overflow: hidden;
 	}
 
@@ -293,7 +285,7 @@
 		padding: 40px 18px;
 		text-align: center;
 		font-size: 13px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.table-wrap {
@@ -315,14 +307,14 @@
 		font-weight: $font-weight-semibold;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #666;
-		background: #fafbfc;
-		border-bottom: 1px solid #eef0f3;
+		color: $admin-ink-2;
+		background: $admin-sunken;
+		border-bottom: 1px solid $admin-line-soft;
 	}
 
 	tbody td {
 		padding: 12px 14px;
-		border-bottom: 1px solid #f1f2f4;
+		border-bottom: 1px solid $admin-line-soft;
 		vertical-align: top;
 	}
 
@@ -340,7 +332,7 @@
 	.cell__sub {
 		margin: 2px 0 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.cell__reason {
@@ -354,10 +346,6 @@
 		color: #2050d4;
 		font-size: 12px;
 		text-decoration: none;
-
-		&:hover {
-			text-decoration: underline;
-		}
 	}
 
 	.badge {
@@ -405,32 +393,19 @@
 		font-weight: $font-weight-semibold;
 		color: #111;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 6px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
-
-		&:hover {
-			background: #f3f4f6;
-		}
-
 		&--primary {
 			color: #fff;
 			background: #111;
 			border-color: #111;
-
-			&:hover {
-				background: #000;
-			}
 		}
 
 		&--danger {
 			color: #a01515;
 			border-color: #f5c2c2;
 			background: #fff;
-
-			&:hover {
-				background: #fdecec;
-			}
 		}
 	}
 
@@ -459,7 +434,8 @@
 		width: 100%;
 		max-width: 440px;
 		background: #fff;
-		border-radius: 10px;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 		padding: 22px;
 		font-family: $font-family-base;
 
@@ -474,7 +450,7 @@
 	.modal__sub {
 		margin: 0 0 16px;
 		font-size: 13px;
-		color: #666;
+		color: $admin-ink-2;
 	}
 
 	.field {
@@ -497,8 +473,8 @@
 			font-size: 13px;
 			color: #111;
 			background: #fff;
-			border: 1px solid #d8dbe0;
-			border-radius: 6px;
+			border: 1px solid $admin-line;
+			border-radius: $admin-radius-sm;
 			resize: vertical;
 
 			&:focus {

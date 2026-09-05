@@ -5,6 +5,7 @@
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
+	import { showToast } from '$lib/utils/toast.svelte';
 	import type { StoredObject } from '$lib/server/storageUsage';
 	import type { PageData } from './$types';
 
@@ -15,7 +16,6 @@
 
 	let filter = $state<string>('all');
 	let busy = $state<string | null>(null);
-	let notice = $state<{ tone: 'ok' | 'err'; text: string } | null>(null);
 
 	// The lightbox. Private objects have no URL until one is signed, so the
 	// preview holds whatever link it was handed rather than deriving one.
@@ -25,9 +25,7 @@
 	const shown = $derived(filter === 'all' ? objects : objects.filter((o) => o.bucket === filter));
 
 	const usedPct = $derived(
-		snapshot.quotaBytes > 0
-			? Math.min(100, (snapshot.totalBytes / snapshot.quotaBytes) * 100)
-			: 0
+		snapshot.quotaBytes > 0 ? Math.min(100, (snapshot.totalBytes / snapshot.quotaBytes) * 100) : 0
 	);
 	const remaining = $derived(Math.max(0, snapshot.quotaBytes - snapshot.totalBytes));
 	const avgSize = $derived(
@@ -94,7 +92,7 @@
 	async function openInTab(object: StoredObject) {
 		const url = await linkFor(object);
 		if (url) window.open(url, '_blank', 'noopener');
-		else notice = { tone: 'err', text: 'Could not open that file.' };
+		else showToast('Could not open that file.', 'err');
 	}
 
 	async function remove(object: StoredObject) {
@@ -107,7 +105,6 @@
 		if (!first) return;
 
 		busy = object.path;
-		notice = null;
 		try {
 			let res = await send(object, false);
 
@@ -127,11 +124,11 @@
 
 			if (!res.ok) {
 				const body = (await res.json().catch(() => ({}))) as { message?: string };
-				notice = { tone: 'err', text: body.message ?? 'Could not delete that file.' };
+				showToast(body.message ?? 'Could not delete that file.', 'err');
 				return;
 			}
 			if (preview?.object.path === object.path) preview = null;
-			notice = { tone: 'ok', text: `Deleted ${object.name}.` };
+			showToast(`Deleted ${object.name}.`, 'ok');
 			await invalidateAll();
 		} finally {
 			busy = null;
@@ -156,7 +153,6 @@
 
 <AdminShell
 	brand="TIC Team Admin"
-	brandSub="Internal"
 	navItems={TIC_ADMIN_NAV}
 	title="Storage"
 	eyebrow="Files"
@@ -167,17 +163,15 @@
 		<p class="msg msg--err">Could not read storage — {snapshot.problem}</p>
 	{/if}
 
-	{#if notice}
-		<p class="msg" class:msg--err={notice.tone === 'err'} class:msg--ok={notice.tone === 'ok'}>
-			{notice.text}
-		</p>
-	{/if}
-
 	<div class="tiles">
 		<div class="tile">
 			<span class="tile__label">Total used</span>
 			<strong class="tile__value">{fmtBytes(snapshot.totalBytes)}</strong>
-			<span class="tile__sub">{usedPct < 0.1 && snapshot.totalBytes > 0 ? '<0.1' : usedPct.toFixed(1)}% of {fmtBytes(snapshot.quotaBytes)}</span>
+			<span class="tile__sub"
+				>{usedPct < 0.1 && snapshot.totalBytes > 0 ? '<0.1' : usedPct.toFixed(1)}% of {fmtBytes(
+					snapshot.quotaBytes
+				)}</span
+			>
 		</div>
 		<div class="tile">
 			<span class="tile__label">Remaining</span>
@@ -200,10 +194,15 @@
 		<h2 class="panel__title">Storage breakdown</h2>
 
 		<div class="meter" role="img" aria-label="{usedPct.toFixed(1)} percent of the plan limit used">
-			<div class="meter__fill" style="width: {Math.max(usedPct, snapshot.totalBytes > 0 ? 0.6 : 0)}%"></div>
+			<div
+				class="meter__fill"
+				style="width: {Math.max(usedPct, snapshot.totalBytes > 0 ? 0.6 : 0)}%"
+			></div>
 		</div>
 		<p class="meter__caption">
-			{fmtBytes(snapshot.totalBytes)} of {fmtBytes(snapshot.quotaBytes)} used · {fmtBytes(remaining)}
+			{fmtBytes(snapshot.totalBytes)} of {fmtBytes(snapshot.quotaBytes)} used · {fmtBytes(
+				remaining
+			)}
 			left
 		</p>
 
@@ -212,13 +211,20 @@
 				<li class="bucket">
 					<div class="bucket__head">
 						<span class="bucket__name">{bucket.id}</span>
-						<span class="badge" class:badge--good={bucket.public} class:badge--info={!bucket.public}>
+						<span
+							class="badge"
+							class:badge--good={bucket.public}
+							class:badge--info={!bucket.public}
+						>
 							{bucket.public ? 'Public' : 'Private'}
 						</span>
 						<span class="bucket__stat">{bucket.objects} files · {fmtBytes(bucket.bytes)}</span>
 					</div>
 					<div class="bucket__bar">
-						<div class="bucket__bar-fill" style="width: {(bucket.bytes / largestBucket) * 100}%"></div>
+						<div
+							class="bucket__bar-fill"
+							style="width: {(bucket.bytes / largestBucket) * 100}%"
+						></div>
 					</div>
 				</li>
 			{/each}
@@ -270,18 +276,28 @@
 						<div class="file__meta">
 							<span class="file__name" title={object.path}>{object.name}</span>
 							<span class="file__sub">
-								{object.bucket}{object.folder ? ` · ${object.folder}` : ''} · {fmtDate(object.updatedAt)}
+								{object.bucket}{object.folder ? ` · ${object.folder}` : ''} · {fmtDate(
+									object.updatedAt
+								)}
 							</span>
 						</div>
 
-						<span class="badge" class:badge--good={object.referenced} class:badge--warn={!object.referenced}>
+						<span
+							class="badge"
+							class:badge--good={object.referenced}
+							class:badge--warn={!object.referenced}
+						>
 							{object.referenced ? 'In use' : 'Unused'}
 						</span>
 
 						<span class="file__size">{fmtBytes(object.size)}</span>
 
 						<div class="file__actions">
-							<button type="button" class="btn-sm btn-sm--primary" onclick={() => openPreview(object)}>
+							<button
+								type="button"
+								class="btn-sm btn-sm--primary"
+								onclick={() => openPreview(object)}
+							>
 								Preview
 							</button>
 							<button type="button" class="btn-sm" onclick={() => openInTab(object)}>Open</button>
@@ -320,9 +336,17 @@
 			<header class="lightbox__bar">
 				<div class="lightbox__id">
 					<strong>{preview.object.name}</strong>
-					<span>{preview.object.bucket} · {fmtBytes(preview.object.size)} · {preview.object.mimeType}</span>
+					<span
+						>{preview.object.bucket} · {fmtBytes(preview.object.size)} · {preview.object
+							.mimeType}</span
+					>
 				</div>
-				<button type="button" class="lightbox__close" onclick={() => (preview = null)} aria-label="Close">
+				<button
+					type="button"
+					class="lightbox__close"
+					onclick={() => (preview = null)}
+					aria-label="Close"
+				>
 					✕
 				</button>
 			</header>
@@ -351,9 +375,6 @@
 
 	.msg {
 		margin: 0 0 16px;
-		&--ok {
-			@include admin-msg-ok;
-		}
 		&--err {
 			@include admin-msg-err;
 		}
@@ -385,23 +406,24 @@
 
 	.tile__sub {
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.panel {
 		@include admin-panel;
+		padding: 20px;
 		margin-bottom: 20px;
 	}
 
 	.panel__title {
 		@include admin-section-title;
-		margin: 0;
+		margin: 0 0 14px;
 	}
 
 	.meter {
 		height: 10px;
 		border-radius: 999px;
-		background: #eef0f3;
+		background: $admin-line-soft;
 		overflow: hidden;
 	}
 
@@ -412,14 +434,14 @@
 	}
 
 	.meter__caption {
-		margin: 0;
+		margin: 10px 0 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.buckets {
 		list-style: none;
-		margin: 8px 0 0;
+		margin: 20px 0 0;
 		padding: 0;
 		display: flex;
 		flex-direction: column;
@@ -443,7 +465,7 @@
 	.bucket__stat {
 		margin-left: auto;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.bucket__bar {
@@ -494,6 +516,7 @@
 
 	.empty {
 		@include admin-empty;
+		padding: 24px 0;
 		text-align: left;
 	}
 
@@ -518,10 +541,15 @@
 		display: flex;
 		align-items: center;
 		gap: 14px;
-		padding: 12px 0;
+		padding: 14px 0;
 		border-bottom: 1px solid #f0f1f4;
 
+		&:first-child {
+			padding-top: 2px;
+		}
+
 		&:last-child {
+			padding-bottom: 2px;
 			border-bottom: 0;
 		}
 
@@ -537,9 +565,9 @@
 		padding: 0;
 		display: grid;
 		place-items: center;
-		background: #f6f7f9;
-		border: 1px solid #e6e8ec;
-		border-radius: 8px;
+		background: $admin-sunken;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-md;
 		overflow: hidden;
 		cursor: pointer;
 
@@ -581,7 +609,7 @@
 
 	.file__sub {
 		font-size: 11.5px;
-		color: #888;
+		color: $admin-ink-3;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -645,7 +673,7 @@
 		align-items: flex-start;
 		gap: 16px;
 		padding: 16px 18px;
-		border-bottom: 1px solid #eef0f3;
+		border-bottom: 1px solid $admin-line-soft;
 	}
 
 	.lightbox__id {
@@ -661,7 +689,7 @@
 
 		span {
 			font-size: 12px;
-			color: #888;
+			color: $admin-ink-3;
 		}
 	}
 
@@ -674,14 +702,9 @@
 		font-size: 14px;
 		color: #444;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 8px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-md;
 		cursor: pointer;
-
-		&:hover {
-			background: #eef0f3;
-		}
-
 		&:focus-visible {
 			outline: 2px solid #111;
 			outline-offset: 2px;
@@ -694,7 +717,7 @@
 		display: grid;
 		place-items: center;
 		padding: 20px;
-		background: #f6f7f9;
+		background: $admin-sunken;
 		overflow: auto;
 
 		img {

@@ -12,6 +12,7 @@
 	import { Navbar, EventBar, Footer } from '$lib';
 	import Seo from '$lib/components/Seo.svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+	import Toast from '$lib/components/Toast.svelte';
 	import { setContent } from '$lib/content';
 	import type { LayoutData } from './$types';
 
@@ -54,8 +55,9 @@
 {/if}
 
 <!-- Mounted once for the whole app, admin and public alike, so any component can
-     ask a question without shipping its own modal. -->
+     ask a question or raise a toast without shipping its own modal. -->
 <ConfirmDialog />
+<Toast />
 
 <style lang="scss">
 	main {

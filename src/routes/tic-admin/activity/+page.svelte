@@ -11,6 +11,11 @@
 		type Impression,
 		type PageViewEntry
 	} from '$lib/utils/ticAdmin';
+	import Plus from '@lucide/svelte/icons/plus';
+	import PencilLine from '@lucide/svelte/icons/pencil-line';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import Dot from '@lucide/svelte/icons/dot';
+	import Info from '@lucide/svelte/icons/info';
 	import type { PageData } from './$types';
 
 	type View = 'audit' | 'impressions';
@@ -29,10 +34,9 @@
 	let loadingMore = $state(false);
 	let exhausted = $state(false);
 	let expanded = $state<number | null>(null);
+	let showAbout = $state(false);
 
-	const entries = $derived(
-		filteredEntries ?? [...(data.entries as AuditEntry[]), ...extraEntries]
-	);
+	const entries = $derived(filteredEntries ?? [...(data.entries as AuditEntry[]), ...extraEntries]);
 
 	const TABLES = ['all', 'companies', 'jobs', 'applications', 'profiles'];
 
@@ -144,6 +148,54 @@
 		});
 	}
 
+	// Rows are grouped under a day heading, so each one only needs its clock time.
+	function fmtClock(iso: string) {
+		return new Date(iso).toLocaleTimeString('en-GB', {
+			hour: '2-digit',
+			minute: '2-digit',
+			second: '2-digit'
+		});
+	}
+
+	function dayLabel(iso: string) {
+		const date = new Date(iso);
+		const midnight = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+		const days = Math.round((midnight(new Date()) - midnight(date)) / 86400000);
+		if (days === 0) return 'Today';
+		if (days === 1) return 'Yesterday';
+		return date.toLocaleDateString('en-GB', {
+			weekday: 'short',
+			day: 'numeric',
+			month: 'short',
+			year: date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric'
+		});
+	}
+
+	// A day at a time, because a flat list repeats the same date on every row and
+	// the eye has nothing to anchor on.
+	const days = $derived.by(() => {
+		const out: { key: string; label: string; items: AuditEntry[] }[] = [];
+		for (const entry of entries) {
+			const key = new Date(entry.occurred_at).toDateString();
+			const last = out[out.length - 1];
+			if (last?.key === key) last.items.push(entry);
+			else out.push({ key, label: dayLabel(entry.occurred_at), items: [entry] });
+		}
+		return out;
+	});
+
+	// `action` is free text written by the triggers, so the tint is read off the
+	// verb. Presentation only — nothing branches on this.
+	function actionTone(action: string): 'good' | 'warn' | 'bad' | 'info' {
+		const a = action.toLowerCase();
+		if (/\b(delete|deleted|remove|removed|drop)\b/.test(a)) return 'bad';
+		if (/\b(insert|create|created|add|added|new)\b/.test(a)) return 'good';
+		if (/\b(update|updated|change|changed|edit|edited|set)\b/.test(a)) return 'warn';
+		return 'info';
+	}
+
+	const TONE_ICONS = { good: Plus, warn: PencilLine, bad: Trash2, info: Dot } as const;
+
 	// The interesting part of an update is what actually moved, not the whole row.
 	function changedFields(entry: AuditEntry): { field: string; from: unknown; to: unknown }[] {
 		if (!entry.before || !entry.after) return [];
@@ -169,61 +221,94 @@
 </svelte:head>
 
 <AdminShell
-		brand="TIC Team Admin"
-		brandSub="Internal"
-		navItems={TIC_ADMIN_NAV}
-		title="Activity"
-		eyebrow="Audit & traffic"
-		user={adminName}
-		onLogout={handleLogout}
-	>
-		<div class="tabs">
-			<button class="tab" class:tab--active={view === 'audit'} onclick={() => (view = 'audit')}>
-				Audit log
-			</button>
+	brand="TIC Team Admin"
+	navItems={TIC_ADMIN_NAV}
+	title="Activity"
+	eyebrow="Audit & traffic"
+	user={adminName}
+	onLogout={handleLogout}
+>
+	<div class="tabs">
+		<button class="tab" class:tab--active={view === 'audit'} onclick={() => (view = 'audit')}>
+			Audit log
+		</button>
+		<button
+			class="tab"
+			class:tab--active={view === 'impressions'}
+			onclick={() => (view = 'impressions')}
+		>
+			Page impressions
+		</button>
+	</div>
+
+	{#if view === 'audit'}
+		<div class="filters">
+			{#each TABLES as table (table)}
+				<button
+					class="chip"
+					class:chip--active={auditTable === table}
+					onclick={() => reloadAudit(table)}
+				>
+					{table}
+				</button>
+			{/each}
+
+			<!-- The explanation is worth keeping but not worth permanent space: it is
+			     read once to understand the model, then never again. -->
 			<button
-				class="tab"
-				class:tab--active={view === 'impressions'}
-				onclick={() => (view = 'impressions')}
+				class="about-toggle"
+				aria-expanded={showAbout}
+				aria-controls="audit-about"
+				onclick={() => (showAbout = !showAbout)}
 			>
-				Page impressions
+				<Info size={14} strokeWidth={2} />
+				<span>How this log works</span>
 			</button>
 		</div>
 
-		{#if view === 'audit'}
-			<p class="note">
-				Written by database triggers, so a row changed anywhere — this console, the company
-				portal, or the SQL editor — is recorded. Entries cannot be edited or deleted from the app.
+		{#if showAbout}
+			<p class="note" id="audit-about">
+				Written by database triggers, so a row changed anywhere — this console, the company portal,
+				or the SQL editor — is recorded. Entries cannot be edited or deleted from the app.
 			</p>
+		{/if}
 
-			<div class="filters">
-				{#each TABLES as table (table)}
-					<button
-						class="chip"
-						class:chip--active={auditTable === table}
-						onclick={() => reloadAudit(table)}
-					>
-						{table}
-					</button>
-				{/each}
-			</div>
-
-			<div class="panel">
-				{#if entries.length === 0}
-					<p class="empty">Nothing recorded yet.</p>
-				{:else}
+		<div class="panel">
+			{#if entries.length === 0}
+				<p class="empty">Nothing recorded yet.</p>
+			{:else}
+				{#each days as day (day.key)}
+					<h3 class="daybar">
+						<span>{day.label}</span>
+						<span class="daybar__count">{day.items.length}</span>
+					</h3>
 					<ul class="feed">
-						{#each entries as entry (entry.id)}
+						{#each day.items as entry (entry.id)}
 							{@const changes = changedFields(entry)}
+							{@const tone = actionTone(entry.action)}
+							{@const ToneIcon = TONE_ICONS[tone]}
 							<li class="event">
+								<span
+									class="event__icon"
+									style="--tile-bg: var(--admin-tone-{tone}-bg); --tile-fg: var(--admin-tone-{tone}-fg);"
+									aria-hidden="true"
+								>
+									<ToneIcon size={15} strokeWidth={2.1} />
+								</span>
+
 								<div class="event__main">
 									<div class="event__line">
-										<span class="who">{entry.actor_label}</span>
+										<span class="who" class:who--system={entry.actor_label === 'system'}>
+											{entry.actor_label}
+										</span>
 										<span class="what">{entry.action}</span>
 										<span class="src src--{entry.source}">{entry.source}</span>
 									</div>
 									<p class="event__meta">
-										{fmtTime(entry.occurred_at)}
+										<time datetime={entry.occurred_at} title={fmtTime(entry.occurred_at)}>
+											{fmtClock(entry.occurred_at)}
+										</time>
+										{#if entry.table_name}· {entry.table_name}{/if}
 										{#if entry.record_id}· <code>{entry.record_id.slice(0, 8)}</code>{/if}
 									</p>
 									{#if changes.length > 0 && expanded !== entry.id}
@@ -235,9 +320,11 @@
 										</p>
 									{/if}
 								</div>
+
 								{#if entry.before || entry.after}
 									<button
 										class="btn"
+										aria-expanded={expanded === entry.id}
 										onclick={() => (expanded = expanded === entry.id ? null : entry.id)}
 									>
 										{expanded === entry.id ? 'Hide' : 'Detail'}
@@ -269,107 +356,120 @@
 							</li>
 						{/each}
 					</ul>
-				{/if}
-			</div>
-
-			{#if entries.length > 0 && !exhausted}
-				<button class="btn load-more" onclick={loadMore} disabled={loadingMore}>
-					{loadingMore ? 'Loading…' : 'Load older entries'}
-				</button>
+				{/each}
 			{/if}
-		{:else}
-			<div class="impressions__head">
-				<div>
-					<h2 class="impressions__title">Page impressions</h2>
-					<p class="impressions__sub">
-						{compact(totals.views)} views · {compact(totals.visitors)} visitors · {compact(
-							totals.bots
-						)} bot hits across {totals.pages} pages
-					</p>
-				</div>
-				<div class="range" role="group" aria-label="Time range">
-					<button class="range__opt" class:range__opt--on={range === 'all'} onclick={() => changeRange('all')}>
-						All time
-					</button>
-					<button class="range__opt" class:range__opt--on={range === '30d'} onclick={() => changeRange('30d')}>
-						30 days
-					</button>
-					<button class="range__opt" class:range__opt--on={range === '7d'} onclick={() => changeRange('7d')}>
-						7 days
-					</button>
-				</div>
-			</div>
+		</div>
 
-			{#if loadingRange}
-				<p class="empty">Loading…</p>
-			{:else if impressions.length === 0}
-				<div class="panel">
-					<p class="empty">No page views recorded in this window yet.</p>
-				</div>
-			{:else}
-				<div class="cards">
-					{#each impressions as row (row.path)}
-						<article class="metric" class:metric--admin={row.is_admin}>
-							<header class="metric__head">
-								<h3 class="metric__title" title={row.path}>{pageTitle(row.path)}</h3>
-								{#if row.is_admin}<span class="metric__tag">admin</span>{/if}
-							</header>
-							<p class="metric__path">{row.path}</p>
-							<p class="metric__value">
-								{compact(row.total)}<span class="metric__unit">total</span>
-							</p>
-							<div class="metric__stats">
-								<span class="stat stat--people" title="Unique human visitors">
-									<svg viewBox="0 0 16 16" aria-hidden="true"
-										><path
-											d="M8 8a3 3 0 100-6 3 3 0 000 6zm0 1.5c-3 0-5 1.6-5 3.3V14h10v-1.2c0-1.7-2-3.3-5-3.3z"
-										/></svg
-									>
-									{compact(row.visitors)}
-								</span>
-								<span class="stat stat--bots" title="Requests from bots and crawlers">
-									<svg viewBox="0 0 16 16" aria-hidden="true"
-										><path
-											d="M8 1v2M4 5h8a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2zm2 3v2m4-2v2"
-											fill="none"
-											stroke="currentColor"
-											stroke-width="1.4"
-											stroke-linecap="round"
-										/></svg
-									>
-									{compact(row.bots)}
-								</span>
-							</div>
-						</article>
-					{/each}
-				</div>
-			{/if}
-
-			<section class="card recent">
-				<h2>Recent visits</h2>
-				{#if recent.length === 0}
-					<p class="empty">No visits recorded yet.</p>
-				{:else}
-					<ul class="paths">
-						{#each recent as visit (visit.id)}
-							<li class="path">
-								<div class="path__main">
-									<span class="path__name">{visit.path}</span>
-									{#if visit.actor_label}
-										<span class="path__who">{visit.actor_label}</span>
-									{:else}
-										<span class="path__who path__who--anon">
-											visitor {visit.visitor_id.slice(0, 6)}
-										</span>
-									{/if}
-								</div>
-								<span class="path__count">{fmtTime(visit.occurred_at)}</span>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			</section>
+		{#if entries.length > 0 && !exhausted}
+			<button class="btn load-more" onclick={loadMore} disabled={loadingMore}>
+				{loadingMore ? 'Loading…' : 'Load older entries'}
+			</button>
 		{/if}
+	{:else}
+		<div class="impressions__head">
+			<div>
+				<h2 class="impressions__title">Page impressions</h2>
+				<p class="impressions__sub">
+					{compact(totals.views)} views · {compact(totals.visitors)} visitors · {compact(
+						totals.bots
+					)} bot hits across {totals.pages} pages
+				</p>
+			</div>
+			<div class="range" role="group" aria-label="Time range">
+				<button
+					class="range__opt"
+					class:range__opt--on={range === 'all'}
+					onclick={() => changeRange('all')}
+				>
+					All time
+				</button>
+				<button
+					class="range__opt"
+					class:range__opt--on={range === '30d'}
+					onclick={() => changeRange('30d')}
+				>
+					30 days
+				</button>
+				<button
+					class="range__opt"
+					class:range__opt--on={range === '7d'}
+					onclick={() => changeRange('7d')}
+				>
+					7 days
+				</button>
+			</div>
+		</div>
+
+		{#if loadingRange}
+			<p class="empty">Loading…</p>
+		{:else if impressions.length === 0}
+			<div class="panel">
+				<p class="empty">No page views recorded in this window yet.</p>
+			</div>
+		{:else}
+			<div class="cards">
+				{#each impressions as row (row.path)}
+					<article class="metric" class:metric--admin={row.is_admin}>
+						<header class="metric__head">
+							<h3 class="metric__title" title={row.path}>{pageTitle(row.path)}</h3>
+							{#if row.is_admin}<span class="metric__tag">admin</span>{/if}
+						</header>
+						<p class="metric__path">{row.path}</p>
+						<p class="metric__value">
+							{compact(row.total)}<span class="metric__unit">total</span>
+						</p>
+						<div class="metric__stats">
+							<span class="stat stat--people" title="Unique human visitors">
+								<svg viewBox="0 0 16 16" aria-hidden="true"
+									><path
+										d="M8 8a3 3 0 100-6 3 3 0 000 6zm0 1.5c-3 0-5 1.6-5 3.3V14h10v-1.2c0-1.7-2-3.3-5-3.3z"
+									/></svg
+								>
+								{compact(row.visitors)}
+							</span>
+							<span class="stat stat--bots" title="Requests from bots and crawlers">
+								<svg viewBox="0 0 16 16" aria-hidden="true"
+									><path
+										d="M8 1v2M4 5h8a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2zm2 3v2m4-2v2"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="1.4"
+										stroke-linecap="round"
+									/></svg
+								>
+								{compact(row.bots)}
+							</span>
+						</div>
+					</article>
+				{/each}
+			</div>
+		{/if}
+
+		<section class="card recent">
+			<h2>Recent visits</h2>
+			{#if recent.length === 0}
+				<p class="empty">No visits recorded yet.</p>
+			{:else}
+				<ul class="paths">
+					{#each recent as visit (visit.id)}
+						<li class="path">
+							<div class="path__main">
+								<span class="path__name">{visit.path}</span>
+								{#if visit.actor_label}
+									<span class="path__who">{visit.actor_label}</span>
+								{:else}
+									<span class="path__who path__who--anon">
+										visitor {visit.visitor_id.slice(0, 6)}
+									</span>
+								{/if}
+							</div>
+							<span class="path__count">{fmtTime(visit.occurred_at)}</span>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+	{/if}
 </AdminShell>
 
 <style lang="scss">
@@ -393,22 +493,47 @@
 	}
 
 	.note {
-		margin: 0 0 14px;
+		margin: 0 0 16px;
 		font-size: 12px;
-		color: #666;
-		padding: 10px 12px;
-		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-left: 3px solid #2050d4;
-		border-radius: 6px;
+		line-height: 1.6;
+		color: $admin-ink-2;
+		padding: 12px 16px;
+		background: admin-tone-bg('info');
+		border: 0;
+		border-radius: $admin-radius-md;
 		max-width: 78ch;
+	}
+
+	.about-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		margin-left: auto;
+		padding: 5px 12px;
+		font: inherit;
+		font-family: $font-family-base;
+		font-size: 12px;
+		font-weight: $font-weight-medium;
+		color: $admin-ink-3;
+		background: transparent;
+		border: 1px solid transparent;
+		border-radius: $admin-radius-pill;
+		cursor: pointer;
+		@include admin-focus-ring;
+
+		&[aria-expanded='true'] {
+			color: $admin-accent;
+			border-color: $admin-line;
+			background: #fff;
+		}
 	}
 
 	.filters {
 		display: flex;
+		align-items: center;
 		gap: 6px;
 		flex-wrap: wrap;
-		margin-bottom: 14px;
+		margin-bottom: 16px;
 	}
 
 	.chip {
@@ -419,19 +544,46 @@
 		font-weight: $font-weight-medium;
 		color: #555;
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 6px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-pill;
 		cursor: pointer;
-
-		&:hover {
-			background: #f6f7f9;
-		}
+		text-transform: capitalize;
+		@include admin-focus-ring;
 
 		&--active {
-			color: #111;
-			border-color: #111;
+			color: $color-white;
+			background: $admin-ink;
+			border-color: $admin-ink;
 			font-weight: $font-weight-semibold;
 		}
+	}
+
+	// Sticky so the day you are reading stays named while you scroll a long log.
+	.daybar {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 0;
+		padding: 9px 18px;
+		font-size: 11px;
+		font-weight: $font-weight-bold;
+		letter-spacing: 0.09em;
+		text-transform: uppercase;
+		color: $admin-ink-2;
+		background: $admin-sunken;
+		border-bottom: 1px solid $admin-line-soft;
+	}
+
+	.daybar__count {
+		padding: 1px 8px;
+		font-size: 10px;
+		letter-spacing: 0;
+		color: $admin-ink-3;
+		background: #fff;
+		border-radius: $admin-radius-pill;
 	}
 
 	.feed {
@@ -442,14 +594,25 @@
 
 	.event {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
-		gap: 8px 14px;
-		padding: 12px 14px;
-		border-bottom: 1px solid #f1f2f4;
+		grid-template-columns: auto minmax(0, 1fr) auto;
+		align-items: start;
+		gap: 8px 13px;
+		padding: 13px 18px;
+		border-bottom: 1px solid $admin-line-soft;
 
 		&:last-child {
 			border-bottom: 0;
 		}
+	}
+
+	// Tints the row by what happened, so deletes read differently from edits at
+	// a glance instead of every line looking the same.
+	.event__icon {
+		@include admin-icon-tile('neutral', 28px);
+		background: var(--tile-bg);
+		color: var(--tile-fg);
+		border-radius: $admin-radius-sm;
+		margin-top: 1px;
 	}
 
 	.event__main {
@@ -466,7 +629,14 @@
 	.who {
 		font-size: 13px;
 		font-weight: $font-weight-semibold;
-		color: #111;
+		color: $admin-ink;
+
+		// A trigger-written row is not a person; it should not look like one.
+		&--system {
+			font-weight: $font-weight-medium;
+			color: $admin-ink-3;
+			font-variant: small-caps;
+		}
 	}
 
 	.what {
@@ -483,7 +653,7 @@
 		border-radius: 999px;
 
 		&--trigger {
-			background: #eef0f3;
+			background: $admin-line-soft;
 			color: #555;
 		}
 
@@ -496,11 +666,12 @@
 	.event__meta {
 		margin: 3px 0 0;
 		font-size: 11px;
-		color: #999;
+		color: $admin-ink-3;
+		font-variant-numeric: tabular-nums;
 
 		code {
 			font-size: 11px;
-			background: #f1f2f4;
+			background: $admin-line-soft;
 			padding: 1px 4px;
 			border-radius: 3px;
 		}
@@ -509,16 +680,16 @@
 	.event__fields {
 		margin: 4px 0 0;
 		font-size: 11px;
-		color: #777;
+		color: $admin-ink-3;
 		overflow-wrap: anywhere;
 	}
 
 	.detail {
 		grid-column: 1 / -1;
 		overflow-x: auto;
-		background: #fafbfc;
-		border: 1px solid #eef0f3;
-		border-radius: 6px;
+		background: $admin-sunken;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-sm;
 		padding: 10px;
 
 		pre {
@@ -540,14 +711,14 @@
 			font-size: 10px;
 			letter-spacing: 0.07em;
 			text-transform: uppercase;
-			color: #888;
+			color: $admin-ink-3;
 		}
 
 		td {
 			padding: 4px 8px;
 			vertical-align: top;
 			overflow-wrap: anywhere;
-			border-top: 1px solid #eef0f3;
+			border-top: 1px solid $admin-line-soft;
 		}
 	}
 
@@ -595,15 +766,15 @@
 	.impressions__sub {
 		margin: 4px 0 0;
 		font-size: 12.5px;
-		color: #777;
+		color: $admin-ink-3;
 		font-variant-numeric: tabular-nums;
 	}
 
 	.range {
 		display: inline-flex;
 		padding: 3px;
-		background: #eef0f3;
-		border-radius: 8px;
+		background: $admin-line-soft;
+		border-radius: $admin-radius-md;
 		gap: 2px;
 	}
 
@@ -616,13 +787,8 @@
 		color: #555;
 		background: transparent;
 		border: 0;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
-
-		&:hover {
-			color: #111;
-		}
-
 		&--on {
 			color: #111;
 			background: #fff;
@@ -644,8 +810,9 @@
 		gap: 2px;
 		padding: 16px 18px 14px;
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 		font-family: $font-family-base;
 
 		&--admin {
@@ -725,7 +892,7 @@
 		padding: 4px 9px;
 		font-size: 11.5px;
 		font-weight: $font-weight-semibold;
-		border-radius: 6px;
+		border-radius: $admin-radius-sm;
 		font-variant-numeric: tabular-nums;
 
 		svg {
@@ -774,7 +941,7 @@
 		justify-content: space-between;
 		gap: 14px;
 		padding: 8px 0;
-		border-bottom: 1px solid #f1f2f4;
+		border-bottom: 1px solid $admin-line-soft;
 
 		&:last-child {
 			border-bottom: 0;
@@ -796,11 +963,11 @@
 
 	.path__who {
 		font-size: 11px;
-		color: #666;
+		color: $admin-ink-2;
 		white-space: nowrap;
 
 		&--anon {
-			color: #aaa;
+			color: $admin-ink-3;
 		}
 	}
 

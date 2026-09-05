@@ -14,6 +14,7 @@
 	import { downloadCsv, stampedFileName, toCsv } from '$lib/utils/csv';
 	import type { PageData } from './$types';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
+	import { showToast } from '$lib/utils/toast.svelte';
 
 	type Filter = 'all' | JobApplicationStatus;
 
@@ -49,7 +50,6 @@
 	});
 
 	let busy = $state('');
-	let notice = $state('');
 
 	async function setStatus(id: string, status: JobApplicationStatus) {
 		await adminSetJobApplicationStatus(id, status);
@@ -60,11 +60,10 @@
 	// export is the free-text answers and the contact details.
 	async function handleExport() {
 		busy = 'export';
-		notice = '';
 		try {
 			const rows = await adminExportJobApplications(role === 'all' ? undefined : role);
 			if (rows.length === 0) {
-				notice = 'Nothing to export in this view.';
+				showToast('Nothing to export in this view.', 'info');
 				return;
 			}
 
@@ -109,7 +108,7 @@
 				stampedFileName('applicants', role === 'all' ? 'all-roles' : roleLabel(role)),
 				csv
 			);
-			notice = `Exported ${rows.length} applicant${rows.length === 1 ? '' : 's'}.`;
+			showToast(`Exported ${rows.length} applicant${rows.length === 1 ? '' : 's'}.`);
 		} finally {
 			busy = '';
 		}
@@ -131,14 +130,13 @@
 		if (!ok) return;
 
 		busy = 'clear';
-		notice = '';
 		try {
 			const deleted = await adminClearJobApplicants(role);
 			if (deleted === null) {
-				notice = 'Could not clear that role. Nothing was deleted.';
+				showToast('Could not clear that role. Nothing was deleted.', 'err');
 				return;
 			}
-			notice = `Deleted ${deleted} applicant${deleted === 1 ? '' : 's'} and their resumes.`;
+			showToast(`Deleted ${deleted} applicant${deleted === 1 ? '' : 's'} and their resumes.`);
 			role = 'all';
 			await invalidateAll();
 		} finally {
@@ -166,7 +164,6 @@
 
 <AdminShell
 	brand="TIC Team Admin"
-	brandSub="Internal"
 	navItems={TIC_ADMIN_NAV}
 	title="Role applicants"
 	eyebrow="Opportunities"
@@ -227,10 +224,6 @@
 			{/if}
 		</div>
 	</div>
-
-	{#if notice}
-		<p class="notice" role="status">{notice}</p>
-	{/if}
 
 	<div class="panel">
 		{#if filtered.length === 0}
@@ -319,6 +312,7 @@
 
 <style lang="scss">
 	@use '$styles/variables' as *;
+	@use '$styles/admin' as *;
 
 	.controls {
 		display: flex;
@@ -346,22 +340,13 @@
 		font-weight: $font-weight-medium;
 		color: #555;
 		background: #fff;
-		border: 1px solid #e6e8ec;
+		border: 1px solid $admin-line-soft;
 		border-radius: 999px;
 		cursor: pointer;
-
-		&:hover {
-			background: #f6f7f9;
-		}
-
 		&--active {
 			color: #fff;
 			background: #111;
 			border-color: #111;
-
-			&:hover {
-				background: #000;
-			}
 		}
 	}
 
@@ -382,8 +367,8 @@
 			padding: 7px 10px;
 			color: #111;
 			background: #fff;
-			border: 1px solid #e6e8ec;
-			border-radius: 6px;
+			border: 1px solid $admin-line-soft;
+			border-radius: $admin-radius-sm;
 			max-width: 260px;
 		}
 	}
@@ -393,7 +378,7 @@
 		font-weight: $font-weight-semibold;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #666;
+		color: $admin-ink-2;
 	}
 
 	.retention {
@@ -402,21 +387,11 @@
 		gap: 8px;
 	}
 
-	.notice {
-		margin: 0 0 16px;
-		padding: 8px 12px;
-		font-family: $font-family-base;
-		font-size: 13px;
-		color: #24427e;
-		background: #eef2fb;
-		border-left: 2px solid #24427e;
-		border-radius: 4px;
-	}
-
 	.panel {
 		background: #fff;
-		border: 1px solid #e6e8ec;
-		border-radius: 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-lg;
+		box-shadow: $admin-shadow-card;
 		overflow: hidden;
 	}
 
@@ -425,7 +400,7 @@
 		padding: 40px 18px;
 		text-align: center;
 		font-size: 13px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.empty-state {
@@ -445,7 +420,7 @@
 		max-width: 400px;
 		font-size: 13px;
 		line-height: 1.6;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.table-wrap {
@@ -467,14 +442,14 @@
 		font-weight: $font-weight-semibold;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		color: #666;
-		background: #fafbfc;
-		border-bottom: 1px solid #eef0f3;
+		color: $admin-ink-2;
+		background: $admin-sunken;
+		border-bottom: 1px solid $admin-line-soft;
 	}
 
 	tbody td {
 		padding: 12px 14px;
-		border-bottom: 1px solid #f1f2f4;
+		border-bottom: 1px solid $admin-line-soft;
 		vertical-align: top;
 	}
 
@@ -492,13 +467,13 @@
 	.cell__sub {
 		margin: 2px 0 0;
 		font-size: 12px;
-		color: #777;
+		color: $admin-ink-3;
 	}
 
 	.cell__reason {
 		margin: 6px 0 0;
 		font-size: 11px;
-		color: #666;
+		color: $admin-ink-2;
 		max-width: 220px;
 	}
 
@@ -506,10 +481,6 @@
 		color: #2050d4;
 		font-size: 12px;
 		text-decoration: none;
-
-		&:hover {
-			text-decoration: underline;
-		}
 	}
 
 	.badge {
@@ -562,14 +533,9 @@
 		font-weight: $font-weight-semibold;
 		color: #111;
 		background: #fff;
-		border: 1px solid #d8dbe0;
-		border-radius: 6px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
 		cursor: pointer;
-
-		&:hover {
-			background: #f3f4f6;
-		}
-
 		&:disabled {
 			opacity: 0.55;
 			cursor: not-allowed;
@@ -579,20 +545,12 @@
 			color: #fff;
 			background: #111;
 			border-color: #111;
-
-			&:hover {
-				background: #000;
-			}
 		}
 
 		&--danger {
 			color: #a01515;
 			border-color: #f5c2c2;
 			background: #fff;
-
-			&:hover {
-				background: #fdecec;
-			}
 		}
 	}
 </style>
