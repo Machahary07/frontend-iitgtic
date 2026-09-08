@@ -14,6 +14,7 @@ import Activity from '@lucide/svelte/icons/activity';
 import FilePen from '@lucide/svelte/icons/file-pen-line';
 import Mail from '@lucide/svelte/icons/mail';
 import HardDrive from '@lucide/svelte/icons/hard-drive';
+import LifeBuoy from '@lucide/svelte/icons/life-buoy';
 
 import type { NavItem } from '$lib/utils/adminNavTypes';
 
@@ -34,5 +35,7 @@ export const TIC_ADMIN_NAV: NavItem[] = [
 	{ separator: true as const },
 	{ label: 'Content', href: '/tic-admin/content', icon: FilePen, tone: 'violet' },
 	{ label: 'Email', href: '/tic-admin/email', icon: Mail, tone: 'good' },
-	{ label: 'Storage', href: '/tic-admin/storage', icon: HardDrive, tone: 'bad' }
+	{ label: 'Storage', href: '/tic-admin/storage', icon: HardDrive, tone: 'bad' },
+	{ separator: true as const },
+	{ label: 'Support', href: '/tic-admin/support', icon: LifeBuoy, tone: 'neutral' }
 ];

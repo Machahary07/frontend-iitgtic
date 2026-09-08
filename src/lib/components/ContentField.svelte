@@ -47,6 +47,16 @@
 	);
 	const preview = $derived(resolveMedia(value as string | null));
 
+	// Contact details are still plain strings, but typing the input gives the
+	// right on-screen keyboard on a phone and shows the expected format.
+	const CONTACT_FIELDS: Record<string, { type: 'email' | 'tel'; placeholder: string }> = {
+		email: { type: 'email', placeholder: 'name@domain.com' },
+		phone: { type: 'tel', placeholder: '+91 98765 43210' }
+	};
+	const contact = $derived(
+		kind === 'text' && !isMedia ? CONTACT_FIELDS[String(field).toLowerCase()] : undefined
+	);
+
 	let uploading = $state(false);
 	let mediaError = $state<string | null>(null);
 
@@ -264,6 +274,17 @@
 			</div>
 		</div>
 	</div>
+{:else if contact}
+	<label class="field">
+		<span class="field__label">{label}</span>
+		<input
+			class="field__input"
+			type={contact.type}
+			placeholder={contact.placeholder}
+			value={String(value ?? '')}
+			oninput={(e) => set((e.currentTarget as HTMLInputElement).value)}
+		/>
+	</label>
 {:else if isLong}
 	<label class="field field--wide">
 		<span class="field__label">{label}</span>

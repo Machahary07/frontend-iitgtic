@@ -160,7 +160,7 @@
 	}
 
 	.card__avatar {
-		width: clamp(120px, 38%, 160px);
+		width: clamp(130px, 52%, 190px);
 		aspect-ratio: 1 / 1;
 		border-radius: $radius-circle;
 		background: $color-black;

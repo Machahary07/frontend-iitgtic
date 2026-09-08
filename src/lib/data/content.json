@@ -2300,7 +2300,9 @@
 						"alt": ""
 					},
 					"role": "Chief Executive Officer",
-					"bio": "Leads the centre's operations, programmes and external partnerships."
+					"bio": "Leads the centre's operations, programmes and external partnerships.",
+					"email": "",
+					"phone": ""
 				},
 				{
 					"name": "",
@@ -2309,7 +2311,9 @@
 						"alt": ""
 					},
 					"role": "Operations Manager",
-					"bio": "Runs the day-to-day of incubatee onboarding, infrastructure and facilities."
+					"bio": "Runs the day-to-day of incubatee onboarding, infrastructure and facilities.",
+					"email": "",
+					"phone": ""
 				},
 				{
 					"name": "",
@@ -2318,7 +2322,9 @@
 						"alt": ""
 					},
 					"role": "Programme Manager",
-					"bio": "Curates cohorts, mentorship matches and the incubation calendar."
+					"bio": "Curates cohorts, mentorship matches and the incubation calendar.",
+					"email": "",
+					"phone": ""
 				},
 				{
 					"name": "",
@@ -2327,7 +2333,9 @@
 						"alt": ""
 					},
 					"role": "Finance & Accounts Officer",
-					"bio": "Manages grants, soft-loan disbursements and statutory compliance."
+					"bio": "Manages grants, soft-loan disbursements and statutory compliance.",
+					"email": "",
+					"phone": ""
 				},
 				{
 					"name": "",
@@ -2336,7 +2344,9 @@
 						"alt": ""
 					},
 					"role": "Technical Lead",
-					"bio": "Supports incubatees with prototyping, lab access and technical reviews."
+					"bio": "Supports incubatees with prototyping, lab access and technical reviews.",
+					"email": "",
+					"phone": ""
 				},
 				{
 					"name": "",
@@ -2345,7 +2355,9 @@
 						"alt": ""
 					},
 					"role": "Communications Lead",
-					"bio": "Tells the centre's stories — to partners outside, across the community inside."
+					"bio": "Tells the centre's stories — to partners outside, across the community inside.",
+					"email": "",
+					"phone": ""
 				}
 			]
 		},
