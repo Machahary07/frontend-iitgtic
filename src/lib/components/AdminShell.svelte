@@ -6,13 +6,17 @@
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
 	import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
+	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import Scanner from '$lib/components/Scanner.svelte';
 	import { images } from '$lib/data/images';
-	import type { NavItem } from '$lib/utils/adminNavTypes';
+	import type { NavItem, NavLink } from '$lib/utils/adminNavTypes';
 
 	interface Props {
 		brand: string;
 		brandSub?: string;
+		/** Where the sparkle beside the logo goes. Opt-in: the console that has an
+		 *  assistant passes it, and the shell stays unchanged everywhere else. */
+		assistantHref?: string;
 		navItems: NavItem[];
 		title: string;
 		eyebrow?: string;
@@ -25,6 +29,7 @@
 	let {
 		brand,
 		brandSub = '',
+		assistantHref = '',
 		navItems,
 		title,
 		eyebrow = '',
@@ -64,12 +69,19 @@
 		}
 	}
 
+	// A section owns everything beneath it — /tic-admin/content is the parent of
+	// /tic-admin/content/pages.team. The root entry is the exception: it is a page
+	// sitting at the console root, not a section above every other one, so it
+	// matches its own path and nothing else. Without that, a page absent from the
+	// nav inherited the root as its parent and read "Admin › Overview › Assistant".
 	const activeHref = $derived.by(() => {
 		const path = page.url.pathname;
+		const root = navItems.find((item): item is NavLink => !('separator' in item))?.href;
 		let best = '';
 		for (const item of navItems) {
 			if ('separator' in item) continue;
-			if (path === item.href || path.startsWith(item.href + '/')) {
+			const owns = item.href !== root && path.startsWith(item.href + '/');
+			if (path === item.href || owns) {
 				if (item.href.length > best.length) best = item.href;
 			}
 		}
@@ -277,6 +289,19 @@
 				<span class="brand__role">{brand}</span>
 			</div>
 			{#if brandSub}<span class="brand__tag">{brandSub}</span>{/if}
+			{#if assistantHref}
+				<a
+					href={assistantHref}
+					class="spark"
+					class:spark--active={page.url.pathname === assistantHref}
+					aria-label="Assistant"
+					aria-current={page.url.pathname === assistantHref ? 'page' : undefined}
+					title="Assistant"
+					onclick={() => (mobileOpen = false)}
+				>
+					<Sparkles size={16} strokeWidth={1.9} />
+				</a>
+			{/if}
 		</div>
 
 		<nav class="nav">
@@ -522,8 +547,16 @@
 			}
 
 			.brand {
+				// Stacked rather than centred in a row: the sparkle has to stay
+				// reachable on the rail, and two icons side by side would not fit.
+				flex-direction: column;
 				justify-content: center;
+				gap: 10px;
 				padding-inline: 0;
+			}
+
+			.spark {
+				margin-left: 0;
 			}
 
 			// Hidden rather than removed: keeping them in the tree means no reflow
@@ -608,6 +641,29 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+	}
+
+	// The way into the assistant. It sits with the mark rather than in the nav
+	// because it is not another section of the console — it is a way to work the
+	// whole of it.
+	.spark {
+		margin-left: auto;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex: none;
+		width: 30px;
+		height: 30px;
+		border-radius: $admin-radius-md;
+		color: admin-tone-fg('violet');
+		background: admin-tone-bg('violet');
+		text-decoration: none;
+		@include admin-focus-ring;
+
+		&--active {
+			color: $color-white;
+			background: $admin-ink;
+		}
 	}
 
 	.brand__tag {

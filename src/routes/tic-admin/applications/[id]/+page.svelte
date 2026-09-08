@@ -100,6 +100,7 @@
 <AdminShell
 	brand="TIC Team Admin"
 	navItems={TIC_ADMIN_NAV}
+	assistantHref="/tic-admin/ai"
 	title={application.startup_name || 'Untitled startup'}
 	eyebrow="Application"
 	user={adminName}

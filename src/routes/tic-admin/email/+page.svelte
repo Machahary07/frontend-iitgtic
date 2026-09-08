@@ -162,6 +162,7 @@
 <AdminShell
 	brand="TIC Team Admin"
 	navItems={TIC_ADMIN_NAV}
+	assistantHref="/tic-admin/ai"
 	title="Email"
 	eyebrow="Delivery"
 	user={adminName}

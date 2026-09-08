@@ -226,6 +226,7 @@
 <AdminShell
 	brand="TIC Team Admin"
 	navItems={TIC_ADMIN_NAV}
+	assistantHref="/tic-admin/ai"
 	title="Activity"
 	eyebrow="Audit & traffic"
 	user={adminName}

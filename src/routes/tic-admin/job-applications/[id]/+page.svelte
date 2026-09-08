@@ -98,6 +98,7 @@
 <AdminShell
 	brand="TIC Team Admin"
 	navItems={TIC_ADMIN_NAV}
+	assistantHref="/tic-admin/ai"
 	title={applicant.full_name}
 	eyebrow="Role applicant"
 	user={adminName}
