@@ -27,27 +27,13 @@
 	<div class="body__inner">
 		<p class="body__eyebrow">{page.sectionEyebrow}</p>
 		<div class="grid">
-			{#each page.tracks as track, i (track.track)}
+			{#each page.mentors as mentor, i (mentor.name)}
 				<article class="card">
-					<span class="card__index">0{i + 1}</span>
-					<div class="card__avatar-wrap">
-						{#if track.avatar?.src}
-							<img
-								class="card__avatar card__avatar--photo"
-								src={track.avatar.src}
-								alt={track.avatar.alt}
-								loading="lazy"
-								decoding="async"
-							/>
-						{:else}
-							<!-- No photo yet: the plain circle is the placeholder, and being
-							     decorative it stays out of the accessibility tree. -->
-							<div class="card__avatar" aria-hidden="true"></div>
-						{/if}
-					</div>
-					<h2 class="card__name">{track.name || track.track}</h2>
-					{#if track.name}<p class="card__role">{track.track}</p>{/if}
-					<p class="card__bio">{track.bio}</p>
+					<span class="card__index">{String(i + 1).padStart(2, '0')}</span>
+					<h2 class="card__name">{mentor.name}</h2>
+					{#if mentor.affiliation}<p class="card__affiliation">{mentor.affiliation}</p>{/if}
+					{#if mentor.specialisation}<p class="card__spec">{mentor.specialisation}</p>{/if}
+					{#if mentor.bio}<p class="card__bio">{mentor.bio}</p>{/if}
 				</article>
 			{/each}
 		</div>
@@ -124,16 +110,14 @@
 	.card {
 		display: flex;
 		flex-direction: column;
-		gap: $space-3;
+		gap: $space-2;
 		padding: $space-6;
 		border: 1px solid $color-black;
 		background: $color-white;
 		color: $color-black;
-		aspect-ratio: 1 / 1;
 
 		@include breakpoint-down($bp-sm) {
-			aspect-ratio: auto;
-			min-height: 360px;
+			padding: $space-5;
 		}
 	}
 
@@ -145,37 +129,8 @@
 		color: rgba($color-black, 0.45);
 	}
 
-	.card__avatar-wrap {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.card__avatar {
-		width: clamp(120px, 38%, 160px);
-		aspect-ratio: 1 / 1;
-		border-radius: $radius-circle;
-		background: $color-black;
-	}
-
-	.card__avatar--photo {
-		object-fit: cover;
-		display: block;
-	}
-
-	.card__role {
-		margin: 0;
-		font-family: $font-family-base;
-		font-size: $font-size-xs;
-		font-weight: $font-weight-semibold;
-		letter-spacing: 0.16em;
-		text-transform: uppercase;
-		color: rgba($color-black, 0.55);
-	}
-
 	.card__name {
-		margin: 0;
+		margin: $space-2 0 0;
 		font-family: $font-family-serif;
 		font-size: clamp(1.25rem, 2vw, #{$font-size-xl});
 		font-style: italic;
@@ -184,8 +139,25 @@
 		letter-spacing: $letter-spacing-tight;
 	}
 
-	.card__bio {
+	.card__affiliation {
 		margin: 0;
+		font-family: $font-family-base;
+		font-size: $font-size-sm;
+		line-height: $line-height-snug;
+		color: rgba($color-black, 0.55);
+	}
+
+	.card__spec {
+		margin: $space-1 0 0;
+		font-family: $font-family-base;
+		font-size: $font-size-sm;
+		font-weight: $font-weight-medium;
+		line-height: $line-height-snug;
+		color: rgba($color-black, 0.82);
+	}
+
+	.card__bio {
+		margin: $space-2 0 0;
 		font-family: $font-family-serif;
 		font-size: $font-size-base;
 		line-height: $line-height-base;

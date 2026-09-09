@@ -2602,63 +2602,15 @@
 				"eyebrow": "About · Mentors",
 				"headlineLead": "The people who walk",
 				"headlineEmphasis": "alongside our founders.",
-				"lede": "Our mentors aren't here to lecture — they're here to think with you. Each mentorship track pairs incubatees with senior practitioners who have done the work themselves."
+				"lede": "Our mentors aren't here to lecture — they're here to think with you: senior academics and practitioners who have done the work themselves and make time for our founders."
 			},
-			"sectionEyebrow": "Mentorship tracks",
-			"tracks": [
+			"sectionEyebrow": "The mentors",
+			"mentors": [
 				{
 					"name": "",
-					"avatar": {
-						"src": "",
-						"alt": ""
-					},
-					"track": "Technology",
-					"bio": "Senior engineers and researchers across hardware, software and embedded systems — there to sharpen the technical core of your idea."
-				},
-				{
-					"name": "",
-					"avatar": {
-						"src": "",
-						"alt": ""
-					},
-					"track": "Business & Strategy",
-					"bio": "Operators who have built and scaled ventures — there to challenge your market thinking, pricing and growth path."
-				},
-				{
-					"name": "",
-					"avatar": {
-						"src": "",
-						"alt": ""
-					},
-					"track": "Industry",
-					"bio": "Practitioners from manufacturing, energy, healthcare and IT — there to ground your work in the realities of your sector."
-				},
-				{
-					"name": "",
-					"avatar": {
-						"src": "",
-						"alt": ""
-					},
-					"track": "IP & Legal",
-					"bio": "Patents, contracts, founder agreements — there when you need to protect the work or set things up cleanly."
-				},
-				{
-					"name": "",
-					"avatar": {
-						"src": "",
-						"alt": ""
-					},
-					"track": "Funding & Finance",
-					"bio": "Investors and finance leaders — there to help you raise, budget and read the numbers honestly."
-				},
-				{
-					"name": "",
-					"avatar": {
-						"src": "",
-						"alt": ""
-					},
-					"track": "Storytelling",
-					"bio": "Communicators who have positioned products for partners, press and customers — there to help you say what you do, clearly."
+					"affiliation": "",
+					"specialisation": "",
+					"bio": ""
 				}
 			]
 		},
