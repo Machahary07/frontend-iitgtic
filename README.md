@@ -33,14 +33,14 @@ The public website, the company job portal, the incubation application, and the 
 
 ## Contents
 
-| Section                                                                                                                                     | What you will find                           |
-| ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| [Overview](#overview) · [Stack](#stack) · [Architecture](#architecture)                                                                     | What the app is and how it fits together     |
-| [Getting started](#getting-started) · [Environment](#environment) · [Scripts](#scripts)                                                     | Running it locally                           |
-| [Project structure](#project-structure) · [Routes](#routes) · [API surface](#api-surface)                                                   | Finding your way around the code             |
-| [Data model](#data-model) · [Permissions](#permissions-at-a-glance) · [Role applications](#role-applications)                               | Postgres, RLS and the flows that write to it |
-| [Operations](#operations) · [Transactional email](#transactional-email) · [Content model](#content-model) · [SEO](#seo) · [Deploy](#deploy) | Running it in production                     |
-| [Roadmap](#roadmap)                                                                                                                         | What is deliberately not built yet           |
+| Section                                                                                                                                                                           | What you will find                           |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| [Overview](#overview) · [Stack](#stack) · [Architecture](#architecture)                                                                                                           | What the app is and how it fits together     |
+| [Getting started](#getting-started) · [Environment](#environment) · [Scripts](#scripts)                                                                                           | Running it locally                           |
+| [Project structure](#project-structure) · [Routes](#routes) · [API surface](#api-surface)                                                                                         | Finding your way around the code             |
+| [Data model](#data-model) · [Permissions](#permissions-at-a-glance) · [Role applications](#role-applications)                                                                     | Postgres, RLS and the flows that write to it |
+| [Operations](#operations) · [Transactional email](#transactional-email) · [Admin assistant](#admin-assistant) · [Content model](#content-model) · [SEO](#seo) · [Deploy](#deploy) | Running it in production                     |
+| [Roadmap](#roadmap)                                                                                                                                                               | What is deliberately not built yet           |
 
 ---
 
@@ -307,6 +307,7 @@ admin's id.
 | `/api/tic-admin/email/suppressions` | `DELETE`                      | Lift a bounce or complaint suppression so the address can be written to again                                                                             |
 | `/api/newsletter`                   | `POST`                        | **Public** footer subscribe — rate limited and validated; a repeat address is a plain success, so the form cannot be used to discover who is on the list  |
 | `/api/tic-admin/newsletter`         | `GET` `DELETE`                | The subscriber list for export, and removal on request                                                                                                    |
+| `/api/tic-admin/ai`                 | `POST`                        | The admin assistant. Runs a read-only tool loop against Sarvam and streams NDJSON progress back — see [Admin assistant](#admin-assistant)                 |
 | `/api/resend-webhook`               | `POST`                        | **Public but Svix-signed** delivery feedback from Resend — records the event and suppresses the address on a permanent bounce or a complaint              |
 
 ## Data model
@@ -734,6 +735,61 @@ The project currently has **email confirmation enabled**, so `signUp` returns no
 and the sign-up screens tell the user to check their inbox. To let people in immediately
 instead, turn off _Confirm email_ under **Authentication → Sign In / Providers → Email**
 in the Supabase dashboard — the code already handles both cases.
+
+## Admin assistant
+
+**/tic-admin/ai** is a chat window over the console's own data. It answers from the database
+rather than from anything baked into a prompt: the model is given a set of tools, calls the
+ones it needs, and the reply is written from what came back.
+
+**Every tool is a read.** The model can look at anything an admin can already see and change
+nothing at all. Verifying a company, moving an application, sending mail and editing the site
+stay where they were, behind `/api/tic-admin/*`, where they are attributed and audited. That
+is what makes it safe to hand a third-party model a service-role client — the tool list in
+`src/lib/server/assistantTools.ts` is the security boundary, so no tool takes a raw table name
+or a raw filter from the model.
+
+What it can reach: console-wide counts, companies, incubation applications (including one
+application in full), posted jobs, role applicants, users, the audit trail, site traffic, the
+email templates and delivery log, newsletter sign-ups, and the live copy of any section of the
+public website.
+
+### Models
+
+Two, chosen from the assistant's settings dialog. Both are Sarvam's, and both are
+OpenAI-compatible, but they sit on different paths — `src/lib/utils/assistantModels.ts` carries
+the path with the model so nothing has to guess.
+
+| Model         | Endpoint               | Notes                                                                                                                                                                                                         |
+| ------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sarvam-105b` | `/v1/chat/completions` | The default. 128K context, tool calling, and it reasons before it answers — the working-out streams into a collapsed block above the reply. Text only.                                                        |
+| `gemma4`      | `/v2/chat/completions` | Gemma 4 31B. Also 128K and tool calling, and the only one that reads images, so the attach button appears for this model alone. **In beta:** a key has to be allow-listed by Sarvam before it answers at all. |
+
+Images are inlined as base64 data URIs — Sarvam rejects remote URLs — and the whole request is
+capped at 10 MB, which is why a source image over ~7 MB is refused in the browser.
+
+### The key
+
+By default there is no key on the server. Each admin pastes their own into the settings dialog,
+where it is held in that browser's `localStorage` and sent with each question; it is never
+written to the database and never logged. Setting `SARVAM_API_KEY` gives the whole team one
+shared key instead, and the dialog then only overrides it.
+
+`localStorage` is readable by anything running on the origin. That is acceptable for a key
+scoped to an admin-only console, and it is why the key never gets a `PUBLIC_` var — but it is a
+reason to rotate rather than treat one as long-lived.
+
+### How a turn runs
+
+The browser posts the conversation to `/api/tic-admin/ai`. The route runs up to six rounds of
+tool calls, and streams newline-delimited JSON back as it goes: `step` for each lookup the model
+starts, `reasoning` for its working-out, `text` for the answer itself, then `done`. On the last
+permitted round the tools are withheld, which forces an answer out of what has been gathered
+rather than ending the turn on a call nobody will run.
+
+Replies are rendered by a small markdown subset in `src/lib/utils/assistantMarkdown.ts` —
+paragraphs, headings, lists, tables, blockquotes, code and http(s) links. It escapes the reply
+before it adds a single tag: model output echoes database rows, so it is untrusted text.
 
 ## Content model
 
