@@ -15,6 +15,7 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import ShieldCheck from '@lucide/svelte/icons/shield-check';
 	import Zap from '@lucide/svelte/icons/zap';
+	import FileText from '@lucide/svelte/icons/file-text';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import { ASSISTANT_MODELS } from '$lib/utils/assistantModels';
@@ -45,14 +46,20 @@
 		after: unknown;
 		status: 'pending' | 'applying' | 'approved' | 'rejected' | 'error';
 		error: string;
+		/** What happened once applied — e.g. how many the newsletter reached. */
+		note: string;
 	};
 
-	// An image the admin attached. It is uploaded to the site's media bucket on
-	// attach, so `url` is a public link the assistant can drop into content (e.g.
-	// a member's avatar). `dataUrl` is only for the thumbnail shown in the chat.
+	// A file the admin attached. It is uploaded to a public bucket on attach, so
+	// `url` is a link the assistant can drop into content or an email — an image
+	// into a member's avatar, a PDF as an email attachment. The assistant only
+	// ever gets the name and URL, never the file's contents. `dataUrl` is the
+	// thumbnail for an image; `size` the human label for a document.
 	type Attachment = {
 		name: string;
 		url: string;
+		kind: 'image' | 'file';
+		size: string;
 		dataUrl: string;
 		uploading: boolean;
 	};
@@ -154,9 +161,16 @@
 
 	// ---- attachments ---------------------------------------------------------
 
-	// The media bucket caps an upload at 5 MB, so anything larger is refused here
-	// before it is sent.
-	const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+	// Both buckets cap an upload at 5 MB, so anything larger is refused here before
+	// it is sent. Non-image files can only be what an email can carry.
+	const MAX_BYTES = 5 * 1024 * 1024;
+	const FILE_TYPES = [
+		'application/pdf',
+		'application/msword',
+		'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+		'text/plain',
+		'text/csv'
+	];
 
 	function readAsDataUrl(file: File): Promise<string> {
 		return new Promise((done, fail) => {
@@ -167,12 +181,14 @@
 		});
 	}
 
-	// Uploads to the same media bucket the content editor uses, so the URL it
-	// returns is one the assistant can write straight into a section.
-	async function uploadAsset(file: File): Promise<string> {
+	// Images go to the site's media bucket, so the assistant can place one into
+	// content; other files go to the email-assets bucket, so it can attach one to
+	// an email. Both return a public URL the assistant is handed as text.
+	async function uploadAsset(file: File, image: boolean): Promise<{ url: string; size: string }> {
+		const endpoint = image ? '/api/tic-admin/content/assets' : '/api/tic-admin/email/assets';
 		const form = new FormData();
 		form.append('file', file);
-		const response = await fetch('/api/tic-admin/content/assets', { method: 'POST', body: form });
+		const response = await fetch(endpoint, { method: 'POST', body: form });
 		if (!response.ok) {
 			const detail = await response
 				.json()
@@ -180,7 +196,8 @@
 				.catch(() => null);
 			throw new Error(detail || 'The upload failed.');
 		}
-		return (await response.json()).url as string;
+		const payload = await response.json();
+		return { url: payload.url as string, size: (payload.size as string) ?? '' };
 	}
 
 	async function onPick(event: Event) {
@@ -189,28 +206,32 @@
 		input.value = '';
 
 		for (const file of files) {
-			if (!file.type.startsWith('image/')) {
-				showToast(`${file.name} is not an image.`, 'err');
+			const isImage = file.type.startsWith('image/');
+			if (!isImage && !FILE_TYPES.includes(file.type)) {
+				showToast(`${file.name} is not a supported file.`, 'err');
 				continue;
 			}
-			if (file.size > MAX_IMAGE_BYTES) {
+			if (file.size > MAX_BYTES) {
 				showToast(`${file.name} is larger than 5 MB.`, 'err');
 				continue;
 			}
 
-			// Show the thumbnail immediately, then upload — the row flips out of its
+			// Show the chip immediately, then upload — the row flips out of its
 			// uploading state once the bucket has the file and a URL to point at.
-			let attachment: Attachment;
-			try {
-				attachment = { name: file.name, url: '', dataUrl: await readAsDataUrl(file), uploading: true };
-			} catch {
-				showToast(`Could not read ${file.name}.`, 'err');
-				continue;
-			}
+			const attachment: Attachment = {
+				name: file.name,
+				url: '',
+				kind: isImage ? 'image' : 'file',
+				size: '',
+				dataUrl: isImage ? await readAsDataUrl(file).catch(() => '') : '',
+				uploading: true
+			};
 
 			pending = [...pending, attachment];
 			try {
-				attachment.url = await uploadAsset(file);
+				const uploaded = await uploadAsset(file, isImage);
+				attachment.url = uploaded.url;
+				attachment.size = uploaded.size;
 				attachment.uploading = false;
 			} catch (cause) {
 				pending = pending.filter((item) => item !== attachment);
@@ -311,12 +332,21 @@
 						.map((message) => ({
 							role: message.role === 'you' ? 'user' : 'assistant',
 							content: message.text,
-							// URLs let any model place the image into content; the base64
-							// data URIs are only for a vision model that can look at them.
+							// URLs let any model place a file into content or an email; the
+							// base64 data URIs are only images, only for a vision model.
 							attachments: message.attachments
 								.filter((item) => item.url)
-								.map((item) => ({ name: item.name, url: item.url })),
-							images: model.images ? message.attachments.map((item) => item.dataUrl) : []
+								.map((item) => ({
+									name: item.name,
+									url: item.url,
+									kind: item.kind,
+									size: item.size
+								})),
+							images: model.images
+								? message.attachments
+										.filter((item) => item.kind === 'image')
+										.map((item) => item.dataUrl)
+								: []
 						}))
 				})
 			});
@@ -385,7 +415,8 @@
 								before: event.before,
 								after: event.after,
 								status: 'pending',
-								error: ''
+								error: '',
+								note: ''
 							}
 						];
 						await follow();
@@ -553,8 +584,20 @@
 				proposal.error = detail || 'The change could not be applied.';
 				return;
 			}
+
+			// A newsletter blast reports how many it reached; a plain edit does not.
+			const result = await response
+				.json()
+				.then((payload) => payload?.result)
+				.catch(() => null);
 			proposal.status = 'approved';
-			showToast('Change applied to the site.');
+			if (result && typeof result.sent === 'number') {
+				const extra = result.blocked || result.failed ? ` (${result.blocked} blocked, ${result.failed} failed)` : '';
+				proposal.note = `Sent to ${result.sent} of ${result.recipients} recipient${result.recipients === 1 ? '' : 's'}${extra}`;
+				showToast(`Email sent to ${result.sent} recipient${result.sent === 1 ? '' : 's'}.`);
+			} else {
+				showToast('Change applied to the site.');
+			}
 		} catch {
 			proposal.status = 'error';
 			proposal.error = 'The change could not be applied.';
@@ -681,7 +724,16 @@
 								{#if message.attachments.length}
 									<ul class="shots">
 										{#each message.attachments as shot, index (index)}
-											<li><img src={shot.dataUrl || shot.url} alt={shot.name} /></li>
+											<li>
+												{#if shot.kind === 'image' && (shot.dataUrl || shot.url)}
+													<img src={shot.dataUrl || shot.url} alt={shot.name} />
+												{:else}
+													<span class="doc">
+														<FileText size={15} strokeWidth={1.8} aria-hidden="true" />
+														<span class="doc__name">{shot.name}</span>
+													</span>
+												{/if}
+											</li>
 										{/each}
 									</ul>
 								{/if}
@@ -776,7 +828,8 @@
 											</div>
 										{:else if proposal.status === 'approved'}
 											<p class="prop__state prop__state--ok">
-												<Check size={12} strokeWidth={2.4} aria-hidden="true" /> Applied to the site
+												<Check size={12} strokeWidth={2.4} aria-hidden="true" />
+												{proposal.note || 'Applied to the site'}
 											</p>
 										{:else if proposal.status === 'rejected'}
 											<p class="prop__state">Rejected — nothing was changed</p>
@@ -800,8 +853,20 @@
 			{#if pending.length}
 				<ul class="queue">
 					{#each pending as item, index (index)}
-						<li class="queue__item" class:queue__item--busy={item.uploading}>
-							<img src={item.dataUrl} alt={item.name} />
+						<li
+							class="queue__item"
+							class:queue__item--busy={item.uploading}
+							class:queue__item--file={item.kind === 'file'}
+						>
+							{#if item.kind === 'image'}
+								<img src={item.dataUrl} alt={item.name} />
+							{:else}
+								<span class="queue__doc">
+									<FileText size={16} strokeWidth={1.8} aria-hidden="true" />
+									<span class="queue__docname">{item.name}</span>
+									{#if item.size}<span class="queue__docsize">{item.size}</span>{/if}
+								</span>
+							{/if}
 							{#if item.uploading}
 								<span class="queue__spin" aria-label="Uploading"></span>
 							{/if}
@@ -832,7 +897,7 @@
 			<div class="composer__bar">
 				<input
 					type="file"
-					accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+					accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv"
 					multiple
 					class="composer__file"
 					bind:this={picker}
@@ -843,8 +908,8 @@
 				<button
 					type="button"
 					class="composer__icon"
-					title="Attach an image"
-					aria-label="Attach an image"
+					title="Attach an image or file"
+					aria-label="Attach an image or file"
 					onclick={() => picker?.click()}
 				>
 					<Paperclip size={16} strokeWidth={1.9} />
@@ -1258,6 +1323,25 @@
 		}
 	}
 
+	.doc {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		max-width: 220px;
+		padding: 8px 11px;
+		font-size: 12.5px;
+		color: $admin-ink;
+		background: $admin-surface;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-md;
+	}
+
+	.doc__name {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
 	// ---- what the assistant looked at ----------------------------------------
 
 	.steps {
@@ -1576,8 +1660,37 @@
 		}
 	}
 
-	.queue__item--busy img {
+	.queue__item--busy img,
+	.queue__item--busy .queue__doc {
 		opacity: 0.5;
+	}
+
+	.queue__doc {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		height: 56px;
+		max-width: 200px;
+		padding: 0 12px;
+		color: $admin-ink-2;
+		background: $admin-surface;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
+	}
+
+	.queue__docname {
+		font-size: 12px;
+		font-weight: $font-weight-semibold;
+		color: $admin-ink;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.queue__docsize {
+		font-size: 10.5px;
+		color: $admin-ink-3;
+		flex: none;
 	}
 
 	.queue__spin {

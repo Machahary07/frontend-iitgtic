@@ -57,13 +57,24 @@ HOW TO ANSWER
 - Use British spelling, matching the rest of the console.
 
 WHAT YOU CAN CHANGE
-You can edit the copy on the public website. Call read_site_section first to see the section's shape. Then, to change one field, call update_site_section with the section key, the dotted path to that field (e.g. hero.heading, or members.2.bio — array items count from 0) and the new value for that field alone. Editing by path is the reliable way and leaves the rest of the section untouched; only omit path to replace a whole small section outright. reset_site_section puts a section back to its bundled default. Every edit is audited and can be reverted from Activity, so make the change when asked rather than only describing it; still confirm first if the request is vague about what to write.
+You can edit the copy on the public website and the transactional email templates.
 
-IMAGES THE ADMIN ATTACHES
-When the admin attaches an image it is uploaded to the site's media library and its public URL is listed in their message under "[Attached image…]". To put that image on the site, write its URL into the matching image field with update_site_section — for a person that field is their avatar's src, e.g. path members.2.avatar.src on pages.team or pages.governingBody. Read the section first to find the right index, and set the avatar's alt text too when it is empty. Only ever use a URL the admin attached or that read_site_section returned; never invent an image URL.
+For website copy: call read_site_section first to see the section's shape. Then, to change one field, call update_site_section with the section key, the dotted path to that field (e.g. hero.heading, or members.2.bio — array items count from 0) and the new value for that field alone. Editing by path is the reliable way and leaves the rest of the section untouched; only omit path to replace a whole small section outright. reset_site_section puts a section back to its bundled default.
+
+For emails: call get_email_template first to see its subject, its content blocks and the {{variables}} it uses. Then call update_email_template with the changed subject and/or the full blocks list — send the whole list with your edits, keeping every {{variable}} the template needs, and never send the compiled HTML body. You can also switch a template on or off with its enabled flag. reset_email_template restores a template's bundled default. You cannot edit the shared layout.
+
+You can send email two ways. send_newsletter emails every active subscriber — a subject and message blocks, always including a link block whose href is {{unsubscribeUrl}} (signed per recipient, one click to unsubscribe). send_email sends a one-off message to specific people — an applicant, a company, an individual or a small group (up to 100). Find each recipient's address with the read tools (list_incubation_applications, list_companies, list_role_applicants, list_users) and never guess one. Both can carry a PDF via a file block with attach set to true. Both are real sends, so they always wait for the admin's explicit approval — you never send unattended. There is no other way to send mail: you cannot change a status to make the system send its automatic email.
+
+Every edit is audited and can be reverted from Activity, so make the change when asked rather than only describing it; still confirm first if the request is vague about what to write.
+
+FILES THE ADMIN ATTACHES
+When the admin attaches a file it is uploaded and its public URL is listed in their message under "[The admin attached…]". You are given only the name and URL — never the file's contents, so never claim to have read a file or summarise what is inside it. To use an attachment:
+- An image: write its URL into the matching image field with update_site_section — for a person that field is their avatar's src, e.g. path members.2.avatar.src on pages.team or pages.governingBody. Read the section first to find the right index, and set the avatar's alt text when it is empty.
+- A document (PDF, Word, etc.): attach it to an email by adding a file block to the template with update_email_template — set the block's src to the URL, its name to the file's name, and attach to true so it is delivered as a real attachment. It rides on every send of that template until removed.
+Only ever use a URL the admin attached or that a tool returned; never invent one. You still cannot send email — you prepare the template; the admin sends.
 
 WHAT YOU CANNOT DO
-Content is the only thing you can write. You cannot verify a company, change a status, send an email, edit the email templates or delete anything. If asked to do one of those, say so in one line and point to the console section where the admin can do it themselves — Companies, Applications, Posted jobs, Role applicants, Users, Email or Storage. You may freely draft or rewrite text for an admin to paste in; drafting is not changing.`;
+You can write website content and email templates, and send email (the newsletter, or a direct message to chosen recipients). You cannot verify a company, change a status, or delete anything. If asked to do one of those, say so in one line and point to the console section where the admin can do it themselves — Companies, Applications, Posted jobs, Role applicants, Users or Storage. You may freely draft or rewrite text for an admin to paste in; drafting is not changing.`;
 }
 
 type IncomingMessage = {
@@ -71,9 +82,9 @@ type IncomingMessage = {
 	content: string;
 	/** base64 data URIs, images only, and only on a model that accepts them. */
 	images?: string[];
-	/** Images the admin attached, uploaded to the media bucket. Their URLs are
-	 *  folded into the text so any model can place one into content. */
-	attachments?: { name: string; url: string }[];
+	/** Files the admin attached, uploaded to a public bucket. Their URLs are folded
+	 *  into the text so any model can place or attach one; contents are never read. */
+	attachments?: { name: string; url: string; kind?: 'image' | 'file'; size?: string }[];
 };
 
 type Event =
@@ -92,13 +103,21 @@ type Event =
 	| { type: 'done' }
 	| { type: 'error'; message: string };
 
-// The list of attached image URLs, folded into the user's text so a text-only
-// model can still place one into content. The vision channel below is separate:
-// it lets a model *look* at an image, which is not what an attachment is for.
-function attachmentNote(attachments: { name: string; url: string }[]): string {
+// The attached files, folded into the user's text as name + URL so a text-only
+// model can place or attach one. Their contents are deliberately not included —
+// an attachment is a thing to use, not to read. The vision channel below is
+// separate: it lets a model *look* at an attached image.
+function attachmentNote(
+	attachments: { name: string; url: string; kind?: 'image' | 'file'; size?: string }[]
+): string {
 	if (attachments.length === 0) return '';
-	const lines = attachments.map((item) => `- ${item.name}: ${item.url}`).join('\n');
-	return `\n\n[Attached image${attachments.length > 1 ? 's' : ''}, already uploaded to the media library:\n${lines}]`;
+	const lines = attachments
+		.map((item) => {
+			const what = item.kind === 'file' ? 'file' : 'image';
+			return `- ${what} "${item.name}"${item.size ? ` (${item.size})` : ''}: ${item.url}`;
+		})
+		.join('\n');
+	return `\n\n[The admin attached ${attachments.length} file${attachments.length > 1 ? 's' : ''}, uploaded to storage. You have only the name and URL below, not the contents:\n${lines}]`;
 }
 
 // Turns the console's simplified messages into what the API expects. Images ride
@@ -256,8 +275,9 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 							// A write the admin still has to approve: don't run it. Show them
 							// the before/after and hand the model a note so it stops rather
 							// than looping. The write itself happens later, through
-							// /api/tic-admin/ai/apply, when they click Approve.
-							if (tool?.write && !autoApprove) {
+							// /api/tic-admin/ai/apply, when they click Approve. confirmAlways
+							// tools (the newsletter blast) take this path even with Auto on.
+							if (tool?.write && (!autoApprove || tool.confirmAlways)) {
 								const preview = tool.preview
 									? await tool.preview(ctx.db, args)
 									: { error: 'This change cannot be previewed.' };

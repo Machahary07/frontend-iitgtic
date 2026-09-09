@@ -1,19 +1,28 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSection, getSiteContent, invalidateSiteContent } from '$lib/server/siteContent';
 import { logAdminAction, type AdminContext } from '$lib/server/adminGuard';
+import { invalidateEmailTemplates, resolveTemplate, sendTemplateEmail } from '$lib/server/email';
 import { CONTENT_SECTIONS, readPath, writePath } from '$lib/content';
-import { EMAIL_TEMPLATES } from '$lib/utils/emailTemplates';
+import {
+	EMAIL_LAYOUT_KEY,
+	EMAIL_TEMPLATES,
+	templateDef,
+	type EmailTemplateDef
+} from '$lib/utils/emailTemplates';
+import { blockProblems, parseBlocks, renderBlocks, type EmailBlock } from '$lib/utils/emailBlocks';
+import { EMAIL_RE } from '$lib/utils/jobApplications';
 import fallback from '$lib/data/content.json';
 
 // What the assistant is allowed to do.
 //
-// Almost every tool here is a read. The two exceptions — update_site_section and
-// reset_site_section — let the model edit the public website's copy, the same
-// change an admin makes on the Content screen. Everything else stays read-only:
-// the model cannot verify a company, change a status or send a mail — those stay
-// behind the existing /api/tic-admin/* routes where they are attributed and
-// audited. A content write takes the same site_content path those routes use, so
-// it is audited before/after and reversible from Activity too.
+// Most tools here are reads. The writes are content — update_site_section and
+// reset_site_section, editing the public website's copy — and the transactional
+// email templates — update_email_template and reset_email_template. Each takes
+// the same table path (and validation) the Content and Email screens use, so an
+// edit is audited before/after and reversible from Activity. Everything else
+// stays read-only: the model cannot verify a company, change a status, send a
+// mail or delete anything — those stay behind the existing /api/tic-admin/*
+// routes where they are attributed and audited.
 //
 // The client passed in is the guard's service-role client, so these queries see
 // past RLS. That is the whole point — most of these tables have RLS on with no
@@ -40,6 +49,9 @@ export type ToolDef = {
 	/** True for tools that change data. In manual-approval mode these are not run
 	 *  in the loop — they are previewed and applied only once the admin approves. */
 	write?: boolean;
+	/** Forces the approval step even when the admin has Auto on. For an action too
+	 *  consequential to ever fire unattended — sending mail to the whole list. */
+	confirmAlways?: boolean;
 	/** Computes the before/after for the approval card without changing anything. */
 	preview?: (db: SupabaseClient, args: Record<string, unknown>) => Promise<ToolPreview>;
 };
@@ -98,6 +110,84 @@ async function countWhere(
 		.select('id', { count: 'exact', head: true })
 		.eq(column, value);
 	return count ?? 0;
+}
+
+// The merge behind both email write tools: take the current template, lay the
+// requested changes over it, and compile the body from blocks the way the Email
+// screen's save does — reusing the same validation so a bad block list is caught
+// here rather than reaching a real send. Returns an error string the model can
+// act on, or the resolved edit ready to store.
+type EmailEdit =
+	| { error: string }
+	| {
+			def: EmailTemplateDef;
+			current: { subject: string; body: string };
+			subject: string;
+			body: string;
+			blocks: EmailBlock[] | null;
+			enabled: boolean;
+	  };
+
+async function resolveEmailEdit(args: Record<string, unknown>): Promise<EmailEdit> {
+	const key = textOf(args, 'key');
+	if (!key) return { error: 'A template key is required.' };
+
+	const def = templateDef(key);
+	if (!def) return { error: `No template with key "${key}". Call list_email_templates first.` };
+	if (key === EMAIL_LAYOUT_KEY) {
+		return {
+			error: 'The shared email layout is structural — it is edited by hand in the Email screen, not here.'
+		};
+	}
+
+	const current = await resolveTemplate(key);
+	if (!current) return { error: `No template with key "${key}".` };
+
+	const hasSubject = typeof args.subject === 'string';
+	const hasBlocks = args.blocks !== undefined && args.blocks !== null;
+	const hasEnabled = typeof args.enabled === 'boolean';
+	if (!hasSubject && !hasBlocks && !hasEnabled) {
+		return { error: 'Nothing to change — pass a subject, blocks or enabled.' };
+	}
+
+	const subject = (hasSubject ? String(args.subject) : current.subject).trim();
+	if (!subject) return { error: 'The subject cannot be empty.' };
+
+	let body = current.body;
+	let blocks = current.blocks;
+	if (hasBlocks) {
+		const parsed = parseBlocks(args.blocks);
+		if (!parsed) return { error: 'The blocks were not in a shape the editor understands.' };
+		if (parsed.length === 0) return { error: 'An email needs at least one block.' };
+		const problems = blockProblems(parsed);
+		if (problems.length > 0) return { error: problems[0] };
+		blocks = parsed;
+		body = renderBlocks(parsed);
+	}
+
+	const enabled = hasEnabled ? Boolean(args.enabled) : current.enabled;
+	return {
+		def,
+		current: { subject: current.subject, body: current.body },
+		subject,
+		body,
+		blocks,
+		enabled
+	};
+}
+
+// The recipient list for a direct send: accepts one address or an array, drops
+// anything that is not a valid email, and de-duplicates. The model is told to
+// take addresses from the read tools, so this is a guard, not the source.
+function recipientsOf(value: unknown): string[] {
+	const raw = Array.isArray(value) ? value : [value];
+	const seen = new Set<string>();
+	for (const item of raw) {
+		if (typeof item !== 'string') continue;
+		const email = item.trim().toLowerCase();
+		if (EMAIL_RE.test(email)) seen.add(email);
+	}
+	return [...seen];
 }
 
 export const ASSISTANT_TOOLS: ToolDef[] = [
@@ -516,7 +606,7 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 
 			const { data } = await db
 				.from('email_templates')
-				.select('subject, body, enabled, updated_at')
+				.select('subject, body, blocks, enabled, updated_at')
 				.eq('key', key)
 				.maybeSingle();
 
@@ -528,6 +618,9 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 				purpose: def.description,
 				subject: data?.subject ?? def.subject,
 				body: data?.body ?? def.body,
+				// The structured source the body is compiled from. Edit these and pass
+				// them to update_email_template — never the compiled HTML body.
+				blocks: data?.blocks ?? def.blocks ?? null,
 				enabled: data?.enabled ?? true,
 				variables: def.variables.map((variable) => `{{${variable.name}}}`)
 			};
@@ -777,6 +870,311 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			});
 
 			return { ok: true, key };
+		}
+	},
+
+	{
+		name: 'update_email_template',
+		description:
+			"Edit one transactional email template — its subject line, its content blocks, or whether it is switched on. Read it first with get_email_template to see the current blocks and the {{variables}} it uses. To change the wording, send back the whole blocks list with your edits, keeping every {{variable}} the template needs. Takes effect on future sends; audited and reversible from Activity. The shared layout is not editable here.",
+		parameters: {
+			type: 'object',
+			properties: {
+				key: { type: 'string', description: 'Template key from list_email_templates.' },
+				subject: {
+					type: 'string',
+					description: 'New subject line. Omit to keep the current one.'
+				},
+				blocks: {
+					type: 'array',
+					description:
+						'The full list of content blocks for the body, in the shape get_email_template returns under "blocks". Each block has a "type" (heading, subheading, text, bullets, numbers, quote, callout, button, link, image, file, note, signature, divider, spacer) and that type\'s own fields. Send the entire list, not just the block you changed. Omit to leave the body unchanged.',
+					items: { type: 'object' }
+				},
+				enabled: {
+					type: 'boolean',
+					description: 'Switch the template on or off. Omit to keep it as it is.'
+				}
+			},
+			required: ['key']
+		},
+		label: (args) => `Updating the ${String(args.key ?? '')} email`,
+		write: true,
+		preview: async (_db, args) => {
+			const edit = await resolveEmailEdit(args);
+			if ('error' in edit) return edit;
+			return {
+				summary: `Edit the ${edit.def.name} email`,
+				before: `Subject: ${edit.current.subject}\n\n${edit.current.body}`,
+				after: `Subject: ${edit.subject}\n\n${edit.body}`
+			};
+		},
+		run: async (db, args, ctx) => {
+			const edit = await resolveEmailEdit(args);
+			if ('error' in edit) return edit;
+
+			const key = textOf(args, 'key');
+			const { error } = await db.from('email_templates').upsert(
+				{
+					key,
+					subject: edit.subject,
+					body: edit.body,
+					blocks: edit.blocks,
+					enabled: edit.enabled,
+					updated_by: ctx.admin.userId,
+					updated_at: new Date().toISOString()
+				},
+				{ onConflict: 'key' }
+			);
+			if (error) return { error: error.message };
+
+			invalidateEmailTemplates();
+			await logAdminAction(ctx, `edited email template · ${key}`, {
+				table: 'email_templates',
+				recordId: key
+			});
+			return { ok: true, key };
+		}
+	},
+
+	{
+		name: 'reset_email_template',
+		description:
+			'Discard saved edits to one email template and restore the copy bundled with the site. Use this only when asked to undo changes to an email. Audited and reversible from Activity.',
+		parameters: {
+			type: 'object',
+			properties: {
+				key: { type: 'string', description: 'Template key from list_email_templates.' }
+			},
+			required: ['key']
+		},
+		label: (args) => `Resetting the ${String(args.key ?? '')} email`,
+		write: true,
+		preview: async (_db, args) => {
+			const key = textOf(args, 'key');
+			const def = templateDef(key);
+			if (!def) return { error: `No template with key "${key}".` };
+			const current = await resolveTemplate(key);
+			return {
+				summary: `Reset the ${def.name} email to its default`,
+				before: current ? `Subject: ${current.subject}\n\n${current.body}` : '—',
+				after: `Subject: ${def.subject}\n\n${def.body}`
+			};
+		},
+		run: async (db, args, ctx) => {
+			const key = textOf(args, 'key');
+			const def = templateDef(key);
+			if (!def) return { error: `No template with key "${key}". Call list_email_templates first.` };
+
+			const { error } = await db.from('email_templates').delete().eq('key', key);
+			if (error) return { error: error.message };
+
+			invalidateEmailTemplates();
+			await logAdminAction(ctx, `reset email template to the bundled default · ${key}`, {
+				table: 'email_templates',
+				recordId: key
+			});
+			return { ok: true, key };
+		}
+	},
+
+	{
+		name: 'send_newsletter',
+		description:
+			"Send a newsletter to everyone on the newsletter list. Compose the message as blocks (a heading, the update, and — required — a link block with href {{unsubscribeUrl}} for the unsubscribe footer; add a file block with attach true to send a PDF as an attachment). This blasts real email to every active subscriber, so it ALWAYS waits for the admin's explicit approval — it is never sent automatically. Each recipient gets their own one-click unsubscribe link.",
+		parameters: {
+			type: 'object',
+			properties: {
+				subject: { type: 'string', description: 'The newsletter subject line.' },
+				blocks: {
+					type: 'array',
+					description:
+						'The newsletter content blocks, same shape as update_email_template. Include a link block whose href is {{unsubscribeUrl}}, and a file block with attach set to true for any PDF to deliver as an attachment.',
+					items: { type: 'object' }
+				}
+			},
+			required: ['subject', 'blocks']
+		},
+		label: () => 'Sending the newsletter to subscribers',
+		write: true,
+		confirmAlways: true,
+		preview: async (db, args) => {
+			const edit = await resolveEmailEdit({ key: 'newsletter', subject: args.subject, blocks: args.blocks });
+			if ('error' in edit) return edit;
+			if (!edit.body.includes('{{unsubscribeUrl}}')) {
+				return {
+					error: 'A newsletter must include the unsubscribe link — add a link block with href {{unsubscribeUrl}}.'
+				};
+			}
+
+			const { count } = await db
+				.from('newsletter_subscribers')
+				.select('email', { count: 'exact', head: true })
+				.is('unsubscribed_at', null);
+			const recipients = count ?? 0;
+
+			return {
+				summary: `Send the newsletter to ${recipients} subscriber${recipients === 1 ? '' : 's'}`,
+				before: `${recipients} active subscriber${recipients === 1 ? '' : 's'} will receive this`,
+				after: `Subject: ${edit.subject}\n\n${edit.body}`
+			};
+		},
+		run: async (db, args, ctx) => {
+			const edit = await resolveEmailEdit({ key: 'newsletter', subject: args.subject, blocks: args.blocks });
+			if ('error' in edit) return edit;
+			if (!edit.body.includes('{{unsubscribeUrl}}')) {
+				return {
+					error: 'A newsletter must include the unsubscribe link — add a link block with href {{unsubscribeUrl}}.'
+				};
+			}
+
+			// The blast sends the saved newsletter template, so store the composed
+			// message first — that is also what makes each send pick up the file
+			// attachment and the unsubscribe footer.
+			const { error: saveError } = await db.from('email_templates').upsert(
+				{
+					key: 'newsletter',
+					subject: edit.subject,
+					body: edit.body,
+					blocks: edit.blocks,
+					enabled: true,
+					updated_by: ctx.admin.userId,
+					updated_at: new Date().toISOString()
+				},
+				{ onConflict: 'key' }
+			);
+			if (saveError) return { error: saveError.message };
+			invalidateEmailTemplates();
+
+			const { data: subs, error: subError } = await db
+				.from('newsletter_subscribers')
+				.select('email')
+				.is('unsubscribed_at', null);
+			if (subError) return { error: subError.message };
+
+			const recipients = (subs ?? []).map((row) => row.email as string);
+			if (recipients.length === 0) {
+				return { ok: true, recipients: 0, sent: 0, note: 'No active subscribers to send to.' };
+			}
+
+			// Sequential on purpose: it keeps well under the provider's rate limit,
+			// and each send is checked against the sending allowance and suppression
+			// list on its own, so a spent quota stops the blast rather than bouncing.
+			let sent = 0;
+			let blocked = 0;
+			let failed = 0;
+			for (const to of recipients) {
+				const result = await sendTemplateEmail({
+					templateKey: 'newsletter',
+					to,
+					sentBy: ctx.admin.userId,
+					context: { newsletter: true }
+				});
+				if (result.status === 'sent') sent += 1;
+				else if (result.status === 'blocked') blocked += 1;
+				else failed += 1;
+			}
+
+			await logAdminAction(ctx, `sent the newsletter to ${sent} of ${recipients.length} subscriber(s)`, {
+				table: 'newsletter_subscribers'
+			});
+
+			return { ok: true, recipients: recipients.length, sent, blocked, failed };
+		}
+	},
+
+	{
+		name: 'send_email',
+		description:
+			"Send a one-off email to specific people — an applicant, a company, an individual, or a small group. Find the recipient's address with the read tools (list_incubation_applications, list_companies, list_role_applicants, list_users); never guess an address. Compose the message as blocks. This sends real email, so it ALWAYS waits for the admin's explicit approval — it is never sent automatically. For the whole newsletter list, use send_newsletter instead.",
+		parameters: {
+			type: 'object',
+			properties: {
+				to: {
+					type: 'array',
+					description:
+						'Recipient email address(es), taken from the read tools — one, or up to 100. Do not invent addresses.',
+					items: { type: 'string' }
+				},
+				subject: { type: 'string', description: 'The email subject line.' },
+				blocks: {
+					type: 'array',
+					description: 'The message body as blocks, same shape as update_email_template.',
+					items: { type: 'object' }
+				}
+			},
+			required: ['to', 'subject', 'blocks']
+		},
+		label: () => 'Sending an email',
+		write: true,
+		confirmAlways: true,
+		preview: async (_db, args) => {
+			const recipients = recipientsOf(args.to);
+			if (recipients.length === 0) return { error: 'At least one valid recipient email is required.' };
+			if (recipients.length > 100) {
+				return { error: 'Too many recipients for a direct email (max 100). Use send_newsletter for the whole list.' };
+			}
+
+			const edit = await resolveEmailEdit({ key: 'direct-message', subject: args.subject, blocks: args.blocks });
+			if ('error' in edit) return edit;
+
+			return {
+				summary:
+					recipients.length === 1
+						? `Send an email to ${recipients[0]}`
+						: `Send an email to ${recipients.length} recipients`,
+				before: recipients.join(', '),
+				after: `Subject: ${edit.subject}\n\n${edit.body}`
+			};
+		},
+		run: async (db, args, ctx) => {
+			const recipients = recipientsOf(args.to);
+			if (recipients.length === 0) return { error: 'At least one valid recipient email is required.' };
+			if (recipients.length > 100) {
+				return { error: 'Too many recipients for a direct email (max 100). Use send_newsletter for the whole list.' };
+			}
+
+			const edit = await resolveEmailEdit({ key: 'direct-message', subject: args.subject, blocks: args.blocks });
+			if ('error' in edit) return edit;
+
+			// Stage the composed message on the direct-message template so the send
+			// picks up the body and any attachment; the delivery log keeps the copy
+			// that actually went to each person.
+			const { error: saveError } = await db.from('email_templates').upsert(
+				{
+					key: 'direct-message',
+					subject: edit.subject,
+					body: edit.body,
+					blocks: edit.blocks,
+					enabled: true,
+					updated_by: ctx.admin.userId,
+					updated_at: new Date().toISOString()
+				},
+				{ onConflict: 'key' }
+			);
+			if (saveError) return { error: saveError.message };
+			invalidateEmailTemplates();
+
+			let sent = 0;
+			let blocked = 0;
+			let failed = 0;
+			for (const to of recipients) {
+				const result = await sendTemplateEmail({
+					templateKey: 'direct-message',
+					to,
+					sentBy: ctx.admin.userId,
+					context: { direct: true }
+				});
+				if (result.status === 'sent') sent += 1;
+				else if (result.status === 'blocked') blocked += 1;
+				else failed += 1;
+			}
+
+			await logAdminAction(ctx, `sent a direct email to ${sent} of ${recipients.length} recipient(s)`, {
+				table: 'email_log'
+			});
+
+			return { ok: true, recipients: recipients.length, sent, blocked, failed };
 		}
 	}
 ];

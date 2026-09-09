@@ -7,7 +7,6 @@
 	import {
 		adminCreateAdmin,
 		adminDeleteUser,
-		adminSendPasswordReset,
 		adminSetUserBanned,
 		adminSetUserRole,
 		type ManagedUser,
@@ -95,14 +94,6 @@
 			user.id,
 			() => adminSetUserBanned(user.id, next),
 			next ? `${user.email} suspended.` : `${user.email} restored.`
-		);
-	}
-
-	function sendReset(user: ManagedUser) {
-		run(
-			user.id,
-			() => adminSendPasswordReset(user.id, user.email),
-			`Password reset sent to ${user.email}.`
 		);
 	}
 
@@ -308,11 +299,6 @@
 								<td><p class="cell__sub">{fmtDate(user.createdAt)}</p></td>
 								<td class="actions-col">
 									<div class="actions">
-										<button
-											class="btn"
-											disabled={busyId === user.id}
-											onclick={() => sendReset(user)}>Reset password</button
-										>
 										{#if user.id !== currentAdminId}
 											<button
 												class="btn"

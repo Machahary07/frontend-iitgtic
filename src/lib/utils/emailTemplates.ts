@@ -22,7 +22,13 @@ export type EmailTemplateDef = {
 	// Where the send is made from, shown in the editor so it is clear what
 	// actually triggers the message.
 	trigger: string;
-	group: 'Layout' | 'Companies' | 'Incubation applications' | 'Role applicants';
+	group:
+		| 'Layout'
+		| 'Companies'
+		| 'Incubation applications'
+		| 'Role applicants'
+		| 'Newsletter'
+		| 'Direct';
 	variables: TemplateVariable[];
 	subject: string;
 	// The body as an admin edits it. Every template except the layout is authored
@@ -40,7 +46,12 @@ export const COMMON_VARIABLES: TemplateVariable[] = [
 		description: 'Public site origin',
 		sample: 'https://iitgtic.itsjeu.com'
 	},
-	{ name: 'year', description: 'Current year', sample: String(new Date().getFullYear()) }
+	{ name: 'year', description: 'Current year', sample: String(new Date().getFullYear()) },
+	{
+		name: 'unsubscribeUrl',
+		description: 'One-click unsubscribe link, signed for the recipient — use in a newsletter footer',
+		sample: 'https://iitgtic.itsjeu.com/unsubscribe'
+	}
 ];
 
 export const EMAIL_LAYOUT_KEY = 'layout';
@@ -192,6 +203,40 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		],
 		subject: '{{subject}}',
 		body: LAYOUT_BODY
+	},
+
+	// --- newsletter ---------------------------------------------------------
+	{
+		key: 'newsletter',
+		name: 'Newsletter',
+		description:
+			'The message sent to everyone on the newsletter list. Compose it here (or ask the assistant to), then send the blast — every recipient gets a one-click unsubscribe link.',
+		trigger: 'Sent to every active subscriber when the newsletter is blasted',
+		group: 'Newsletter',
+		variables: [],
+		subject: 'News from {{siteName}}',
+		...fromBlocks([
+			{ type: 'heading', text: 'News from {{siteName}}' },
+			{ type: 'text', text: 'Write your update here.' },
+			{ type: 'divider' },
+			{ type: 'link', label: 'Unsubscribe', href: '{{unsubscribeUrl}}' }
+		])
+	},
+
+	// --- direct -------------------------------------------------------------
+	{
+		key: 'direct-message',
+		name: 'Direct message',
+		description:
+			'A one-off email the assistant composes and sends to specific people — an applicant, a company, an individual. It is restaged each time it is sent; the exact message that went out is kept in the delivery log.',
+		trigger: 'Sent by the assistant to a chosen recipient',
+		group: 'Direct',
+		variables: [],
+		subject: 'A message from {{siteName}}',
+		...fromBlocks([
+			{ type: 'heading', text: 'Hello' },
+			{ type: 'text', text: 'Your message here.' }
+		])
 	},
 
 	// --- companies ----------------------------------------------------------

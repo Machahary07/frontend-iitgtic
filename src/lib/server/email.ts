@@ -11,6 +11,7 @@ import {
 	type EmailTemplateDef
 } from '$lib/utils/emailTemplates';
 import { attachmentsFor, type EmailBlock } from '$lib/utils/emailBlocks';
+import { unsubscribeUrl } from '$lib/server/newsletter';
 import {
 	allowance,
 	dayStart,
@@ -428,6 +429,11 @@ export async function sendTemplateEmail(options: SendOptions): Promise<SendResul
 
 	const { subject, html, text } = renderEmail(template, layout, {
 		...defaultVariables(config),
+		// A per-recipient one-click unsubscribe link. Any template that references
+		// {{unsubscribeUrl}} — a newsletter footer, say — gets a link signed for
+		// this exact address; templates that don't (the transactional ones) ignore
+		// it. A caller may still override it through options.variables.
+		unsubscribeUrl: unsubscribeUrl(config.siteUrl, options.to),
 		...(options.variables ?? {})
 	});
 

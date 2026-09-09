@@ -742,15 +742,17 @@ in the Supabase dashboard — the code already handles both cases.
 rather than from anything baked into a prompt: the model is given a set of tools, calls the
 ones it needs, and the reply is written from what came back.
 
-**Site content is the only thing it can write; everything else is a read.** The model can look
+**It writes website content and email templates; everything else is a read.** The model can look
 at anything an admin can already see, and it can edit the public website's copy through
-`update_site_section` / `reset_site_section` — the same audited `site_content` path the Content
-screen uses, so those edits carry a before/after and are reversible from Activity. Everything
-else stays read-only: verifying a company, moving an application, sending mail and editing the
-email templates stay where they were, behind `/api/tic-admin/*`, where they are attributed and
-audited. The tool list in `src/lib/server/assistantTools.ts` is the security boundary, so no
-tool takes a raw table name or a raw filter from the model, and the write tools accept only a
-known section key.
+`update_site_section` / `reset_site_section` and the transactional emails through
+`update_email_template` / `reset_email_template` — the same audited `site_content` and
+`email_templates` paths (and the same block validation) the Content and Email screens use, so
+those edits carry a before/after and are reversible from Activity. Everything else stays
+read-only: verifying a company, moving an application, sending mail and deleting stay where they
+were, behind `/api/tic-admin/*`, where they are attributed and audited. The tool list in
+`src/lib/server/assistantTools.ts` is the security boundary, so no tool takes a raw table name or
+a raw filter from the model, the content writes accept only a known section key, and the email
+writes only a known template key (never the shared layout).
 
 What it can reach: console-wide counts, companies, incubation applications (including one
 application in full), posted jobs, role applicants, users, the audit trail, site traffic, the
@@ -804,7 +806,7 @@ before it adds a single tag: model output echoes database rows, so it is untrust
 
 ### Approving edits
 
-A content write is gated by an approval mode the admin toggles in the header — **Review**
+A content or email write is gated by an approval mode the admin toggles in the header — **Review**
 (the default) or **Auto**. In Review mode the loop does not run the write: it previews the
 before/after, streams a `proposal` event, and the console shows an Approve/Reject card. Approving
 posts to `/api/tic-admin/ai/apply`, which runs the very same tool the loop would have — so the

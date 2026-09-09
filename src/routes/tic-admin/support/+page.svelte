@@ -24,7 +24,7 @@
 		{
 			name: 'Veeshal D Bodosa',
 			role: 'Site & admin console',
-			email: 'veebodosa@gmail.com',
+			email: 'work@veeshal.me',
 			phone: '+91 6000013904'
 		}
 	];
