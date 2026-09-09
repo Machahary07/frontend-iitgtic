@@ -17,7 +17,7 @@ import { DEFAULT_MODEL_ID, findModel } from '$lib/utils/assistantModels';
 
 const STORE_KEY = 'tic-admin:assistant';
 
-type Stored = { apiKey?: string; model?: string };
+type Stored = { apiKey?: string; model?: string; autoApprove?: boolean };
 
 function read(): Stored {
 	if (!browser) return {};
@@ -33,27 +33,43 @@ function read(): Stored {
 class AssistantSettings {
 	apiKey = $state('');
 	modelId = $state(DEFAULT_MODEL_ID);
+	// Whether the assistant may apply a content edit on its own. Off by default:
+	// the edits reach the live public site, so the safe posture is to show the
+	// change and wait for the admin to approve it.
+	autoApprove = $state(false);
 
 	constructor() {
 		const stored = read();
 		this.apiKey = stored.apiKey ?? '';
 		this.modelId = findModel(stored.model).id;
+		this.autoApprove = stored.autoApprove ?? false;
 	}
 
 	get model() {
 		return findModel(this.modelId);
 	}
 
+	private persist(): void {
+		try {
+			localStorage.setItem(
+				STORE_KEY,
+				JSON.stringify({ apiKey: this.apiKey, model: this.modelId, autoApprove: this.autoApprove })
+			);
+		} catch {
+			// Not being able to remember the settings is not a reason to refuse them
+			// for this session.
+		}
+	}
+
 	save(apiKey: string, modelId: string): void {
 		this.apiKey = apiKey.trim();
 		this.modelId = findModel(modelId).id;
+		this.persist();
+	}
 
-		try {
-			localStorage.setItem(STORE_KEY, JSON.stringify({ apiKey: this.apiKey, model: this.modelId }));
-		} catch {
-			// Not being able to remember the key is not a reason to refuse it for
-			// this session.
-		}
+	setAutoApprove(value: boolean): void {
+		this.autoApprove = value;
+		this.persist();
 	}
 
 	forget(): void {

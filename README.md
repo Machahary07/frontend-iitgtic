@@ -307,7 +307,7 @@ admin's id.
 | `/api/tic-admin/email/suppressions` | `DELETE`                      | Lift a bounce or complaint suppression so the address can be written to again                                                                             |
 | `/api/newsletter`                   | `POST`                        | **Public** footer subscribe — rate limited and validated; a repeat address is a plain success, so the form cannot be used to discover who is on the list  |
 | `/api/tic-admin/newsletter`         | `GET` `DELETE`                | The subscriber list for export, and removal on request                                                                                                    |
-| `/api/tic-admin/ai`                 | `POST`                        | The admin assistant. Runs a read-only tool loop against Sarvam and streams NDJSON progress back — see [Admin assistant](#admin-assistant)                 |
+| `/api/tic-admin/ai`                 | `POST`                        | The admin assistant. Runs a tool loop against Sarvam (reads everything, writes only site content) and streams NDJSON progress back — see [Admin assistant](#admin-assistant)                 |
 | `/api/resend-webhook`               | `POST`                        | **Public but Svix-signed** delivery feedback from Resend — records the event and suppresses the address on a permanent bounce or a complaint              |
 
 ## Data model
@@ -742,17 +742,20 @@ in the Supabase dashboard — the code already handles both cases.
 rather than from anything baked into a prompt: the model is given a set of tools, calls the
 ones it needs, and the reply is written from what came back.
 
-**Every tool is a read.** The model can look at anything an admin can already see and change
-nothing at all. Verifying a company, moving an application, sending mail and editing the site
-stay where they were, behind `/api/tic-admin/*`, where they are attributed and audited. That
-is what makes it safe to hand a third-party model a service-role client — the tool list in
-`src/lib/server/assistantTools.ts` is the security boundary, so no tool takes a raw table name
-or a raw filter from the model.
+**Site content is the only thing it can write; everything else is a read.** The model can look
+at anything an admin can already see, and it can edit the public website's copy through
+`update_site_section` / `reset_site_section` — the same audited `site_content` path the Content
+screen uses, so those edits carry a before/after and are reversible from Activity. Everything
+else stays read-only: verifying a company, moving an application, sending mail and editing the
+email templates stay where they were, behind `/api/tic-admin/*`, where they are attributed and
+audited. The tool list in `src/lib/server/assistantTools.ts` is the security boundary, so no
+tool takes a raw table name or a raw filter from the model, and the write tools accept only a
+known section key.
 
 What it can reach: console-wide counts, companies, incubation applications (including one
 application in full), posted jobs, role applicants, users, the audit trail, site traffic, the
 email templates and delivery log, newsletter sign-ups, and the live copy of any section of the
-public website.
+public website — which it can also edit.
 
 ### Models
 
@@ -763,10 +766,17 @@ the path with the model so nothing has to guess.
 | Model         | Endpoint               | Notes                                                                                                                                                                                                         |
 | ------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sarvam-105b` | `/v1/chat/completions` | The default. 128K context, tool calling, and it reasons before it answers — the working-out streams into a collapsed block above the reply. Text only.                                                        |
-| `gemma4`      | `/v2/chat/completions` | Gemma 4 31B. Also 128K and tool calling, and the only one that reads images, so the attach button appears for this model alone. **In beta:** a key has to be allow-listed by Sarvam before it answers at all. |
+| `gemma4`      | `/v2/chat/completions` | Gemma 4 31B. Also 128K and tool calling, and the only one that can *look* at an image to answer a question about it. **In beta:** a key has to be allow-listed by Sarvam before it answers at all. |
 
-Images are inlined as base64 data URIs — Sarvam rejects remote URLs — and the whole request is
-capped at 10 MB, which is why a source image over ~7 MB is refused in the browser.
+### Attaching images
+
+The attach button is on every model. An attached image is uploaded to the `site-assets` bucket —
+the same one the content editor uses, through `/api/tic-admin/content/assets` — and its public URL
+is folded into the message as text, so any model can place it into content: "add this photo to
+governing-body member A" sets that member's `avatar.src` with `update_site_section` (subject to the
+same approval as any other edit). On Gemma the image is *also* inlined as a base64 data URI so it
+can be looked at; Sarvam rejects remote image URLs on the vision channel, and the whole request is
+capped at 10 MB, so an upload is limited to 5 MB.
 
 ### The key
 
@@ -783,13 +793,32 @@ reason to rotate rather than treat one as long-lived.
 
 The browser posts the conversation to `/api/tic-admin/ai`. The route runs up to six rounds of
 tool calls, and streams newline-delimited JSON back as it goes: `step` for each lookup the model
-starts, `reasoning` for its working-out, `text` for the answer itself, then `done`. On the last
-permitted round the tools are withheld, which forces an answer out of what has been gathered
-rather than ending the turn on a call nobody will run.
+starts, `reasoning` for its working-out, `text` for the answer itself, `proposal` for a content
+edit awaiting approval, then `done`. On the last permitted round the tools are withheld, which
+forces an answer out of what has been gathered rather than ending the turn on a call nobody will
+run.
 
 Replies are rendered by a small markdown subset in `src/lib/utils/assistantMarkdown.ts` —
 paragraphs, headings, lists, tables, blockquotes, code and http(s) links. It escapes the reply
 before it adds a single tag: model output echoes database rows, so it is untrusted text.
+
+### Approving edits
+
+A content write is gated by an approval mode the admin toggles in the header — **Review**
+(the default) or **Auto**. In Review mode the loop does not run the write: it previews the
+before/after, streams a `proposal` event, and the console shows an Approve/Reject card. Approving
+posts to `/api/tic-admin/ai/apply`, which runs the very same tool the loop would have — so the
+merge, the audit entry and the cache invalidation are identical either way, and the mode only
+decides *when* the write runs. In Auto mode the write happens inside the loop as any other tool
+would. Off by default because the edits reach the live public site.
+
+### Saved chats
+
+Conversations persist to `assistant_conversations` (one row per chat, the turns as a JSON array,
+scoped to the admin) through `/api/tic-admin/ai/conversations`. The console autosaves after every
+turn, the header's history panel lists an admin's own chats to reopen or delete, and **New chat**
+starts a fresh one. Attachments are dropped from the stored copy so a base64 image never bloats a
+row; the table is not audited — an admin's own chats are not site data.
 
 ## Content model
 

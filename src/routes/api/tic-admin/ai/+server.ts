@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { requireAdmin, type AdminContext } from '$lib/server/adminGuard';
@@ -14,9 +15,11 @@ import type { RequestHandler } from './$types';
 // have. Instead the console posts a conversation here, this route runs the
 // tool-calling loop against the admin's own data, and streams the result back.
 //
-// The loop is deliberately read-only — see assistantTools.ts. The model can look
-// at anything an admin can already see in the console and nothing else, and it
-// cannot change a single row.
+// The loop can look at anything an admin can already see in the console. It is
+// read-only everywhere except site content: the model may edit the public
+// website's copy, the one write the tool surface grants — see assistantTools.ts.
+// Those edits go through the same audited site_content path the Content screen
+// uses. Everything else — statuses, companies, emails, deletes — stays read-only.
 
 // A question that needs a count, then a list, then a specific record is three
 // round trips. Past that the model is going in circles rather than converging.
@@ -53,8 +56,14 @@ HOW TO ANSWER
 - Be concise and concrete. Give the figure, the name, the date. Short markdown — a sentence or a tight list, not an essay. No preamble like "Certainly".
 - Use British spelling, matching the rest of the console.
 
+WHAT YOU CAN CHANGE
+You can edit the copy on the public website. Call read_site_section first to see the section's shape. Then, to change one field, call update_site_section with the section key, the dotted path to that field (e.g. hero.heading, or members.2.bio — array items count from 0) and the new value for that field alone. Editing by path is the reliable way and leaves the rest of the section untouched; only omit path to replace a whole small section outright. reset_site_section puts a section back to its bundled default. Every edit is audited and can be reverted from Activity, so make the change when asked rather than only describing it; still confirm first if the request is vague about what to write.
+
+IMAGES THE ADMIN ATTACHES
+When the admin attaches an image it is uploaded to the site's media library and its public URL is listed in their message under "[Attached image…]". To put that image on the site, write its URL into the matching image field with update_site_section — for a person that field is their avatar's src, e.g. path members.2.avatar.src on pages.team or pages.governingBody. Read the section first to find the right index, and set the avatar's alt text too when it is empty. Only ever use a URL the admin attached or that read_site_section returned; never invent an image URL.
+
 WHAT YOU CANNOT DO
-Every tool you have is read-only. You cannot verify a company, change a status, send an email, edit the website or delete anything. If asked to do one of those, say so in one line and point to the console section where the admin can do it themselves — Companies, Applications, Posted jobs, Role applicants, Users, Content, Email or Storage. You may freely draft or rewrite text for an admin to paste in; drafting is not changing.`;
+Content is the only thing you can write. You cannot verify a company, change a status, send an email, edit the email templates or delete anything. If asked to do one of those, say so in one line and point to the console section where the admin can do it themselves — Companies, Applications, Posted jobs, Role applicants, Users, Email or Storage. You may freely draft or rewrite text for an admin to paste in; drafting is not changing.`;
 }
 
 type IncomingMessage = {
@@ -62,28 +71,54 @@ type IncomingMessage = {
 	content: string;
 	/** base64 data URIs, images only, and only on a model that accepts them. */
 	images?: string[];
+	/** Images the admin attached, uploaded to the media bucket. Their URLs are
+	 *  folded into the text so any model can place one into content. */
+	attachments?: { name: string; url: string }[];
 };
 
 type Event =
 	| { type: 'step'; label: string }
 	| { type: 'text'; delta: string }
 	| { type: 'reasoning'; delta: string }
+	| {
+			type: 'proposal';
+			id: string;
+			tool: string;
+			args: Record<string, unknown>;
+			summary: string;
+			before: unknown;
+			after: unknown;
+	  }
 	| { type: 'done' }
 	| { type: 'error'; message: string };
+
+// The list of attached image URLs, folded into the user's text so a text-only
+// model can still place one into content. The vision channel below is separate:
+// it lets a model *look* at an image, which is not what an attachment is for.
+function attachmentNote(attachments: { name: string; url: string }[]): string {
+	if (attachments.length === 0) return '';
+	const lines = attachments.map((item) => `- ${item.name}: ${item.url}`).join('\n');
+	return `\n\n[Attached image${attachments.length > 1 ? 's' : ''}, already uploaded to the media library:\n${lines}]`;
+}
 
 // Turns the console's simplified messages into what the API expects. Images ride
 // along in the content array, which only the vision model understands, so they
 // are dropped rather than sent to a model that would reject the whole request.
 function toApiMessages(messages: IncomingMessage[], acceptsImages: boolean): ChatMessage[] {
 	return messages.map((message) => {
-		const images = acceptsImages ? (message.images ?? []) : [];
-		if (message.role !== 'user' || images.length === 0) {
+		if (message.role !== 'user') {
 			return { role: message.role, content: message.content };
+		}
+
+		const text = message.content + attachmentNote(message.attachments ?? []);
+		const images = acceptsImages ? (message.images ?? []) : [];
+		if (images.length === 0) {
+			return { role: 'user', content: text };
 		}
 		return {
 			role: 'user',
 			content: [
-				{ type: 'text', text: message.content },
+				{ type: 'text', text },
 				...images.map((url) => ({ type: 'image_url', image_url: { url } }))
 			]
 		};
@@ -107,7 +142,7 @@ async function runTool(ctx: AdminContext, call: ToolCall): Promise<string> {
 	}
 
 	try {
-		return JSON.stringify(await tool.run(ctx.db, args));
+		return JSON.stringify(await tool.run(ctx.db, args, ctx));
 	} catch (cause) {
 		const message = cause instanceof Error ? cause.message : 'The lookup failed.';
 		return JSON.stringify({ error: message });
@@ -121,7 +156,11 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 		model?: string;
 		apiKey?: string;
 		messages?: IncomingMessage[];
+		/** When false (the default), a content write is previewed for the admin to
+		 *  approve rather than applied inside the loop. */
+		autoApprove?: boolean;
 	};
+	const autoApprove = body.autoApprove === true;
 
 	// The key is the admin's, held in their browser and sent per request, or a
 	// server-side one if the deployment has been given a shared key. It is never
@@ -179,18 +218,32 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 						break;
 					}
 
+					// A tool call whose arguments were cut off mid-stream (the token budget
+					// spent on reasoning, say) carries an incomplete JSON string. Echoing
+					// that straight back makes Sarvam reject the whole next request;
+					// blanking it keeps the request valid, and the tool result below
+					// already tells the model the arguments were unreadable so it retries.
+					const echoedCalls = turn.toolCalls.map((call) => {
+						try {
+							JSON.parse(call.function.arguments || '{}');
+							return call;
+						} catch {
+							return { ...call, function: { ...call.function, arguments: '{}' } };
+						}
+					});
+
 					messages.push({
 						role: 'assistant',
 						content: turn.content || null,
-						tool_calls: turn.toolCalls
+						tool_calls: echoedCalls
 					});
 
 					// Independent lookups, so they run together rather than in sequence.
 					const results = await Promise.all(
 						turn.toolCalls.map(async (call) => {
 							const tool = findTool(call.function.name);
+							let args: Record<string, unknown> = {};
 							if (tool) {
-								let args: Record<string, unknown> = {};
 								try {
 									args = JSON.parse(call.function.arguments || '{}');
 								} catch {
@@ -199,6 +252,35 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 								}
 								emit({ type: 'step', label: tool.label(args) });
 							}
+
+							// A write the admin still has to approve: don't run it. Show them
+							// the before/after and hand the model a note so it stops rather
+							// than looping. The write itself happens later, through
+							// /api/tic-admin/ai/apply, when they click Approve.
+							if (tool?.write && !autoApprove) {
+								const preview = tool.preview
+									? await tool.preview(ctx.db, args)
+									: { error: 'This change cannot be previewed.' };
+								if ('error' in preview) return { call, content: JSON.stringify(preview) };
+
+								emit({
+									type: 'proposal',
+									id: randomUUID(),
+									tool: call.function.name,
+									args,
+									summary: preview.summary,
+									before: preview.before,
+									after: preview.after
+								});
+								return {
+									call,
+									content: JSON.stringify({
+										status: 'awaiting_approval',
+										note: 'This change has been shown to the admin to approve or reject. Do not call it again; briefly tell them what you have proposed.'
+									})
+								};
+							}
+
 							return { call, content: await runTool(ctx, call) };
 						})
 					);

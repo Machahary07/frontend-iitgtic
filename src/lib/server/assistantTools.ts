@@ -1,21 +1,28 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getSiteContent } from '$lib/server/siteContent';
-import { CONTENT_SECTIONS, readPath } from '$lib/content';
+import { getSection, getSiteContent, invalidateSiteContent } from '$lib/server/siteContent';
+import { logAdminAction, type AdminContext } from '$lib/server/adminGuard';
+import { CONTENT_SECTIONS, readPath, writePath } from '$lib/content';
 import { EMAIL_TEMPLATES } from '$lib/utils/emailTemplates';
+import fallback from '$lib/data/content.json';
 
-// What the assistant is allowed to look at.
+// What the assistant is allowed to do.
 //
-// Every tool here is a read. The model can describe the console and answer
-// questions about it, but it cannot verify a company, change a status or send a
-// mail — those stay behind the existing /api/tic-admin/* routes where they are
-// attributed and audited. Keeping the tool surface read-only is what makes it
-// safe to let a third-party model drive it.
+// Almost every tool here is a read. The two exceptions — update_site_section and
+// reset_site_section — let the model edit the public website's copy, the same
+// change an admin makes on the Content screen. Everything else stays read-only:
+// the model cannot verify a company, change a status or send a mail — those stay
+// behind the existing /api/tic-admin/* routes where they are attributed and
+// audited. A content write takes the same site_content path those routes use, so
+// it is audited before/after and reversible from Activity too.
 //
 // The client passed in is the guard's service-role client, so these queries see
 // past RLS. That is the whole point — most of these tables have RLS on with no
 // policies and are invisible any other way — but it also means the tool list is
 // the security boundary, so nothing here takes a raw table name or a raw filter
-// from the model.
+// from the model, and the write tools accept only a known section key.
+
+/** What a write tool would change, shown to the admin before it is applied. */
+export type ToolPreview = { summary: string; before: unknown; after: unknown } | { error: string };
 
 export type ToolDef = {
 	name: string;
@@ -23,7 +30,18 @@ export type ToolDef = {
 	parameters: Record<string, unknown>;
 	/** Short present-tense label shown in the transcript while it runs. */
 	label: (args: Record<string, unknown>) => string;
-	run: (db: SupabaseClient, args: Record<string, unknown>) => Promise<unknown>;
+	// ctx is the acting admin, needed by the write tools to stamp updated_by and
+	// log the action. Read tools ignore it and use only db.
+	run: (
+		db: SupabaseClient,
+		args: Record<string, unknown>,
+		ctx: AdminContext
+	) => Promise<unknown>;
+	/** True for tools that change data. In manual-approval mode these are not run
+	 *  in the loop — they are previewed and applied only once the admin approves. */
+	write?: boolean;
+	/** Computes the before/after for the approval card without changing anything. */
+	preview?: (db: SupabaseClient, args: Record<string, unknown>) => Promise<ToolPreview>;
 };
 
 // Rows are fed back to the model as JSON, so a runaway limit costs context
@@ -615,6 +633,150 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			}
 
 			return { key, value };
+		}
+	},
+
+	{
+		name: 'update_site_section',
+		description:
+			"Edit the live copy of the public website — the same change an admin makes on the Content screen, published immediately. Read_site_section first to see the section's shape. To change one field, pass its dotted path within the section and the new value for that field alone; this is the reliable way to edit and leaves everything else untouched. Omit path only to replace an entire (small) section. The edit is audited and can be reverted from Activity.",
+		parameters: {
+			type: 'object',
+			properties: {
+				key: {
+					type: 'string',
+					description: 'A section key from list_site_sections, e.g. pages.governingBody.'
+				},
+				path: {
+					type: 'string',
+					description:
+						'Dotted path to the field within the section, e.g. hero.heading or members.2.bio (array items are indexed from 0). Omit to replace the whole section.'
+				},
+				value: {
+					description:
+						'The new value. With a path, the value for that one field (string, object or array). Without a path, the complete new section value.'
+				},
+				label: {
+					type: 'string',
+					description: 'Optional short note describing the edit, stored with the section.'
+				}
+			},
+			required: ['key', 'value']
+		},
+		label: (args) => `Updating the ${String(args.key ?? '')} content`,
+		write: true,
+		preview: async (_db, args) => {
+			const key = textOf(args, 'key');
+			if (!key) return { error: 'A section key is required.' };
+			if (!CONTENT_SECTIONS.some((section) => section.key === key)) {
+				return { error: `"${key}" is not an editable section.` };
+			}
+			if (args.value === undefined) return { error: 'A new value is required.' };
+
+			const path = textOf(args, 'path');
+			const current = await getSection(key);
+			return {
+				summary: `Update ${key}${path ? ` · ${path}` : ''}`,
+				before: path ? readPath(current, path) : current,
+				after: args.value
+			};
+		},
+		run: async (db, args, ctx) => {
+			const key = textOf(args, 'key');
+			if (!key) return { error: 'A section key is required.' };
+			if (!CONTENT_SECTIONS.some((section) => section.key === key)) {
+				return {
+					error: `"${key}" is not an editable section. Call list_site_sections for valid keys.`
+				};
+			}
+			if (args.value === undefined) return { error: 'A new value is required.' };
+
+			const path = textOf(args, 'path');
+			let value: unknown;
+			if (path) {
+				// Patch one field: start from the current section so everything else is
+				// preserved and the model only sends the part that changed. Re-emitting
+				// a whole section as JSON is what the token budget cannot reliably fit —
+				// on a reasoning model the arguments get truncated mid-write.
+				const current = await getSection(key);
+				const draft = current && typeof current === 'object' ? structuredClone(current) : {};
+				writePath(draft as Record<string, unknown>, path, args.value);
+				value = draft;
+			} else {
+				value = args.value;
+			}
+
+			const { error } = await db.from('site_content').upsert(
+				{
+					key,
+					value,
+					label: textOf(args, 'label'),
+					updated_by: ctx.admin.userId,
+					updated_at: new Date().toISOString()
+				},
+				{ onConflict: 'key' }
+			);
+			if (error) return { error: error.message };
+
+			// The public site reads through an in-process cache; without this the edit
+			// would not show until the TTL lapsed.
+			invalidateSiteContent();
+			await logAdminAction(ctx, `edited site content · ${key}${path ? ` · ${path}` : ''}`, {
+				table: 'site_content',
+				recordId: key
+			});
+
+			return { ok: true, key, path: path || null };
+		}
+	},
+
+	{
+		name: 'reset_site_section',
+		description:
+			'Discard any saved edits to one section and restore the copy bundled with the site (its original default). Use this only when asked to undo changes or reset a section. Audited and shown in Activity.',
+		parameters: {
+			type: 'object',
+			properties: {
+				key: {
+					type: 'string',
+					description: 'A section key from list_site_sections, e.g. pages.about.'
+				}
+			},
+			required: ['key']
+		},
+		label: (args) => `Resetting the ${String(args.key ?? '')} content`,
+		write: true,
+		preview: async (_db, args) => {
+			const key = textOf(args, 'key');
+			if (!key) return { error: 'A section key is required.' };
+			if (!CONTENT_SECTIONS.some((section) => section.key === key)) {
+				return { error: `"${key}" is not an editable section.` };
+			}
+			return {
+				summary: `Reset ${key} to its bundled default`,
+				before: await getSection(key),
+				after: readPath(fallback, key)
+			};
+		},
+		run: async (db, args, ctx) => {
+			const key = textOf(args, 'key');
+			if (!key) return { error: 'A section key is required.' };
+			if (!CONTENT_SECTIONS.some((section) => section.key === key)) {
+				return {
+					error: `"${key}" is not an editable section. Call list_site_sections for valid keys.`
+				};
+			}
+
+			const { error } = await db.from('site_content').delete().eq('key', key);
+			if (error) return { error: error.message };
+
+			invalidateSiteContent();
+			await logAdminAction(ctx, `reset site content to the bundled default · ${key}`, {
+				table: 'site_content',
+				recordId: key
+			});
+
+			return { ok: true, key };
 		}
 	}
 ];

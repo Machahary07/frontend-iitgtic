@@ -11,9 +11,13 @@
 	import Square from '@lucide/svelte/icons/square';
 	import X from '@lucide/svelte/icons/x';
 	import Check from '@lucide/svelte/icons/check';
+	import History from '@lucide/svelte/icons/history';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import ShieldCheck from '@lucide/svelte/icons/shield-check';
+	import Zap from '@lucide/svelte/icons/zap';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import { ASSISTANT_MODELS, findModel } from '$lib/utils/assistantModels';
+	import { ASSISTANT_MODELS } from '$lib/utils/assistantModels';
 	import { assistantSettings } from '$lib/utils/assistantSettings.svelte';
 	import { renderMarkdown } from '$lib/utils/assistantMarkdown';
 	import { showToast } from '$lib/utils/toast.svelte';
@@ -30,24 +34,49 @@
 	const configured = $derived(Boolean(assistantSettings.apiKey) || data.hasServerKey);
 	const model = $derived(assistantSettings.model);
 
+	// A content edit the assistant wants to make, waiting on the admin. Only ever
+	// appears in manual-approval mode; in auto mode the write just happens.
+	type Proposal = {
+		id: string;
+		tool: string;
+		args: Record<string, unknown>;
+		summary: string;
+		before: unknown;
+		after: unknown;
+		status: 'pending' | 'applying' | 'approved' | 'rejected' | 'error';
+		error: string;
+	};
+
+	// An image the admin attached. It is uploaded to the site's media bucket on
+	// attach, so `url` is a public link the assistant can drop into content (e.g.
+	// a member's avatar). `dataUrl` is only for the thumbnail shown in the chat.
+	type Attachment = {
+		name: string;
+		url: string;
+		dataUrl: string;
+		uploading: boolean;
+	};
+
 	type Message = {
 		id: number;
 		role: 'you' | 'assistant';
 		text: string;
-		/** base64 data URIs shown back to the admin and sent with the question. */
-		images: string[];
+		/** Images the admin attached, already uploaded to the media bucket. */
+		attachments: Attachment[];
 		/** What the assistant looked at, in the order it looked. */
 		steps: string[];
 		/** sarvam-105b reasons out loud before answering. Kept separate from the
 		 *  answer, because it is working-out and not a claim about the data. */
 		reasoning: string;
+		/** Content edits it is asking to make, in manual-approval mode. */
+		proposals: Proposal[];
 		streaming: boolean;
 		error: string;
 	};
 
 	let messages = $state<Message[]>([]);
 	let draft = $state('');
-	let pending = $state<string[]>([]);
+	let pending = $state<Attachment[]>([]);
 	let busy = $state(false);
 	let thread = $state<HTMLDivElement | null>(null);
 	let box = $state<HTMLTextAreaElement | null>(null);
@@ -55,8 +84,20 @@
 	let nextId = 0;
 	let controller: AbortController | null = null;
 
+	// ---- saved chats ---------------------------------------------------------
+
+	// The row this conversation is saved as, once it has been. Autosaved after
+	// every turn, so leaving and coming back to it loses nothing.
+	let conversationId = $state<string | null>(null);
+	let conversations = $state<{ id: string; title: string; updated_at: string }[]>([]);
+	let historyOpen = $state(false);
+	let historyLoading = $state(false);
+
 	const empty = $derived(messages.length === 0);
-	const canSend = $derived(!busy && (draft.trim().length > 0 || pending.length > 0));
+	const uploading = $derived(pending.some((item) => item.uploading));
+	const canSend = $derived(
+		!busy && !uploading && (draft.trim().length > 0 || pending.length > 0)
+	);
 
 	// Written against the console as it stands, so the suggestions read as things
 	// this admin could actually ask for rather than filler.
@@ -75,12 +116,20 @@
 	let modelDraft = $state(assistantSettings.modelId);
 	let keyVisible = $state(false);
 
+	let historyEl = $state<HTMLDialogElement | null>(null);
+
 	// <dialog> is what gives the focus trap, the inert background and Esc to
 	// dismiss, the same as the app's confirm dialog.
 	$effect(() => {
 		if (!settingsEl) return;
 		if (settingsOpen && !settingsEl.open) settingsEl.showModal();
 		else if (!settingsOpen && settingsEl.open) settingsEl.close();
+	});
+
+	$effect(() => {
+		if (!historyEl) return;
+		if (historyOpen && !historyEl.open) historyEl.showModal();
+		else if (!historyOpen && historyEl.open) historyEl.close();
 	});
 
 	function openSettings() {
@@ -93,15 +142,7 @@
 	function saveSettings(event: SubmitEvent) {
 		event.preventDefault();
 		assistantSettings.save(keyDraft, modelDraft);
-
-		// A model that cannot read images must not leave images queued behind it.
-		if (!findModel(modelDraft).images && pending.length > 0) {
-			pending = [];
-			showToast('Attachments cleared — this model reads text only.', 'info');
-		} else {
-			showToast('Assistant settings saved.');
-		}
-
+		showToast('Assistant settings saved.');
 		settingsOpen = false;
 	}
 
@@ -113,9 +154,9 @@
 
 	// ---- attachments ---------------------------------------------------------
 
-	// The whole request is capped at 10 MB and base64 adds about a third, so a
-	// source file over ~7 MB cannot fit however few of them there are.
-	const MAX_IMAGE_BYTES = 7 * 1024 * 1024;
+	// The media bucket caps an upload at 5 MB, so anything larger is refused here
+	// before it is sent.
+	const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 	function readAsDataUrl(file: File): Promise<string> {
 		return new Promise((done, fail) => {
@@ -124,6 +165,22 @@
 			reader.onerror = () => fail(new Error(`Could not read ${file.name}.`));
 			reader.readAsDataURL(file);
 		});
+	}
+
+	// Uploads to the same media bucket the content editor uses, so the URL it
+	// returns is one the assistant can write straight into a section.
+	async function uploadAsset(file: File): Promise<string> {
+		const form = new FormData();
+		form.append('file', file);
+		const response = await fetch('/api/tic-admin/content/assets', { method: 'POST', body: form });
+		if (!response.ok) {
+			const detail = await response
+				.json()
+				.then((payload) => payload?.message)
+				.catch(() => null);
+			throw new Error(detail || 'The upload failed.');
+		}
+		return (await response.json()).url as string;
 	}
 
 	async function onPick(event: Event) {
@@ -137,13 +194,27 @@
 				continue;
 			}
 			if (file.size > MAX_IMAGE_BYTES) {
-				showToast(`${file.name} is larger than 7 MB.`, 'err');
+				showToast(`${file.name} is larger than 5 MB.`, 'err');
 				continue;
 			}
+
+			// Show the thumbnail immediately, then upload — the row flips out of its
+			// uploading state once the bucket has the file and a URL to point at.
+			let attachment: Attachment;
 			try {
-				pending = [...pending, await readAsDataUrl(file)];
+				attachment = { name: file.name, url: '', dataUrl: await readAsDataUrl(file), uploading: true };
+			} catch {
+				showToast(`Could not read ${file.name}.`, 'err');
+				continue;
+			}
+
+			pending = [...pending, attachment];
+			try {
+				attachment.url = await uploadAsset(file);
+				attachment.uploading = false;
 			} catch (cause) {
-				showToast(cause instanceof Error ? cause.message : 'Could not read that file.', 'err');
+				pending = pending.filter((item) => item !== attachment);
+				showToast(cause instanceof Error ? cause.message : `Could not upload ${file.name}.`, 'err');
 			}
 		}
 	}
@@ -189,14 +260,14 @@
 			return;
 		}
 
-		const images = model.images ? pending : [];
 		const question: Message = {
 			id: nextId++,
 			role: 'you',
 			text: body,
-			images,
+			attachments: pending,
 			steps: [],
 			reasoning: '',
+			proposals: [],
 			streaming: false,
 			error: ''
 		};
@@ -204,9 +275,10 @@
 			id: nextId++,
 			role: 'assistant',
 			text: '',
-			images: [],
+			attachments: [],
 			steps: [],
 			reasoning: '',
+			proposals: [],
 			streaming: true,
 			error: ''
 		};
@@ -233,12 +305,18 @@
 				body: JSON.stringify({
 					model: assistantSettings.modelId,
 					apiKey: assistantSettings.apiKey || undefined,
+					autoApprove: assistantSettings.autoApprove,
 					messages: messages
-						.filter((message) => message !== live && (message.text || message.images.length))
+						.filter((message) => message !== live && (message.text || message.attachments.length))
 						.map((message) => ({
 							role: message.role === 'you' ? 'user' : 'assistant',
 							content: message.text,
-							images: message.images
+							// URLs let any model place the image into content; the base64
+							// data URIs are only for a vision model that can look at them.
+							attachments: message.attachments
+								.filter((item) => item.url)
+								.map((item) => ({ name: item.name, url: item.url })),
+							images: model.images ? message.attachments.map((item) => item.dataUrl) : []
 						}))
 				})
 			});
@@ -269,7 +347,18 @@
 					buffer = buffer.slice(newline + 1);
 					if (!line) continue;
 
-					let event: { type: string; delta?: string; label?: string; message?: string };
+					let event: {
+						type: string;
+						delta?: string;
+						label?: string;
+						message?: string;
+						id?: string;
+						tool?: string;
+						args?: Record<string, unknown>;
+						summary?: string;
+						before?: unknown;
+						after?: unknown;
+					};
 					try {
 						event = JSON.parse(line);
 					} catch {
@@ -284,6 +373,21 @@
 						await follow();
 					} else if (event.type === 'step' && event.label) {
 						live.steps = [...live.steps, event.label];
+						await follow();
+					} else if (event.type === 'proposal' && event.id && event.tool) {
+						live.proposals = [
+							...live.proposals,
+							{
+								id: event.id,
+								tool: event.tool,
+								args: event.args ?? {},
+								summary: event.summary ?? 'Content change',
+								before: event.before,
+								after: event.after,
+								status: 'pending',
+								error: ''
+							}
+						];
 						await follow();
 					} else if (event.type === 'error' && event.message) {
 						live.error = event.message;
@@ -301,32 +405,179 @@
 			busy = false;
 			controller = null;
 			await follow();
+			// Persist the exchange so it survives a reload and shows in history.
+			saveConversation();
 		}
 	}
 
-	// Nothing is kept between threads — there is no history to go back to — so
-	// starting over is the one action here that actually destroys something, and
-	// it asks first once there is a conversation to lose.
+	// The current chat is autosaved after every turn, so starting a new one loses
+	// nothing — the last is already in history. No confirmation to get in the way.
 	async function newChat() {
-		if (!empty) {
-			const ok = await askConfirm({
-				title: 'Start a new chat?',
-				body: 'This conversation is not saved anywhere, so it will be gone.',
-				confirmLabel: 'Start new chat',
-				tone: 'danger'
-			});
-			if (!ok) return;
-		}
-
 		stop();
 		messages = [];
 		draft = '';
 		pending = [];
 		busy = false;
+		conversationId = null;
 
 		await tick();
 		grow();
 		box?.focus();
+	}
+
+	// A conversation is worth saving once the assistant has actually answered.
+	// Images are dropped from the stored copy — a base64 attachment would bloat the
+	// row for little value once the question has been answered.
+	function saveConversation() {
+		if (!messages.some((message) => message.role === 'assistant' && message.text.trim())) return;
+
+		const firstAsk = messages.find((message) => message.role === 'you' && message.text.trim());
+		const title = firstAsk ? firstAsk.text.trim().slice(0, 120) : 'New chat';
+		const stored = messages
+			.filter((message) => message.text || message.steps.length)
+			.map((message) => ({
+				role: message.role,
+				text: message.text,
+				steps: message.steps,
+				reasoning: message.reasoning
+			}));
+
+		fetch('/api/tic-admin/ai/conversations', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ id: conversationId, title, messages: stored })
+		})
+			.then((response) => (response.ok ? response.json() : null))
+			.then((payload) => {
+				if (payload?.id) conversationId = payload.id;
+			})
+			.catch(() => {
+				// A failed autosave must never interrupt the chat.
+			});
+	}
+
+	async function openHistory() {
+		historyOpen = true;
+		historyLoading = true;
+		try {
+			const response = await fetch('/api/tic-admin/ai/conversations');
+			if (response.ok) conversations = (await response.json()).conversations ?? [];
+		} catch {
+			// Leave the list as it was; the panel shows the empty state.
+		} finally {
+			historyLoading = false;
+		}
+	}
+
+	async function openConversation(id: string) {
+		if (busy) stop();
+		try {
+			const response = await fetch(`/api/tic-admin/ai/conversations?id=${id}`);
+			if (!response.ok) {
+				showToast('Could not open that chat.', 'err');
+				return;
+			}
+			const { conversation } = await response.json();
+			messages = (conversation.messages ?? []).map(
+				(m: { role?: string; text?: string; steps?: string[]; reasoning?: string }) => ({
+					id: nextId++,
+					role: m.role === 'assistant' ? 'assistant' : 'you',
+					text: m.text ?? '',
+					attachments: [],
+					steps: m.steps ?? [],
+					reasoning: m.reasoning ?? '',
+					proposals: [],
+					streaming: false,
+					error: ''
+				})
+			);
+			conversationId = conversation.id;
+			historyOpen = false;
+			await tick();
+			grow();
+			await follow(true);
+		} catch {
+			showToast('Could not open that chat.', 'err');
+		}
+	}
+
+	async function deleteConversation(id: string) {
+		const ok = await askConfirm({
+			title: 'Delete this chat?',
+			body: 'It will be removed for good.',
+			confirmLabel: 'Delete',
+			tone: 'danger'
+		});
+		if (!ok) return;
+
+		try {
+			await fetch(`/api/tic-admin/ai/conversations?id=${id}`, { method: 'DELETE' });
+			conversations = conversations.filter((chat) => chat.id !== id);
+			if (conversationId === id) {
+				conversationId = null;
+				messages = [];
+			}
+		} catch {
+			showToast('Could not delete that chat.', 'err');
+		}
+	}
+
+	// ---- approvals -----------------------------------------------------------
+
+	function toggleApprove() {
+		assistantSettings.setAutoApprove(!assistantSettings.autoApprove);
+		showToast(
+			assistantSettings.autoApprove
+				? 'Edits will now apply automatically.'
+				: 'Edits will now wait for your approval.',
+			'info'
+		);
+	}
+
+	// Applying runs the very same tool the assistant would have, server-side —
+	// see /api/tic-admin/ai/apply — so the edit is audited exactly as an auto one.
+	async function approveProposal(proposal: Proposal) {
+		proposal.status = 'applying';
+		try {
+			const response = await fetch('/api/tic-admin/ai/apply', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ tool: proposal.tool, args: proposal.args })
+			});
+			if (!response.ok) {
+				const detail = await response
+					.json()
+					.then((payload) => payload?.message)
+					.catch(() => null);
+				proposal.status = 'error';
+				proposal.error = detail || 'The change could not be applied.';
+				return;
+			}
+			proposal.status = 'approved';
+			showToast('Change applied to the site.');
+		} catch {
+			proposal.status = 'error';
+			proposal.error = 'The change could not be applied.';
+		}
+	}
+
+	function rejectProposal(proposal: Proposal) {
+		proposal.status = 'rejected';
+	}
+
+	// A compact, readable rendering of a proposed value for the before/after card.
+	function preview(value: unknown): string {
+		if (value === undefined || value === null) return '—';
+		const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+		return text.length > 2000 ? `${text.slice(0, 2000)}…` : text;
+	}
+
+	// When a proposed value is itself an image URL, the card shows the picture
+	// rather than the link — the point of an image edit is what it looks like.
+	function imageUrl(value: unknown): string {
+		return typeof value === 'string' && /^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg)(\?\S*)?$/i.test(value)
+			? value
+			: '';
 	}
 
 	function onKeydown(event: KeyboardEvent) {
@@ -363,6 +614,24 @@
 		</span>
 		<button
 			type="button"
+			class="mode"
+			class:mode--auto={assistantSettings.autoApprove}
+			onclick={toggleApprove}
+			title={assistantSettings.autoApprove
+				? 'Edits apply automatically — click to require your approval'
+				: 'Edits wait for your approval — click to apply them automatically'}
+		>
+			{#if assistantSettings.autoApprove}
+				<Zap size={13} strokeWidth={2} aria-hidden="true" /> Auto
+			{:else}
+				<ShieldCheck size={13} strokeWidth={2} aria-hidden="true" /> Review
+			{/if}
+		</button>
+		<button type="button" class="gear" onclick={openHistory} title="Chat history" aria-label="Chat history">
+			<History size={16} strokeWidth={1.9} />
+		</button>
+		<button
+			type="button"
 			class="gear"
 			onclick={newChat}
 			disabled={empty && !busy}
@@ -386,7 +655,7 @@
 					<h2 class="opener__title">What can I do for you, {firstName}?</h2>
 					<p class="opener__sub">
 						Ask about anything in the console — the content, the email templates, who applied and
-						where they stand. I read the database to answer; I never change it.
+						where they stand. I can edit the website's copy for you; everything else I only read.
 					</p>
 					<ul class="chips">
 						{#each SUGGESTIONS as suggestion (suggestion)}
@@ -409,10 +678,10 @@
 						<li class="msg msg--{message.role}">
 							{#if message.role === 'you'}
 								<span class="msg__who">You</span>
-								{#if message.images.length}
+								{#if message.attachments.length}
 									<ul class="shots">
-										{#each message.images as image, index (index)}
-											<li><img src={image} alt="" /></li>
+										{#each message.attachments as shot, index (index)}
+											<li><img src={shot.dataUrl || shot.url} alt={shot.name} /></li>
 										{/each}
 									</ul>
 								{/if}
@@ -461,6 +730,62 @@
 									</p>
 								{/if}
 
+								{#each message.proposals as proposal (proposal.id)}
+									<div class="prop" class:prop--done={proposal.status !== 'pending'}>
+										<p class="prop__head">
+											<ShieldCheck size={13} strokeWidth={2} aria-hidden="true" />
+											{proposal.summary}
+										</p>
+										<div class="prop__diff">
+											<div class="prop__side">
+												<span class="prop__label">Now</span>
+												{#if imageUrl(proposal.before)}
+													<img class="prop__img" src={imageUrl(proposal.before)} alt="" />
+												{:else}
+													<pre class="prop__code">{preview(proposal.before)}</pre>
+												{/if}
+											</div>
+											<div class="prop__side">
+												<span class="prop__label">After</span>
+												{#if imageUrl(proposal.after)}
+													<img class="prop__img" src={imageUrl(proposal.after)} alt="" />
+												{:else}
+													<pre class="prop__code prop__code--new">{preview(proposal.after)}</pre>
+												{/if}
+											</div>
+										</div>
+
+										{#if proposal.status === 'pending' || proposal.status === 'applying'}
+											<div class="prop__actions">
+												<button
+													type="button"
+													class="prop__reject"
+													disabled={proposal.status === 'applying'}
+													onclick={() => rejectProposal(proposal)}
+												>
+													Reject
+												</button>
+												<button
+													type="button"
+													class="prop__approve"
+													disabled={proposal.status === 'applying'}
+													onclick={() => approveProposal(proposal)}
+												>
+													{proposal.status === 'applying' ? 'Applying…' : 'Approve & apply'}
+												</button>
+											</div>
+										{:else if proposal.status === 'approved'}
+											<p class="prop__state prop__state--ok">
+												<Check size={12} strokeWidth={2.4} aria-hidden="true" /> Applied to the site
+											</p>
+										{:else if proposal.status === 'rejected'}
+											<p class="prop__state">Rejected — nothing was changed</p>
+										{:else if proposal.status === 'error'}
+											<p class="prop__state prop__state--err">{proposal.error}</p>
+										{/if}
+									</div>
+								{/each}
+
 								{#if message.error}
 									<p class="fail">{message.error}</p>
 								{/if}
@@ -474,9 +799,12 @@
 		<div class="composer">
 			{#if pending.length}
 				<ul class="queue">
-					{#each pending as image, index (index)}
-						<li class="queue__item">
-							<img src={image} alt="" />
+					{#each pending as item, index (index)}
+						<li class="queue__item" class:queue__item--busy={item.uploading}>
+							<img src={item.dataUrl} alt={item.name} />
+							{#if item.uploading}
+								<span class="queue__spin" aria-label="Uploading"></span>
+							{/if}
 							<button
 								type="button"
 								class="queue__drop"
@@ -502,27 +830,25 @@
 			></textarea>
 
 			<div class="composer__bar">
-				{#if model.images}
-					<input
-						type="file"
-						accept="image/*"
-						multiple
-						class="composer__file"
-						bind:this={picker}
-						onchange={onPick}
-						tabindex="-1"
-						aria-hidden="true"
-					/>
-					<button
-						type="button"
-						class="composer__icon"
-						title="Attach an image"
-						aria-label="Attach an image"
-						onclick={() => picker?.click()}
-					>
-						<Paperclip size={16} strokeWidth={1.9} />
-					</button>
-				{/if}
+				<input
+					type="file"
+					accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+					multiple
+					class="composer__file"
+					bind:this={picker}
+					onchange={onPick}
+					tabindex="-1"
+					aria-hidden="true"
+				/>
+				<button
+					type="button"
+					class="composer__icon"
+					title="Attach an image"
+					aria-label="Attach an image"
+					onclick={() => picker?.click()}
+				>
+					<Paperclip size={16} strokeWidth={1.9} />
+				</button>
 
 				<span class="composer__hint">Enter to send · Shift + Enter for a new line</span>
 
@@ -632,7 +958,8 @@
 					{/each}
 				</ul>
 				<p class="field__note">
-					Only Gemma 4 accepts images, so the attach button appears for that model alone.
+					Attach an image on any model to upload it and have the assistant place it in content. Only
+					Gemma 4 can also look at an image to answer questions about it.
 				</p>
 			</div>
 
@@ -646,6 +973,59 @@
 				<button type="submit" class="sheet__save">Save</button>
 			</footer>
 		</form>
+	{/if}
+</dialog>
+
+<dialog
+	bind:this={historyEl}
+	class="sheet"
+	onclose={() => (historyOpen = false)}
+	onclick={(event) => {
+		if (event.target === historyEl) historyOpen = false;
+	}}
+>
+	{#if historyOpen}
+		<div class="sheet__panel">
+			<header class="sheet__head">
+				<div>
+					<h2 class="sheet__title">Chat history</h2>
+					<p class="sheet__sub">Your saved conversations. Open one to pick it back up.</p>
+				</div>
+				<button
+					type="button"
+					class="sheet__close"
+					onclick={() => (historyOpen = false)}
+					aria-label="Close"
+				>
+					<X size={16} strokeWidth={2} />
+				</button>
+			</header>
+
+			{#if historyLoading}
+				<p class="history__empty">Loading…</p>
+			{:else if conversations.length === 0}
+				<p class="history__empty">No saved chats yet.</p>
+			{:else}
+				<ul class="history">
+					{#each conversations as chat (chat.id)}
+						<li class="history__item" class:history__item--on={chat.id === conversationId}>
+							<button type="button" class="history__open" onclick={() => openConversation(chat.id)}>
+								<span class="history__title">{chat.title}</span>
+								<span class="history__when">{new Date(chat.updated_at).toLocaleString()}</span>
+							</button>
+							<button
+								type="button"
+								class="history__delete"
+								onclick={() => deleteConversation(chat.id)}
+								aria-label="Delete chat"
+							>
+								<Trash2 size={14} strokeWidth={1.9} />
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
 	{/if}
 </dialog>
 
@@ -1196,6 +1576,35 @@
 		}
 	}
 
+	.queue__item--busy img {
+		opacity: 0.5;
+	}
+
+	.queue__spin {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: 18px;
+		height: 18px;
+		margin: -9px 0 0 -9px;
+		border: 2px solid rgba($color-white, 0.6);
+		border-top-color: $color-white;
+		border-radius: 50%;
+		animation: queue-spin 0.7s linear infinite;
+	}
+
+	@keyframes queue-spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.queue__spin {
+			animation: none;
+		}
+	}
+
 	.queue__drop {
 		position: absolute;
 		top: -6px;
@@ -1424,6 +1833,230 @@
 		@include admin-btn-primary;
 	}
 
+	// ---- approval mode toggle -------------------------------------------------
+
+	.mode {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		height: 34px;
+		padding: 0 12px;
+		font-size: 11px;
+		font-weight: $font-weight-semibold;
+		letter-spacing: 0.03em;
+		color: $admin-ink-2;
+		background: $admin-surface;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-pill;
+		cursor: pointer;
+		@include admin-focus-ring;
+
+		&:hover {
+			color: $admin-ink;
+		}
+
+		&:active {
+			transform: translateY(0.5px);
+		}
+	}
+
+	.mode--auto {
+		color: admin-tone-fg('warn');
+		background: admin-tone-bg('warn');
+		border-color: transparent;
+	}
+
+	// ---- proposed content edits ----------------------------------------------
+
+	.prop {
+		margin-top: 12px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-md;
+		background: $admin-surface;
+		overflow: hidden;
+	}
+
+	.prop--done {
+		opacity: 0.92;
+	}
+
+	.prop__head {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		margin: 0;
+		padding: 10px 12px;
+		font-size: 12.5px;
+		font-weight: $font-weight-semibold;
+		color: $admin-ink;
+		background: $admin-sunken;
+		border-bottom: 1px solid $admin-line;
+	}
+
+	.prop__diff {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1px;
+		background: $admin-line;
+	}
+
+	.prop__side {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 10px 12px;
+		background: $admin-surface;
+		min-width: 0;
+	}
+
+	.prop__label {
+		font-size: 10px;
+		font-weight: $font-weight-semibold;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: $admin-ink-3;
+	}
+
+	.prop__code {
+		margin: 0;
+		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: 11.5px;
+		line-height: 1.5;
+		color: $admin-ink-2;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		max-height: 220px;
+		overflow-y: auto;
+	}
+
+	.prop__code--new {
+		color: $admin-ink;
+	}
+
+	.prop__img {
+		display: block;
+		max-width: 100%;
+		max-height: 160px;
+		width: auto;
+		border-radius: $admin-radius-sm;
+		border: 1px solid $admin-line;
+	}
+
+	.prop__actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+		padding: 10px 12px;
+		border-top: 1px solid $admin-line;
+	}
+
+	.prop__reject {
+		@include admin-btn-base;
+	}
+
+	.prop__approve {
+		@include admin-btn-primary;
+	}
+
+	.prop__state {
+		display: flex;
+		align-items: center;
+		gap: 5px;
+		margin: 0;
+		padding: 10px 12px;
+		font-size: 12px;
+		color: $admin-ink-3;
+		border-top: 1px solid $admin-line;
+	}
+
+	.prop__state--ok {
+		color: admin-tone-fg('good');
+	}
+
+	.prop__state--err {
+		color: admin-tone-fg('bad');
+	}
+
+	// ---- chat history ---------------------------------------------------------
+
+	.history {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		max-height: 52vh;
+		overflow-y: auto;
+	}
+
+	.history__item {
+		display: flex;
+		align-items: stretch;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-md;
+		background: $admin-surface;
+		overflow: hidden;
+	}
+
+	.history__item--on {
+		border-color: $admin-accent;
+	}
+
+	.history__open {
+		flex: 1;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding: 10px 12px;
+		text-align: left;
+		background: none;
+		border: none;
+		cursor: pointer;
+		@include admin-focus-ring;
+	}
+
+	.history__title {
+		font-size: 13px;
+		font-weight: $font-weight-semibold;
+		color: $admin-ink;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.history__when {
+		font-size: 11px;
+		color: $admin-ink-3;
+	}
+
+	.history__delete {
+		flex: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 36px;
+		color: $admin-ink-3;
+		background: none;
+		border: none;
+		border-left: 1px solid $admin-line;
+		cursor: pointer;
+		@include admin-focus-ring;
+
+		&:hover {
+			color: admin-tone-fg('bad');
+		}
+	}
+
+	.history__empty {
+		margin: 0;
+		padding: 24px 0;
+		text-align: center;
+		font-size: 13px;
+		color: $admin-ink-3;
+	}
+
 	@media (max-width: $bp-sm) {
 		.chat {
 			height: auto;
@@ -1436,6 +2069,10 @@
 
 		.composer__hint {
 			display: none;
+		}
+
+		.prop__diff {
+			grid-template-columns: 1fr;
 		}
 
 		.sheet__foot {
