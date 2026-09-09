@@ -33,9 +33,14 @@
 	);
 	const orphans = $derived(objects.filter((o) => !o.referenced).length);
 
-	// A meter that only fills 0.0002% tells you nothing, so the per-bucket bar is
-	// scaled against the largest bucket rather than the quota.
-	const largestBucket = $derived(Math.max(1, ...snapshot.buckets.map((b) => b.bytes)));
+	// Each bucket's share of the plan allowance, the same basis as the meter at the
+	// top — so a near-empty project reads as near-empty rather than pinning the
+	// largest bucket at full. A bucket with anything in it keeps a thin sliver so
+	// it is still visible.
+	function bucketPct(bytes: number): number {
+		if (snapshot.quotaBytes <= 0 || bytes <= 0) return 0;
+		return Math.max(0.6, Math.min(100, (bytes / snapshot.quotaBytes) * 100));
+	}
 
 	function fmtBytes(bytes: number): string {
 		if (bytes <= 0) return '0 B';
@@ -222,10 +227,7 @@
 						<span class="bucket__stat">{bucket.objects} files · {fmtBytes(bucket.bytes)}</span>
 					</div>
 					<div class="bucket__bar">
-						<div
-							class="bucket__bar-fill"
-							style="width: {(bucket.bytes / largestBucket) * 100}%"
-						></div>
+						<div class="bucket__bar-fill" style="width: {bucketPct(bucket.bytes)}%"></div>
 					</div>
 				</li>
 			{/each}

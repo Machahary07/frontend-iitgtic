@@ -1,11 +1,17 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSection, getSiteContent, invalidateSiteContent } from '$lib/server/siteContent';
 import { logAdminAction, type AdminContext } from '$lib/server/adminGuard';
-import { invalidateEmailTemplates, resolveTemplate, sendTemplateEmail } from '$lib/server/email';
+import {
+	invalidateEmailTemplates,
+	renderEmail,
+	resolveTemplate,
+	sendTemplateEmail
+} from '$lib/server/email';
 import { CONTENT_SECTIONS, readPath, writePath } from '$lib/content';
 import {
 	EMAIL_LAYOUT_KEY,
 	EMAIL_TEMPLATES,
+	sampleVariables,
 	templateDef,
 	type EmailTemplateDef
 } from '$lib/utils/emailTemplates';
@@ -30,8 +36,12 @@ import fallback from '$lib/data/content.json';
 // the security boundary, so nothing here takes a raw table name or a raw filter
 // from the model, and the write tools accept only a known section key.
 
-/** What a write tool would change, shown to the admin before it is applied. */
-export type ToolPreview = { summary: string; before: unknown; after: unknown } | { error: string };
+/** What a write tool would change, shown to the admin before it is applied. For
+ *  an email, `html` is the rendered message the admin sees instead of the raw
+ *  before/after — reviewing markup is no way to approve a mail. */
+export type ToolPreview =
+	| { summary: string; before: unknown; after: unknown; html?: string }
+	| { error: string };
 
 export type ToolDef = {
 	name: string;
@@ -174,6 +184,22 @@ async function resolveEmailEdit(args: Record<string, unknown>): Promise<EmailEdi
 		blocks,
 		enabled
 	};
+}
+
+// The finished email as the recipient would see it, for the approval card —
+// the body compiled into the shared layout with sample values filled in, so a
+// non-technical admin approves what the message looks like, not its markup. The
+// newsletter gets a sample unsubscribe link so its footer shows in the preview.
+async function renderEmailPreview(
+	def: EmailTemplateDef,
+	subject: string,
+	body: string
+): Promise<string> {
+	const layout = await resolveTemplate(EMAIL_LAYOUT_KEY);
+	if (!layout) return '';
+	const variables = sampleVariables(def);
+	if (def.key === 'newsletter') variables.unsubscribeUrl = 'https://example.com/unsubscribe';
+	return renderEmail({ subject, body }, layout, variables).html;
 }
 
 // The recipient list for a direct send: accepts one address or an array, drops
@@ -904,9 +930,10 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			const edit = await resolveEmailEdit(args);
 			if ('error' in edit) return edit;
 			return {
-				summary: `Edit the ${edit.def.name} email`,
-				before: `Subject: ${edit.current.subject}\n\n${edit.current.body}`,
-				after: `Subject: ${edit.subject}\n\n${edit.body}`
+				summary: `Edit the ${edit.def.name} email · subject: "${edit.subject}"`,
+				before: `Subject: ${edit.current.subject}`,
+				after: `Subject: ${edit.subject}`,
+				html: await renderEmailPreview(edit.def, edit.subject, edit.body)
 			};
 		},
 		run: async (db, args, ctx) => {
@@ -954,11 +981,11 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			const key = textOf(args, 'key');
 			const def = templateDef(key);
 			if (!def) return { error: `No template with key "${key}".` };
-			const current = await resolveTemplate(key);
 			return {
-				summary: `Reset the ${def.name} email to its default`,
-				before: current ? `Subject: ${current.subject}\n\n${current.body}` : '—',
-				after: `Subject: ${def.subject}\n\n${def.body}`
+				summary: `Reset the ${def.name} email to its default · subject: "${def.subject}"`,
+				before: 'The current saved version',
+				after: `Subject: ${def.subject}`,
+				html: await renderEmailPreview(def, def.subject, def.body)
 			};
 		},
 		run: async (db, args, ctx) => {
@@ -1001,11 +1028,6 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 		preview: async (db, args) => {
 			const edit = await resolveEmailEdit({ key: 'newsletter', subject: args.subject, blocks: args.blocks });
 			if ('error' in edit) return edit;
-			if (!edit.body.includes('{{unsubscribeUrl}}')) {
-				return {
-					error: 'A newsletter must include the unsubscribe link — add a link block with href {{unsubscribeUrl}}.'
-				};
-			}
 
 			const { count } = await db
 				.from('newsletter_subscribers')
@@ -1014,19 +1036,15 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			const recipients = count ?? 0;
 
 			return {
-				summary: `Send the newsletter to ${recipients} subscriber${recipients === 1 ? '' : 's'}`,
+				summary: `Send the newsletter to ${recipients} subscriber${recipients === 1 ? '' : 's'} · subject: "${edit.subject}"`,
 				before: `${recipients} active subscriber${recipients === 1 ? '' : 's'} will receive this`,
-				after: `Subject: ${edit.subject}\n\n${edit.body}`
+				after: `Subject: ${edit.subject}`,
+				html: await renderEmailPreview(edit.def, edit.subject, edit.body)
 			};
 		},
 		run: async (db, args, ctx) => {
 			const edit = await resolveEmailEdit({ key: 'newsletter', subject: args.subject, blocks: args.blocks });
 			if ('error' in edit) return edit;
-			if (!edit.body.includes('{{unsubscribeUrl}}')) {
-				return {
-					error: 'A newsletter must include the unsubscribe link — add a link block with href {{unsubscribeUrl}}.'
-				};
-			}
 
 			// The blast sends the saved newsletter template, so store the composed
 			// message first — that is also what makes each send pick up the file
@@ -1120,11 +1138,12 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 
 			return {
 				summary:
-					recipients.length === 1
+					(recipients.length === 1
 						? `Send an email to ${recipients[0]}`
-						: `Send an email to ${recipients.length} recipients`,
+						: `Send an email to ${recipients.length} recipients`) + ` · subject: "${edit.subject}"`,
 				before: recipients.join(', '),
-				after: `Subject: ${edit.subject}\n\n${edit.body}`
+				after: `Subject: ${edit.subject}`,
+				html: await renderEmailPreview(edit.def, edit.subject, edit.body)
 			};
 		},
 		run: async (db, args, ctx) => {

@@ -46,12 +46,7 @@ export const COMMON_VARIABLES: TemplateVariable[] = [
 		description: 'Public site origin',
 		sample: 'https://iitgtic.itsjeu.com'
 	},
-	{ name: 'year', description: 'Current year', sample: String(new Date().getFullYear()) },
-	{
-		name: 'unsubscribeUrl',
-		description: 'One-click unsubscribe link, signed for the recipient — use in a newsletter footer',
-		sample: 'https://iitgtic.itsjeu.com/unsubscribe'
-	}
+	{ name: 'year', description: 'Current year', sample: String(new Date().getFullYear()) }
 ];
 
 export const EMAIL_LAYOUT_KEY = 'layout';
@@ -168,6 +163,7 @@ const LAYOUT_BODY = `<!doctype html>
 							<td style="padding:20px 32px;background:#fafbfc;border-top:1px solid #eef0f3;font:400 12px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#888888;">
 								<p style="margin:0;">Technology Incubation Centre, IIT Guwahati, Assam 781039</p>
 								<p style="margin:6px 0 0;">You are receiving this because you contacted or applied to {{siteName}}. &copy; {{year}}</p>
+								{{#if unsubscribeUrl}}<p style="margin:10px 0 0;"><a href="{{unsubscribeUrl}}" style="color:#888888;text-decoration:underline;">Unsubscribe from the newsletter</a></p>{{/if}}
 							</td>
 						</tr>
 					</table>
@@ -217,9 +213,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		subject: 'News from {{siteName}}',
 		...fromBlocks([
 			{ type: 'heading', text: 'News from {{siteName}}' },
-			{ type: 'text', text: 'Write your update here.' },
-			{ type: 'divider' },
-			{ type: 'link', label: 'Unsubscribe', href: '{{unsubscribeUrl}}' }
+			{ type: 'text', text: 'Write your update here.' }
 		])
 	},
 

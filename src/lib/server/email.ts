@@ -427,13 +427,16 @@ export async function sendTemplateEmail(options: SendOptions): Promise<SendResul
 		return blocked('This template is switched off in the console.');
 	}
 
+	// The layout footer shows a one-click unsubscribe link only when it is handed a
+	// {{unsubscribeUrl}}, and only the newsletter is a subscription to leave — a
+	// password reset or an application decision is not. So the link is signed and
+	// passed for the newsletter alone; every other send leaves it unset and the
+	// footer omits it.
+	const isNewsletter = options.templateKey === 'newsletter';
+
 	const { subject, html, text } = renderEmail(template, layout, {
 		...defaultVariables(config),
-		// A per-recipient one-click unsubscribe link. Any template that references
-		// {{unsubscribeUrl}} — a newsletter footer, say — gets a link signed for
-		// this exact address; templates that don't (the transactional ones) ignore
-		// it. A caller may still override it through options.variables.
-		unsubscribeUrl: unsubscribeUrl(config.siteUrl, options.to),
+		...(isNewsletter ? { unsubscribeUrl: unsubscribeUrl(config.siteUrl, options.to) } : {}),
 		...(options.variables ?? {})
 	});
 

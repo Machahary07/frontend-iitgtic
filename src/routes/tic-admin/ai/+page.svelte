@@ -44,6 +44,8 @@
 		summary: string;
 		before: unknown;
 		after: unknown;
+		/** For an email proposal: the rendered message, shown instead of before/after. */
+		html: string;
 		status: 'pending' | 'applying' | 'approved' | 'rejected' | 'error';
 		error: string;
 		/** What happened once applied — e.g. how many the newsletter reached. */
@@ -56,6 +58,7 @@
 	// ever gets the name and URL, never the file's contents. `dataUrl` is the
 	// thumbnail for an image; `size` the human label for a document.
 	type Attachment = {
+		id: number;
 		name: string;
 		url: string;
 		kind: 'image' | 'file';
@@ -89,6 +92,7 @@
 	let box = $state<HTMLTextAreaElement | null>(null);
 	let picker = $state<HTMLInputElement | null>(null);
 	let nextId = 0;
+	let attachSeq = 0;
 	let controller: AbortController | null = null;
 
 	// ---- saved chats ---------------------------------------------------------
@@ -218,7 +222,12 @@
 
 			// Show the chip immediately, then upload — the row flips out of its
 			// uploading state once the bucket has the file and a URL to point at.
+			// Updates go through a whole-array reassignment keyed by id: mutating the
+			// pushed object in place would not fire the reactive setter, so the
+			// uploading flag (and the send button that watches it) would never update.
+			const id = attachSeq++;
 			const attachment: Attachment = {
+				id,
 				name: file.name,
 				url: '',
 				kind: isImage ? 'image' : 'file',
@@ -230,11 +239,13 @@
 			pending = [...pending, attachment];
 			try {
 				const uploaded = await uploadAsset(file, isImage);
-				attachment.url = uploaded.url;
-				attachment.size = uploaded.size;
-				attachment.uploading = false;
+				pending = pending.map((item) =>
+					item.id === id
+						? { ...item, url: uploaded.url, size: uploaded.size, uploading: false }
+						: item
+				);
 			} catch (cause) {
-				pending = pending.filter((item) => item !== attachment);
+				pending = pending.filter((item) => item.id !== id);
 				showToast(cause instanceof Error ? cause.message : `Could not upload ${file.name}.`, 'err');
 			}
 		}
@@ -388,6 +399,7 @@
 						summary?: string;
 						before?: unknown;
 						after?: unknown;
+						html?: string;
 					};
 					try {
 						event = JSON.parse(line);
@@ -414,6 +426,7 @@
 								summary: event.summary ?? 'Content change',
 								before: event.before,
 								after: event.after,
+								html: event.html ?? '',
 								status: 'pending',
 								error: '',
 								note: ''
@@ -608,6 +621,15 @@
 		proposal.status = 'rejected';
 	}
 
+	// Size the email preview to its own height so it shows the whole message with
+	// no scrollbar of its own. allow-same-origin lets us read the rendered height;
+	// the frame runs no scripts.
+	function fitEmailFrame(event: Event) {
+		const frame = event.currentTarget as HTMLIFrameElement;
+		const doc = frame.contentDocument;
+		if (doc) frame.style.height = `${doc.documentElement.scrollHeight + 4}px`;
+	}
+
 	// A compact, readable rendering of a proposed value for the before/after card.
 	function preview(value: unknown): string {
 		if (value === undefined || value === null) return '—';
@@ -788,24 +810,40 @@
 											<ShieldCheck size={13} strokeWidth={2} aria-hidden="true" />
 											{proposal.summary}
 										</p>
-										<div class="prop__diff">
-											<div class="prop__side">
-												<span class="prop__label">Now</span>
-												{#if imageUrl(proposal.before)}
-													<img class="prop__img" src={imageUrl(proposal.before)} alt="" />
-												{:else}
-													<pre class="prop__code">{preview(proposal.before)}</pre>
-												{/if}
+										{#if proposal.html}
+											<!-- The rendered email, so a non-technical admin approves how the
+												 message looks rather than its HTML. allow-same-origin (without
+												 allow-scripts) keeps the content inert but lets us measure it, so
+												 the frame is sized to the email and never grows its own scrollbar. -->
+											<div class="prop__email">
+												<iframe
+													class="prop__frame"
+													title="Email preview"
+													sandbox="allow-same-origin"
+													srcdoc={proposal.html}
+													onload={fitEmailFrame}
+												></iframe>
 											</div>
-											<div class="prop__side">
-												<span class="prop__label">After</span>
-												{#if imageUrl(proposal.after)}
-													<img class="prop__img" src={imageUrl(proposal.after)} alt="" />
-												{:else}
-													<pre class="prop__code prop__code--new">{preview(proposal.after)}</pre>
-												{/if}
+										{:else}
+											<div class="prop__diff">
+												<div class="prop__side">
+													<span class="prop__label">Now</span>
+													{#if imageUrl(proposal.before)}
+														<img class="prop__img" src={imageUrl(proposal.before)} alt="" />
+													{:else}
+														<pre class="prop__code">{preview(proposal.before)}</pre>
+													{/if}
+												</div>
+												<div class="prop__side">
+													<span class="prop__label">After</span>
+													{#if imageUrl(proposal.after)}
+														<img class="prop__img" src={imageUrl(proposal.after)} alt="" />
+													{:else}
+														<pre class="prop__code prop__code--new">{preview(proposal.after)}</pre>
+													{/if}
+												</div>
 											</div>
-										</div>
+										{/if}
 
 										{#if proposal.status === 'pending' || proposal.status === 'applying'}
 											<div class="prop__actions">
@@ -2053,6 +2091,23 @@
 		width: auto;
 		border-radius: $admin-radius-sm;
 		border: 1px solid $admin-line;
+	}
+
+	.prop__email {
+		padding: 12px;
+		background: $admin-sunken;
+	}
+
+	.prop__frame {
+		display: block;
+		width: 100%;
+		height: 240px;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
+		background: #fff;
+		// Sized to the email's own height on load (see fitEmailFrame), so it never
+		// shows a scrollbar; this is only the height before that runs.
+		overflow: hidden;
 	}
 
 	.prop__actions {

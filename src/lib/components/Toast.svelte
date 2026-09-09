@@ -164,6 +164,9 @@
 		font-weight: $font-weight-medium;
 		line-height: 1.4;
 		color: #1a1c1f;
+		// A filename is one long unbroken token, so let it wrap mid-word rather
+		// than push past the card's edge.
+		overflow-wrap: anywhere;
 	}
 
 	.toast__close {

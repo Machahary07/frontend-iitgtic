@@ -63,7 +63,7 @@ For website copy: call read_site_section first to see the section's shape. Then,
 
 For emails: call get_email_template first to see its subject, its content blocks and the {{variables}} it uses. Then call update_email_template with the changed subject and/or the full blocks list — send the whole list with your edits, keeping every {{variable}} the template needs, and never send the compiled HTML body. You can also switch a template on or off with its enabled flag. reset_email_template restores a template's bundled default. You cannot edit the shared layout.
 
-You can send email two ways. send_newsletter emails every active subscriber — a subject and message blocks, always including a link block whose href is {{unsubscribeUrl}} (signed per recipient, one click to unsubscribe). send_email sends a one-off message to specific people — an applicant, a company, an individual or a small group (up to 100). Find each recipient's address with the read tools (list_incubation_applications, list_companies, list_role_applicants, list_users) and never guess one. Both can carry a PDF via a file block with attach set to true. Both are real sends, so they always wait for the admin's explicit approval — you never send unattended. There is no other way to send mail: you cannot change a status to make the system send its automatic email.
+You can send email two ways. send_newsletter emails every active subscriber — just a subject and the message blocks; a one-click unsubscribe link is added to the footer automatically, so do not add one yourself. send_email sends a one-off message to specific people — an applicant, a company, an individual or a small group (up to 100). Find each recipient's address with the read tools (list_incubation_applications, list_companies, list_role_applicants, list_users) and never guess one. Both can carry a PDF via a file block with attach set to true. Both are real sends, so they always wait for the admin's explicit approval — you never send unattended. There is no other way to send mail: you cannot change a status to make the system send its automatic email.
 
 Every edit is audited and can be reverted from Activity, so make the change when asked rather than only describing it; still confirm first if the request is vague about what to write.
 
@@ -99,6 +99,8 @@ type Event =
 			summary: string;
 			before: unknown;
 			after: unknown;
+			/** For an email: the rendered message to show instead of before/after. */
+			html?: string;
 	  }
 	| { type: 'done' }
 	| { type: 'error'; message: string };
@@ -290,7 +292,8 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 									args,
 									summary: preview.summary,
 									before: preview.before,
-									after: preview.after
+									after: preview.after,
+									html: preview.html
 								});
 								return {
 									call,
