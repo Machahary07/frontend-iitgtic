@@ -13,6 +13,12 @@
 	// the top; the sort below keeps the order right if one lands out of place.
 	const milestones: Milestone[] = [
 		{
+			date: '2026-09-09',
+			title: 'Admin assistant',
+			status: 'done',
+			note: "A chat console at /tic-admin/ai over the console's own data, backed by Sarvam. It reads anything an admin can see and now writes too — website copy and email templates — and sends mail, with each change shown as a before/after the admin approves; an Auto toggle lifts the gate for edits but never for a send. Attach an image and it uploads to a bucket and drops into content; attach a PDF and it rides an email. Conversations are saved per admin, with a history panel and a working New chat."
+		},
+		{
 			date: '2026-09-04',
 			title: 'Storage console + safe deletes',
 			status: 'done',
@@ -255,7 +261,7 @@
 			name: 'TIC team admin · Users',
 			path: '/tic-admin/users',
 			status: 'done',
-			note: 'All accounts with role, last sign-in and status; role changes, suspend, password reset, delete'
+			note: 'All accounts with role, last sign-in and status; role changes, suspend, delete. Admin-initiated password reset was removed — admin passwords are managed by the developers, and founders / companies self-serve via Forgot password on the sign-in screen'
 		},
 		{
 			name: 'TIC team admin · Activity',
@@ -288,6 +294,12 @@
 			note: 'Block editor — fifteen components behind a + palette, live preview, variable insertion, per-template on/off, test send, reset to bundled copy'
 		},
 		{
+			name: 'TIC team admin · Assistant',
+			path: '/tic-admin/ai',
+			status: 'done',
+			note: 'Chat over the console data — reads everything, writes content and email templates, sends the newsletter or a direct email, all behind a Review/Approve gate; saved per-admin chat history and image / PDF attachments'
+		},
+		{
 			name: 'TIC content editor (other pages)',
 			status: 'done',
 			note: 'All 18 sections live in site_content; content.json is now only the fallback'
@@ -309,6 +321,12 @@
 			path: '/login',
 			status: 'done',
 			note: 'Turnstile-gated Supabase Auth sign-in'
+		},
+		{
+			name: 'Newsletter unsubscribe',
+			path: '/unsubscribe',
+			status: 'done',
+			note: 'One-click and signed per address — the link every newsletter carries. Opening it removes the address and confirms, no extra step; the signature stops anyone unsubscribing anyone'
 		},
 		{
 			name: 'Auth callback',
@@ -480,6 +498,12 @@
 	// belong to, so a migration landing is what moves a node here.
 	const backend: Milestone[] = [
 		{
+			date: '2026-09-09',
+			title: 'Assistant writes, sends, and saved chats',
+			status: 'done',
+			note: "The assistant's tool surface gained writes: update/reset for site_content and email_templates, send_newsletter to the whole subscriber list and send_email to chosen recipients — both always gated behind an explicit approval, never Auto. assistant_conversations (service-role only) stores each chat, and /api/tic-admin/ai/apply runs an approved write through the same tool the loop would have, so its audit and cache handling match an auto-applied one. A per-recipient {{unsubscribeUrl}} is signed into every send, and a one-click /unsubscribe page honours it."
+		},
+		{
 			date: '2026-09-04',
 			title: 'Editable media',
 			status: 'done',
@@ -580,6 +604,11 @@
 			name: 'newsletter_subscribers',
 			status: 'done',
 			note: 'Footer signups, one row per address case-folded. Service-role only and audited — a subscriber list is personal data, and who removed someone from it is worth being able to answer'
+		},
+		{
+			name: 'assistant_conversations',
+			status: 'done',
+			note: "Saved admin-assistant chats, one row per conversation with the turns as JSON, scoped to the admin who had it. Service-role only and deliberately not audited — an admin's own chat is not site data, and a row per message would drown the log"
 		},
 		{
 			name: 'rate_limits',
@@ -703,7 +732,7 @@
 		{
 			name: 'PATCH / PUT / POST / DELETE /api/tic-admin/users',
 			status: 'done',
-			note: 'Role changes, suspend, password-reset mail, delete, and creating a further admin'
+			note: 'Role changes, suspend, delete, and creating a further admin. The PUT password-reset endpoint still exists but is no longer surfaced in the console — admin passwords are managed by the developers'
 		},
 		{
 			name: 'GET /api/tic-admin/activity',
@@ -734,6 +763,21 @@
 			name: 'POST /api/tic-admin/content/assets',
 			status: 'done',
 			note: 'Uploads an image for a media field in the content editor into the public site-assets bucket; admin-only, returns the public URL saved into the section'
+		},
+		{
+			name: 'POST /api/tic-admin/ai',
+			status: 'done',
+			note: "The assistant turn loop against Sarvam — streams steps, reasoning, text and edit proposals as NDJSON, runs read tools inline, and holds every write for approval (a send always, an edit unless Auto is on)"
+		},
+		{
+			name: 'GET / PUT / DELETE /api/tic-admin/ai/conversations',
+			status: 'done',
+			note: "List, load, save and delete an admin's own saved chats; every query carries the admin id since the table is service-role only"
+		},
+		{
+			name: 'POST /api/tic-admin/ai/apply',
+			status: 'done',
+			note: 'Runs a write the assistant proposed once the admin approves it — the same tool the loop would have run, so the merge, the audit entry and the cache handling are identical to an auto-applied one'
 		},
 		{
 			name: 'DELETE /api/tic-admin/email/suppressions',
