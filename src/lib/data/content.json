@@ -16,6 +16,10 @@
 						"href": "/about/governing-body"
 					},
 					{
+						"label": "Committee of Management",
+						"href": "/about/committee-of-management"
+					},
+					{
 						"label": "TIC Team",
 						"href": "/about/team"
 					},
@@ -2283,6 +2287,28 @@
 				}
 			]
 		},
+		"committeeOfManagement": {
+			"title": "Committee of Management · IITG TIC",
+			"hero": {
+				"eyebrow": "About · Committee of Management",
+				"headlineLead": "Run by its",
+				"headlineEmphasis": "Committee of Management.",
+				"lede": "The Committee of Management oversees the day-to-day running of the centre, carrying out the direction set by the governing body."
+			},
+			"sectionEyebrow": "The committee",
+			"members": [
+				{
+					"name": "",
+					"avatar": {
+						"src": "",
+						"alt": ""
+					},
+					"role": "Member",
+					"affiliation": "",
+					"bio": ""
+				}
+			]
+		},
 		"team": {
 			"title": "TIC Team · IITG TIC",
 			"hero": {
@@ -2989,6 +3015,10 @@
 					{
 						"label": "Governing Body",
 						"href": "/about/governing-body"
+					},
+					{
+						"label": "Committee of Management",
+						"href": "/about/committee-of-management"
 					},
 					{
 						"label": "TIC Team",

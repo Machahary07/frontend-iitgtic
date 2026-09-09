@@ -26,6 +26,7 @@ const SECTION_FOR: Record<string, string> = {
 	'/about': 'pages.about',
 	'/about/what-happens': 'pages.whatHappens',
 	'/about/governing-body': 'pages.governingBody',
+	'/about/committee-of-management': 'pages.committeeOfManagement',
 	'/about/team': 'pages.team',
 	'/about/mentors': 'pages.mentors',
 	'/about/faq': 'pages.faq',

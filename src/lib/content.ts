@@ -34,6 +34,7 @@ export const CONTENT_SECTIONS: { key: string; label: string; group: string }[] =
 	{ key: 'pages.about', label: 'About', group: 'Pages' },
 	{ key: 'pages.whatHappens', label: 'What happens', group: 'Pages' },
 	{ key: 'pages.governingBody', label: 'Governing body', group: 'Pages' },
+	{ key: 'pages.committeeOfManagement', label: 'Committee of management', group: 'Pages' },
 	{ key: 'pages.team', label: 'TIC team', group: 'Pages' },
 	{ key: 'pages.mentors', label: 'Mentors', group: 'Pages' },
 	{ key: 'pages.faq', label: 'FAQ', group: 'Pages' },
