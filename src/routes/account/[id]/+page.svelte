@@ -117,10 +117,10 @@
 				</div>
 			</header>
 
-			{#if application.review_note && application.status !== 'submitted'}
+			{#if application.applicant_message && application.status !== 'submitted'}
 				<div class="note">
 					<span class="note__label">Note from the reviewer</span>
-					<p>{application.review_note}</p>
+					<p>{application.applicant_message}</p>
 				</div>
 			{/if}
 

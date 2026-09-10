@@ -14,7 +14,7 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 	const { data, error: dbError } = await db
 		.from('applications')
 		.select(
-			'id, user_id, status, full_name, email, startup_name, review_note, reviewed_at, created_at, updated_at, answers, documents'
+			'id, user_id, status, full_name, email, startup_name, applicant_message, review_note, reviewed_at, created_at, updated_at, answers, documents'
 		)
 		.eq('id', params.id)
 		.maybeSingle();

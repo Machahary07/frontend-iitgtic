@@ -75,16 +75,18 @@ export type MyApplication = {
 	startup_name: string;
 	created_at: string;
 	reviewed_at: string | null;
-	review_note: string | null;
+	applicant_message: string | null;
 };
 
 // The applicant's own applications, newest first. RLS ("applications: read own")
 // scopes this to the signed-in user, so no user_id filter is needed here — the
-// select would return nothing for anyone else regardless.
+// select would return nothing for anyone else regardless. review_note is the
+// team's private note and is not selectable by a founder; applicant_message is
+// the line written for them.
 export async function getMyApplications(): Promise<MyApplication[]> {
 	const { data, error } = await supabase
 		.from('applications')
-		.select('id, status, startup_name, created_at, reviewed_at, review_note')
+		.select('id, status, startup_name, created_at, reviewed_at, applicant_message')
 		.order('created_at', { ascending: false });
 
 	if (error) return [];
@@ -104,7 +106,7 @@ export async function getApplication(id: string): Promise<ApplicationDetail | nu
 	const { data, error } = await supabase
 		.from('applications')
 		.select(
-			'id, status, startup_name, created_at, reviewed_at, review_note, full_name, email, answers, documents'
+			'id, status, startup_name, created_at, reviewed_at, applicant_message, full_name, email, answers, documents'
 		)
 		.eq('id', id)
 		.maybeSingle();

@@ -42,6 +42,9 @@ export type ApplicationSummary = {
 	full_name: string;
 	email: string;
 	startup_name: string;
+	// The applicant-facing line (emailed + shown on their account) and the team's
+	// private note. Only the console (service role) can read review_note.
+	applicant_message: string | null;
 	review_note: string | null;
 	reviewed_at: string | null;
 	created_at: string;
@@ -58,12 +61,13 @@ export type DocumentLink = { name: string; size: number; url: string | null };
 export async function adminSetApplicationStatus(
 	id: string,
 	status: ApplicationStatus,
+	applicantMessage?: string,
 	reviewNote?: string
 ): Promise<boolean> {
 	const res = await fetch('/api/tic-admin/applications', {
 		method: 'PATCH',
 		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({ id, status, reviewNote })
+		body: JSON.stringify({ id, status, applicantMessage, reviewNote })
 	});
 	return res.ok;
 }

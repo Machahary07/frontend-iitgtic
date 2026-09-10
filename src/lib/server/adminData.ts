@@ -75,7 +75,7 @@ export async function loadApplications(db: SupabaseClient) {
 	const { data } = await db
 		.from('applications')
 		.select(
-			'id, user_id, status, full_name, email, startup_name, review_note, reviewed_at, created_at, updated_at'
+			'id, user_id, status, full_name, email, startup_name, applicant_message, review_note, reviewed_at, created_at, updated_at'
 		)
 		.order('created_at', { ascending: false });
 	return data ?? [];

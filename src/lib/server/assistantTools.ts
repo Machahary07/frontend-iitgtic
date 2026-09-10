@@ -347,7 +347,7 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			let query = db
 				.from('applications')
 				.select(
-					'id, status, full_name, email, startup_name, review_note, reviewed_at, created_at, updated_at'
+					'id, status, full_name, email, startup_name, applicant_message, review_note, reviewed_at, created_at, updated_at'
 				)
 				.order('created_at', { ascending: false })
 				.limit(limitOf(args));
@@ -385,7 +385,7 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			const { data, error } = await db
 				.from('applications')
 				.select(
-					'id, status, full_name, email, startup_name, answers, documents, review_note, reviewed_at, created_at, updated_at'
+					'id, status, full_name, email, startup_name, answers, documents, applicant_message, review_note, reviewed_at, created_at, updated_at'
 				)
 				.eq('id', id)
 				.maybeSingle();

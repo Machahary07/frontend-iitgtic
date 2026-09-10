@@ -25,20 +25,28 @@
 	const application = $derived(data.application as unknown as ApplicationDetail);
 	const documentLinks = $derived(data.documentLinks);
 
-	// The stored note is the source of truth until the reviewer starts typing.
+	// The stored values are the source of truth until the reviewer starts typing.
+	let messageDraft = $state<string | null>(null);
 	let noteDraft = $state<string | null>(null);
+	const applicantMessage = $derived(messageDraft ?? application.applicant_message ?? '');
 	const reviewNote = $derived(noteDraft ?? application.review_note ?? '');
 
 	let saving = $state(false);
 
 	async function setStatus(status: ApplicationStatus) {
 		saving = true;
-		const ok = await adminSetApplicationStatus(application.id, status, reviewNote);
+		const ok = await adminSetApplicationStatus(
+			application.id,
+			status,
+			applicantMessage,
+			reviewNote
+		);
 		saving = false;
 		if (!ok) {
 			showToast('Could not save. Please try again.', 'err');
 			return;
 		}
+		messageDraft = null;
 		noteDraft = null;
 		await invalidateAll();
 		showToast(`Marked ${statusLabel(status)}.`);
@@ -208,12 +216,22 @@
 				</div>
 
 				<label class="field">
-					<span>Note to applicant</span>
+					<span>Message to applicant</span>
+					<textarea
+						value={applicantMessage}
+						oninput={(e) => (messageDraft = (e.currentTarget as HTMLTextAreaElement).value)}
+						rows="4"
+						placeholder="Shown to the applicant and included in the decision email."
+					></textarea>
+				</label>
+
+				<label class="field">
+					<span>Internal note</span>
 					<textarea
 						value={reviewNote}
 						oninput={(e) => (noteDraft = (e.currentTarget as HTMLTextAreaElement).value)}
-						rows="4"
-						placeholder="Why this decision — included in the applicant's email."
+						rows="3"
+						placeholder="Private to the TIC team — never shown to the applicant."
 					></textarea>
 				</label>
 

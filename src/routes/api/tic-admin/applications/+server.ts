@@ -28,6 +28,7 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 	const body = (await request.json().catch(() => ({}))) as {
 		id?: string;
 		status?: string;
+		applicantMessage?: string;
 		reviewNote?: string;
 	};
 	if (!body.id) error(400, 'Missing application id.');
@@ -37,11 +38,12 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 		.from('applications')
 		.update({
 			status: body.status,
+			applicant_message: body.applicantMessage?.trim() || null,
 			review_note: body.reviewNote?.trim() || null,
 			reviewed_at: new Date().toISOString()
 		})
 		.eq('id', body.id)
-		.select('email, full_name, startup_name, review_note')
+		.select('email, full_name, startup_name, applicant_message')
 		.maybeSingle();
 	if (dbError) error(500, dbError.message);
 
@@ -63,7 +65,7 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 			variables: {
 				fullName: (application.full_name as string) ?? '',
 				startupName: (application.startup_name as string) ?? '',
-				note: (application.review_note as string) ?? ''
+				note: (application.applicant_message as string) ?? ''
 			},
 			context: { table: 'applications', recordId: body.id, status: body.status },
 			sentBy: ctx.admin.userId
