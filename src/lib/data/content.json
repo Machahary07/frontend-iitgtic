@@ -2400,69 +2400,80 @@
 			"sectionEyebrow": "The team",
 			"members": [
 				{
-					"name": "",
+					"name": "Dr. Senthilmurugan Subbiah",
 					"avatar": {
-						"src": "",
-						"alt": ""
+						"src": "https://iitg.ac.in/chemeng/faculty/887823b1e234f21b80b15a2f9f76c957a518bc1e.jpg",
+						"alt": "Dr. Senthilmurugan Subbiah"
 					},
-					"role": "Chief Executive Officer",
-					"bio": "Leads the centre's operations, programmes and external partnerships.",
-					"email": "",
+					"role": "Professor Incharge",
+					"bio": "",
+					"email": "inchargetic@iitg.ac.in",
 					"phone": ""
 				},
 				{
-					"name": "",
+					"name": "Urmi Buragohain",
 					"avatar": {
-						"src": "",
-						"alt": ""
+						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1789012278372-urmi_borgohain.jpg",
+						"alt": "Urmi Buragohain"
 					},
-					"role": "Operations Manager",
-					"bio": "Runs the day-to-day of incubatee onboarding, infrastructure and facilities.",
-					"email": "",
+					"role": "Chief Executive Officer (CEO)",
+					"bio": "",
+					"email": "ceo@iitgtic.com",
 					"phone": ""
 				},
 				{
-					"name": "",
+					"name": "Mortuza Ahmed",
 					"avatar": {
-						"src": "",
-						"alt": ""
+						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1789017465081-mortuza_ahmed.jpg",
+						"alt": "Mortuza Ahmed"
 					},
-					"role": "Programme Manager",
-					"bio": "Curates cohorts, mentorship matches and the incubation calendar.",
-					"email": "",
+					"role": "Accountant",
+					"bio": "",
+					"email": "accountant@iitgtic.com",
 					"phone": ""
 				},
 				{
-					"name": "",
+					"name": "Sanket Umap",
 					"avatar": {
-						"src": "",
-						"alt": ""
+						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1789017458838-sanket_umap.jpg",
+						"alt": "Sanket Umap"
 					},
-					"role": "Finance & Accounts Officer",
-					"bio": "Manages grants, soft-loan disbursements and statutory compliance.",
-					"email": "",
+					"role": "Project Outreach Associate",
+					"bio": "",
+					"email": "poa@iitgtic.com",
 					"phone": ""
 				},
 				{
-					"name": "",
+					"name": "Praneet Dutta",
 					"avatar": {
 						"src": "",
 						"alt": ""
 					},
-					"role": "Technical Lead",
-					"bio": "Supports incubatees with prototyping, lab access and technical reviews.",
-					"email": "",
+					"role": "Project Coordinator",
+					"bio": "",
+					"email": "coordinator@iitgtic.com",
 					"phone": ""
 				},
 				{
-					"name": "",
+					"name": "Mriganka Patowary",
 					"avatar": {
 						"src": "",
 						"alt": ""
 					},
-					"role": "Communications Lead",
-					"bio": "Tells the centre's stories — to partners outside, across the community inside.",
-					"email": "",
+					"role": "Technical Associate",
+					"bio": "",
+					"email": "mriganka.patowary.ticiitg@gmail.com",
+					"phone": ""
+				},
+				{
+					"name": "Roshan Sarma",
+					"avatar": {
+						"src": "",
+						"alt": ""
+					},
+					"role": "Admin Assistant",
+					"bio": "",
+					"email": "roshan.iitgtic@gmail.com",
 					"phone": ""
 				}
 			]
