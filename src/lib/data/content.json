@@ -177,7 +177,7 @@
 				},
 				{
 					"title": "Governing Body",
-					"tagline": "Know the seven members who steer the centre and shape its direction.",
+					"tagline": "Know the ten members who steer the centre and shape its direction.",
 					"href": "/about/governing-body",
 					"icon": "landmark"
 				},
@@ -2210,80 +2210,110 @@
 			"hero": {
 				"eyebrow": "About · Governing Body",
 				"headlineLead": "Directed by a",
-				"headlineEmphasis": "seven-member body.",
+				"headlineEmphasis": "ten-member body.",
 				"lede": "Our governing body, chaired by the Director of IIT Guwahati, sets the direction of the centre and keeps its work aligned with the wider mission of fostering deep-tech entrepreneurship in the North-East."
 			},
 			"sectionEyebrow": "The body",
 			"members": [
 				{
-					"name": "",
+					"name": "Prof. Devendra Jalihal",
 					"avatar": {
-						"src": "",
-						"alt": ""
+						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1788611300226-Chairman_Prof_Devendra_Jalihal_Director_IITG.png",
+						"alt": "Prof. Devendra Jalihal"
 					},
-					"role": "Chairperson",
+					"role": "Chairman",
 					"affiliation": "Director, IIT Guwahati",
-					"bio": "Chairs the governing body and sets the strategic direction of the centre."
+					"bio": ""
 				},
 				{
-					"name": "",
+					"name": "Prof. Rohit Sinha",
 					"avatar": {
-						"src": "",
-						"alt": ""
+						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1788611455622-Vice_Chairman_Prof_Rohit_Sinha_Dean_Research_Development_IIT.jpg",
+						"alt": "Prof. Rohit Sinha"
+					},
+					"role": "Vice-Chairman",
+					"affiliation": "Dean, Research & Development (R&D), IIT Guwahati",
+					"bio": ""
+				},
+				{
+					"name": "Prof. Senthilmurugan Subbiah",
+					"avatar": {
+						"src": "https://iitg.ac.in/chemeng/faculty/887823b1e234f21b80b15a2f9f76c957a518bc1e.jpg",
+						"alt": "Prof. Senthilmurugan Subbiah"
+					},
+					"role": "Member Secretary",
+					"affiliation": "Professor, Department of Chemical Engineering & Professor-in-Charge, IITG-TIC, IIT Guwahati",
+					"bio": ""
+				},
+				{
+					"name": "Urmi Buragohain",
+					"avatar": {
+						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1789012278372-urmi_borgohain.jpg",
+						"alt": "Urmi Buragohain"
 					},
 					"role": "Member",
-					"affiliation": "Deputy Director, IIT Guwahati",
-					"bio": "Oversees institutional alignment between IITG and the centre."
+					"affiliation": "Chief Executive Officer (CEO), IITG-TIC",
+					"bio": ""
 				},
 				{
-					"name": "",
+					"name": "Dr. Amit Vyas",
 					"avatar": {
-						"src": "",
-						"alt": ""
+						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1789015132705-amit_vyas.jpg",
+						"alt": "Dr. Amit Vyas"
 					},
 					"role": "Member",
-					"affiliation": "Dean (R&D), IIT Guwahati",
-					"bio": "Connects research output from the institute to incubation pipelines."
+					"affiliation": "Managing Director, Amul Dairy, Anand",
+					"bio": ""
 				},
 				{
-					"name": "",
+					"name": "Mr. Bhaskar Phukan",
 					"avatar": {
-						"src": "",
-						"alt": ""
+						"src": "https://www.indiaenergyweek.com/media/3k2hcxj4/bhaskar-jyoti.png?width=300&height=300&v=1dc894ac57581f0",
+						"alt": "Mr. Bhaskar Phukan"
 					},
 					"role": "Member",
-					"affiliation": "Senior Faculty, Engineering",
-					"bio": "Provides technical evaluation on hardware and deep-tech ventures."
+					"affiliation": "Managing Director, Numaligarh Refinery Limited (NRL)",
+					"bio": ""
 				},
 				{
-					"name": "",
+					"name": "Dr. Mahesh Gupta",
 					"avatar": {
-						"src": "",
-						"alt": ""
+						"src": "https://iitk.ac.in/dora/imag/profile/gupta-daa.jpg",
+						"alt": "Dr. Mahesh Gupta"
 					},
 					"role": "Member",
-					"affiliation": "Senior Faculty, Computer Science",
-					"bio": "Advises on software, AI and platform-based startups."
+					"affiliation": "Founder & Chairman, KENT RO Systems",
+					"bio": ""
 				},
 				{
-					"name": "",
+					"name": "Mr. Puneet Thalasara",
 					"avatar": {
-						"src": "",
-						"alt": ""
+						"src": "https://www.pyrotechworkspace.com/wp-content/uploads/2025/05/puneet-talesara.png",
+						"alt": "Mr. Puneet Thalasara"
 					},
 					"role": "Member",
-					"affiliation": "Industry Representative",
-					"bio": "Brings an external market lens to investment and selection decisions."
+					"affiliation": "Founder & CMD, OnePWS (Pyrotech Workspace Solutions Pvt. Ltd.)",
+					"bio": ""
 				},
 				{
-					"name": "",
+					"name": "Dr. Jeevan B. IAS",
 					"avatar": {
-						"src": "",
-						"alt": ""
+						"src": "https://media.licdn.com/dms/image/v2/C4D03AQEFZbLjqJIUEA/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1627228130009?e=1790812800&v=beta&t=aCIv2WZIvvSuLPpvb6Cb2H-h9-zMA4lJHdSIuCL0Ltw",
+						"alt": "Dr. Jeevan B. IAS"
 					},
-					"role": "Member-Secretary",
-					"affiliation": "Chief Executive Officer, IITG-TIC",
-					"bio": "Translates the body's direction into the day-to-day work of the centre."
+					"role": "Member",
+					"affiliation": "Secretary to the Government of Assam, Department of Innovation, Incubation & Start-Ups (DIIS)",
+					"bio": ""
+				},
+				{
+					"name": "Prof. Ashok Jhunjhunwala",
+					"avatar": {
+						"src": "https://media.licdn.com/dms/image/v2/D5603AQHJgiMoTlE7MA/profile-displayphoto-crop_800_800/B56Zy85tuwH8AI-/0/1772695772979?e=1790812800&v=beta&t=7RKLiSrEXvjb8L5BmrwHPmfdLKz8FffdDEqbigR5JGE",
+						"alt": "Prof. Ashok Jhunjhunwala"
+					},
+					"role": "Member",
+					"affiliation": "Institute Professor, IIT Madras",
+					"bio": ""
 				}
 			]
 		},
@@ -2678,9 +2708,9 @@
 					"label": "Governance",
 					"eyebrow": "Governance",
 					"headlineLead": "Directed by a",
-					"headlineEmphasis": "seven-member body.",
+					"headlineEmphasis": "ten-member body.",
 					"paragraphs": [
-						"IITG-TIC has a seven-member Governing Body under the Chairmanship of the Director of IIT Guwahati. A Management Council directs and administers the smooth functioning of the centre. Currently, the Management Team of the IITG-TIC is led by a Chief Executive Officer."
+						"IITG-TIC has a ten-member Governing Body under the Chairmanship of the Director of IIT Guwahati. A Management Council directs and administers the smooth functioning of the centre. Currently, the Management Team of the IITG-TIC is led by a Chief Executive Officer."
 					],
 					"callout": {
 						"text": "Want to know who steers all of this? Get to know the Governing Body that shapes the centre's direction.",
