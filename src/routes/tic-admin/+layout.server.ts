@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
-import { readTicAdminSession } from '$lib/server/ticAdminSession';
+import { issueTicAdminSession, readTicAdminSession } from '$lib/server/ticAdminSession';
 import type { LayoutServerLoad } from './$types';
 
 // The admin gate runs here rather than in each page's onMount. Reading a signed
@@ -42,6 +42,10 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 	}
 
 	if (!admin) redirect(303, '/tic-admin/login');
+
+	// Sliding session: renew the cookie on each visit so an active admin is never
+	// logged out on their own — only an explicit logout or ~30 days away ends it.
+	issueTicAdminSession(cookies, admin);
 
 	return { admin, needsBootstrap: false, dbError: null };
 };

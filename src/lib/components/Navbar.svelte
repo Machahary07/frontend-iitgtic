@@ -30,6 +30,22 @@
 		leaveTimer = setTimeout(() => (openDropdown = null), 150);
 	}
 
+	// Profile dropdown — Login / Sign up. Opens on hover and toggles on click,
+	// matching the rest of the nav's dropdown behaviour.
+	let profileOpen = $state(false);
+	let profileTimer: ReturnType<typeof setTimeout> | undefined;
+	function openProfile() {
+		if (profileTimer) clearTimeout(profileTimer);
+		profileOpen = true;
+	}
+	function scheduleCloseProfile() {
+		if (profileTimer) clearTimeout(profileTimer);
+		profileTimer = setTimeout(() => (profileOpen = false), 150);
+	}
+	function toggleProfile() {
+		profileOpen = !profileOpen;
+	}
+
 	// Mobile menu
 	let mobileOpen = $state(false);
 	let openAccordion = $state<string | null>(null);
@@ -168,8 +184,38 @@
 	</div>
 </div>
 
-<!-- Layer 3: Apply button — desktop only -->
-<LinkReveal href="/apply" text={content.nav.applyLabel} class="nav-apply" />
+<!-- Layer 3: Apply + profile — desktop only -->
+<div class="nav-actions">
+	<LinkReveal href="/apply" text={content.nav.applyLabel} class="nav-apply" />
+	<!-- Hover is a mouse-only convenience; the button below is the accessible control. -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="nav-profile"
+		onmouseenter={openProfile}
+		onmouseleave={scheduleCloseProfile}
+	>
+		<button
+			type="button"
+			class="nav-profile-btn"
+			class:open={profileOpen}
+			aria-haspopup="menu"
+			aria-expanded={profileOpen}
+			aria-label="Account menu"
+			onclick={toggleProfile}
+		>
+			<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<circle cx="12" cy="8" r="4" />
+				<path d="M4 20c0-3.5 3.6-6 8-6s8 2.5 8 6" />
+			</svg>
+		</button>
+		{#if profileOpen}
+			<div class="profile-menu" role="menu">
+				<LinkReveal href="/login" text="Login" class="profile-item" role="menuitem" />
+				<LinkReveal href="/apply" text="Sign up" class="profile-item" role="menuitem" />
+			</div>
+		{/if}
+	</div>
+</div>
 
 <!-- Layer 3: logo -->
 <a href={resolve('/')} class="nav-logo" aria-label={content.nav.logoAlt}>
@@ -236,6 +282,14 @@
 				{/if}
 			</div>
 		{/each}
+
+		<!-- Account actions — the desktop profile button is hidden on mobile. -->
+		<div class="mobile-item">
+			<LinkReveal href="/login" text="Login" class="mobile-link" onclick={closeMobileMenu} />
+		</div>
+		<div class="mobile-item">
+			<LinkReveal href="/apply" text="Sign up" class="mobile-link" onclick={closeMobileMenu} />
+		</div>
 	</nav>
 </div>
 
@@ -357,10 +411,26 @@
 		visibility: hidden;
 	}
 
-	:global(.nav-apply) {
+	.nav-actions {
 		position: fixed;
-		top: calc(var(--event-bar-offset, var(--event-bar-height, 40px)) + ($nav-height - 2rem) / 2);
+		top: calc(var(--event-bar-offset, var(--event-bar-height, 40px)) + ($nav-height - 40px) / 2);
 		right: $nav-cluster-gap;
+		display: flex;
+		align-items: center;
+		gap: $space-3;
+		z-index: $z-dropdown;
+		transition: top $transition-base;
+
+		@media (max-width: 1023px) {
+			right: $nav-cluster-gap-tablet;
+		}
+
+		@media (max-width: 767px) {
+			display: none;
+		}
+	}
+
+	:global(.nav-apply) {
 		display: inline-flex;
 		align-items: center;
 		padding: $space-2 $space-6;
@@ -372,17 +442,63 @@
 		font-weight: $font-weight-semibold;
 		font-style: italic;
 		white-space: nowrap;
-		z-index: $z-dropdown;
-		transition: top $transition-base;
 
 		@media (max-width: 1023px) {
-			right: $nav-cluster-gap-tablet;
 			padding: $space-2 $space-4;
 		}
+	}
 
-		@media (max-width: 767px) {
-			display: none !important;
+	.nav-profile {
+		position: relative;
+		display: flex;
+		align-items: center;
+	}
+
+	.nav-profile-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		border: 1px solid $color-black;
+		background: $color-white;
+		color: $color-black;
+		cursor: pointer;
+		padding: 0;
+		transition: background-color $transition-base, color $transition-base;
+
+		// Open-state fill, matching the hamburger's open treatment. No hover swap.
+		&.open {
+			background: $color-black;
+			color: $color-white;
 		}
+	}
+
+	.profile-menu {
+		position: absolute;
+		top: calc(100% + #{$space-2});
+		right: 0;
+		min-width: 184px;
+		background: $color-white;
+		border: 1px solid rgba($color-black, 0.08);
+		border-radius: 14px;
+		box-shadow: $shadow-md;
+		padding: $space-2;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	:global(.profile-item) {
+		display: block;
+		padding: $space-2 $space-3;
+		border-radius: 8px;
+		font-size: $font-size-base;
+		font-weight: $font-weight-regular;
+		color: $color-fg;
+		white-space: nowrap;
+		pointer-events: auto;
 	}
 
 	.dropdown {

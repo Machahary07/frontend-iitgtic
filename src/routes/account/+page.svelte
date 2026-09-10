@@ -151,6 +151,7 @@
 		align-items: flex-start;
 		justify-content: space-between;
 		gap: $space-4;
+		flex-wrap: wrap;
 		margin-bottom: $space-6;
 
 		h1 {

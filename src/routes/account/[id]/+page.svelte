@@ -251,7 +251,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: $space-4;
+		gap: $space-3;
+		flex-wrap: wrap;
 		margin-bottom: $space-6;
 		font-size: $font-size-sm;
 	}

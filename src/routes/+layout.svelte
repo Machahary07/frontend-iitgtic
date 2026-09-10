@@ -13,6 +13,7 @@
 	import Seo from '$lib/components/Seo.svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import Toast from '$lib/components/Toast.svelte';
+	import CookieNotice from '$lib/components/CookieNotice.svelte';
 	import { setContent } from '$lib/content';
 	import type { LayoutData } from './$types';
 
@@ -31,6 +32,10 @@
 		page.url.pathname.startsWith('/tic-admin') ||
 			page.url.pathname.startsWith('/opportunities/job-posting-admin')
 	);
+
+	// The application flow is a focused page — no top nav or announcement strip.
+	// The footer stays; only the top chrome is dropped.
+	const hideTopChrome = $derived(page.url.pathname === '/application');
 </script>
 
 <svelte:head>
@@ -41,7 +46,7 @@
      It does not set <title> — the pages already do, and two would collide. -->
 <Seo />
 
-{#if !isAdmin}
+{#if !isAdmin && !hideTopChrome}
 	<EventBar />
 	<Navbar />
 {/if}
@@ -58,6 +63,7 @@
      ask a question or raise a toast without shipping its own modal. -->
 <ConfirmDialog />
 <Toast />
+<CookieNotice />
 
 <style lang="scss">
 	main {

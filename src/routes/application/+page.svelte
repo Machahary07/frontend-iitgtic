@@ -353,6 +353,10 @@
 		goto(resolve('/apply'));
 	}
 
+	function goAccount() {
+		goto(resolve('/account'));
+	}
+
 	function viewApplication() {
 		// Runtime path carrying the new application's id, so there is no route id to
 		// resolve it against.
@@ -439,11 +443,14 @@
 			</div>
 		{:else}
 			<header class="app__header">
-				<h1>Apply to IITG TIC</h1>
-				<p class="app__sub">
-					Complete all 8 steps to submit your application. Your answers are saved on this device as
-					you go, so you can close this and come back.
-				</p>
+				<div class="app__header-text">
+					<h1>Apply to IITG TIC</h1>
+					<p class="app__sub">
+						Complete all 8 steps to submit your application. Your answers are saved on this device
+						as you go, so you can close this and come back.
+					</p>
+				</div>
+				<ButtonReveal text="Account" class="btn btn--primary app__account" onclick={goAccount} />
 			</header>
 
 			{#if restoredFrom}
@@ -1120,10 +1127,11 @@
 		min-height: 100svh;
 		background: $color-white;
 		color: $color-black;
-		padding: calc(var(--page-shell-top, 104px) + #{$space-8}) 0 $space-9;
+		// No navbar on this page, so no shell height to clear — just page padding.
+		padding: $space-8 0 $space-9;
 
 		@include breakpoint-down($bp-sm) {
-			padding-top: calc(var(--page-shell-top, 100px) + #{$space-6});
+			padding-top: $space-6;
 		}
 	}
 
@@ -1139,6 +1147,11 @@
 	}
 
 	.app__header {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: $space-4;
+		flex-wrap: wrap;
 		margin-bottom: $space-6;
 
 		h1 {
@@ -1147,6 +1160,14 @@
 			font-weight: $font-weight-bold;
 			letter-spacing: $letter-spacing-tight;
 		}
+	}
+
+	.app__header-text {
+		min-width: 0;
+	}
+
+	:global(.app__account) {
+		flex-shrink: 0;
 	}
 
 	.app__sub {

@@ -13,7 +13,10 @@ import type { Cookies } from '@sveltejs/kit';
 // without the browser being able to claim to be someone else.
 
 const COOKIE = 'tic_admin_session';
-const MAX_AGE_SECONDS = 60 * 60 * 8;
+// Thirty days, and the admin layout renews it on every visit (a sliding window),
+// so an admin is never signed out on their own while they are using the console —
+// only an explicit logout, or ~30 days of no visits, ends the session.
+const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 export type AdminSession = {
 	userId: string;
