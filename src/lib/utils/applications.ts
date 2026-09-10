@@ -90,3 +90,35 @@ export async function getMyApplications(): Promise<MyApplication[]> {
 	if (error) return [];
 	return (data ?? []) as MyApplication[];
 }
+
+export type ApplicationDetail = MyApplication & {
+	full_name: string;
+	email: string;
+	answers: Record<string, unknown>;
+	documents: Record<string, { path: string; name: string; size: number }>;
+};
+
+// One application in full, for the founder's own detail view. Same "read own" RLS
+// as above, so a bad or someone else's id simply resolves to null.
+export async function getApplication(id: string): Promise<ApplicationDetail | null> {
+	const { data, error } = await supabase
+		.from('applications')
+		.select(
+			'id, status, startup_name, created_at, reviewed_at, review_note, full_name, email, answers, documents'
+		)
+		.eq('id', id)
+		.maybeSingle();
+
+	if (error || !data) return null;
+	return data as ApplicationDetail;
+}
+
+// A short-lived link to one of the founder's own uploaded documents. The
+// "application docs: read own" storage policy scopes this to their own folder,
+// so it can be signed straight from the browser without a server route.
+export async function signMyDocument(path: string, ttlSeconds = 600): Promise<string | null> {
+	const { data } = await supabase.storage
+		.from('application-documents')
+		.createSignedUrl(path, ttlSeconds);
+	return data?.signedUrl ?? null;
+}

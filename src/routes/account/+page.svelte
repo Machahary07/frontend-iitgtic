@@ -105,6 +105,13 @@
 								<p>{app.review_note}</p>
 							</div>
 						{/if}
+						<div class="app__foot">
+							<LinkReveal
+								href={`/account/${app.id}`}
+								text="View application"
+								class="inline-link"
+							/>
+						</div>
 					</li>
 				{/each}
 			</ul>
@@ -267,6 +274,11 @@
 		letter-spacing: $letter-spacing-wide;
 		text-transform: uppercase;
 		color: rgba($color-white, 0.7);
+	}
+
+	.app__foot {
+		margin-top: $space-4;
+		font-size: $font-size-sm;
 	}
 
 	.pill {
