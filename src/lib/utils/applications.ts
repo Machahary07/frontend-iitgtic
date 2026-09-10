@@ -67,12 +67,26 @@ export async function submitApplication(
 	return { ok: true, id: data.id as string };
 }
 
-export async function getMyApplications() {
+export type ApplicationStatus = 'submitted' | 'under-review' | 'accepted' | 'rejected';
+
+export type MyApplication = {
+	id: string;
+	status: ApplicationStatus;
+	startup_name: string;
+	created_at: string;
+	reviewed_at: string | null;
+	review_note: string | null;
+};
+
+// The applicant's own applications, newest first. RLS ("applications: read own")
+// scopes this to the signed-in user, so no user_id filter is needed here — the
+// select would return nothing for anyone else regardless.
+export async function getMyApplications(): Promise<MyApplication[]> {
 	const { data, error } = await supabase
 		.from('applications')
-		.select('id, status, startup_name, created_at')
+		.select('id, status, startup_name, created_at, reviewed_at, review_note')
 		.order('created_at', { ascending: false });
 
 	if (error) return [];
-	return data ?? [];
+	return (data ?? []) as MyApplication[];
 }
