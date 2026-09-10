@@ -33,6 +33,10 @@ export type DomainStatus =
 	| { state: 'verified'; domain: string; records: DomainRecord[] }
 	| { state: 'pending'; domain: string; records: DomainRecord[] }
 	| { state: 'failed'; domain: string; records: DomainRecord[]; detail: string }
+	// The API key is a sending-only key, so it may send mail but may not read the
+	// domain list. Distinct from 'unknown': nothing is wrong with the network or
+	// the domain, the key simply cannot answer the question.
+	| { state: 'restricted'; domain: string }
 	// Resend could not be reached; not the same as "not verified".
 	| { state: 'unknown'; domain: string; detail: string };
 
@@ -100,9 +104,15 @@ export async function domainStatus(from: string): Promise<DomainStatus> {
 			} else value = { state: 'pending', domain, records };
 		}
 	} catch (err) {
-		// A network problem is not evidence the domain is unverified, and saying so
-		// would send somebody to fix DNS that is already correct.
-		value = { state: 'unknown', domain, detail: err instanceof Error ? err.message : String(err) };
+		const detail = err instanceof Error ? err.message : String(err);
+		// A sending-only key 401s on /domains. That is a fact about the key, not
+		// about the domain, so it gets its own state rather than being reported as
+		// an outage.
+		value = /restricted/i.test(detail)
+			? { state: 'restricted', domain }
+			: // A network problem is not evidence the domain is unverified, and saying
+				// so would send somebody to fix DNS that is already correct.
+				{ state: 'unknown', domain, detail };
 	}
 
 	cache = { at: Date.now(), value };
@@ -124,6 +134,8 @@ export function describeDomain(status: DomainStatus): string {
 			return `${status.domain} is added but not verified yet. Until it is, sending fails.`;
 		case 'failed':
 			return `${status.domain} failed verification (${status.detail}). Check the DNS records below.`;
+		case 'restricted':
+			return `This RESEND_API_KEY may only send mail, so ${status.domain} cannot be checked from here. Confirm it on https://resend.com/domains.`;
 		case 'unknown':
 			return `Could not reach Resend to check ${status.domain} — ${status.detail}`;
 	}

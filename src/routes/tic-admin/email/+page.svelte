@@ -198,7 +198,7 @@
 				data.sendingDomain.state === 'not-added'}
 		>
 			<p class="banner__title">
-				{data.sendingDomain.state === 'unknown'
+				{data.sendingDomain.state === 'unknown' || data.sendingDomain.state === 'restricted'
 					? 'Could not check the sending domain'
 					: `${data.sendingDomain.domain} is not verified`}
 			</p>
