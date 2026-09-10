@@ -250,24 +250,27 @@
 						</div>
 
 						<div class="agree-wrap" class:has-error={errors.agreed}>
-							<label class="agree">
-								<input
-									type="checkbox"
-									class="agree__input"
-									bind:checked={agreed}
-									onchange={revalidate}
-								/>
-								<span class="agree__dot" aria-hidden="true"></span>
+							<div class="agree">
+								<label class="agree__toggle">
+									<input
+										type="checkbox"
+										class="agree__input"
+										bind:checked={agreed}
+										onchange={revalidate}
+										aria-label="I agree to the Terms of Use and Privacy Policy"
+									/>
+									<span class="agree__dot" aria-hidden="true"></span>
+								</label>
 								<span class="agree__text">
 									I agree to the <LinkReveal
-										href="/apply"
+										href="/terms"
 										text="Terms of Use"
 										class="inline-link"
 									/> and
-									<LinkReveal href="/apply" text="Privacy Policy" class="inline-link" />
+									<LinkReveal href="/privacy" text="Privacy Policy" class="inline-link" />
 									<em class="req">*</em>
 								</span>
-							</label>
+							</div>
 							{#if errors.agreed}
 								<span class="field__error field__error--block">{errors.agreed}</span>
 							{/if}
@@ -533,8 +536,14 @@
 		line-height: 1.3;
 		color: $color-white;
 		align-self: flex-start;
-		cursor: pointer;
+	}
+
+	.agree__toggle {
 		position: relative;
+		display: inline-flex;
+		align-items: center;
+		flex-shrink: 0;
+		cursor: pointer;
 	}
 
 	:global(.inline-link) {

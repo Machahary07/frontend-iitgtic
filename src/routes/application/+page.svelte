@@ -1432,7 +1432,8 @@
 		}
 	}
 
-	.check input:checked + .check__box::after {
+	.check input:checked + .check__box::after,
+	.consent input:checked + .check__box::after {
 		transform: scale(1);
 	}
 
