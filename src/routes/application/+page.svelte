@@ -4,7 +4,7 @@
 	import { goto } from '$app/navigation';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
 	import { loadUserSession } from '$lib/utils/userSession';
-	import { submitApplication } from '$lib/utils/applications';
+	import { submitApplication, notifyApplicationSubmitted } from '$lib/utils/applications';
 	import { clearDraft, loadDraft, saveDraft, savedAgo } from '$lib/utils/applicationDraft';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 
@@ -93,6 +93,7 @@
 	let step = $state(1);
 	let attempted = $state(false);
 	let submitted = $state(false);
+	let submittedId = $state('');
 	let submitting = $state(false);
 	let submitError = $state('');
 	let errors = $state<Record<string, string>>({});
@@ -310,9 +311,12 @@
 
 		completedSteps = new Set(completedSteps).add(step);
 		submitted = true;
+		submittedId = result.id;
 		// The row in public.applications is the record now, so the draft is done.
 		clearDraft(userId);
 		restoredFrom = '';
+		// Fire-and-forget: the receipt email must not hold up or fail the submit.
+		void notifyApplicationSubmitted(result.id);
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
@@ -325,6 +329,13 @@
 
 	function goSignUp() {
 		goto(resolve('/apply'));
+	}
+
+	function viewApplication() {
+		// Runtime path carrying the new application's id, so there is no route id to
+		// resolve it against.
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		goto(`/account/${submittedId}`);
 	}
 
 	async function discardDraft() {
@@ -395,9 +406,13 @@
 					> within 2 to 5 working days.
 				</p>
 				<p class="success__meta">
-					Please keep an eye on your inbox for any follow-up questions during review.
+					Please keep an eye on your inbox for any follow-up questions during review. We have also
+					emailed you a link to view your application.
 				</p>
-				<ButtonReveal text="Back to home" class="btn btn--ghost" onclick={goSignUp} />
+				<div class="success__actions">
+					<ButtonReveal text="View your application" class="view" onclick={viewApplication} />
+					<ButtonReveal text="Back to home" class="btn btn--ghost" onclick={goSignUp} />
+				</div>
 			</div>
 		{:else}
 			<header class="app__header">
@@ -1659,5 +1674,25 @@
 		font-size: $font-size-base;
 		color: rgba($color-black, 0.6);
 		line-height: $line-height-relaxed;
+	}
+
+	.success__actions {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: $space-5;
+		flex-wrap: wrap;
+		margin-top: $space-2;
+	}
+
+	:global(button.button-reveal.view) {
+		padding: 11px 28px;
+		border: 1px solid $color-black;
+		background: $color-black;
+		color: $color-white;
+		font-size: $font-size-sm;
+		font-weight: $font-weight-bold;
+		letter-spacing: $letter-spacing-wide;
+		text-transform: uppercase;
 	}
 </style>

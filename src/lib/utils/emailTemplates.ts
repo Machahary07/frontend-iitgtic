@@ -329,6 +329,45 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 
 	// --- incubation applications --------------------------------------------
 	{
+		key: 'application-received',
+		name: 'Application received',
+		description:
+			'Receipt to a founder the moment they submit an incubation application, linking them to their account to view it.',
+		trigger: 'A founder submits the application at /application',
+		group: 'Incubation applications',
+		variables: [
+			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{
+				name: 'applicationId',
+				description: 'Application id — used to link to the applicant’s own view of it',
+				sample: '00000000-0000-0000-0000-000000000000'
+			}
+		],
+		subject: 'We have received your {{siteName}} application',
+		...fromBlocks([
+			{ type: 'heading', text: 'Got it, {{fullName}}', showIf: 'fullName' },
+			{ type: 'heading', text: 'Application received', hideIf: 'fullName' },
+			{
+				type: 'text',
+				text: 'Your incubation application for *{{startupName}}* has been submitted to {{siteName}}.'
+			},
+			{
+				type: 'text',
+				text: 'The committee will review it and get back to you. You can open your application any time from your account to see its current status.'
+			},
+			{
+				type: 'button',
+				label: 'View your application',
+				href: '{{siteUrl}}/account/{{applicationId}}'
+			},
+			{
+				type: 'note',
+				text: 'For your security this link opens your account, which asks you to sign in first.'
+			}
+		])
+	},
+	{
 		key: 'application-under-review',
 		name: 'Application under review',
 		description: 'Lets a founder know their incubation application has been picked up.',

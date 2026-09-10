@@ -21,6 +21,9 @@ export const LIMITS = {
 	jobApplication: { windowSeconds: 3600, max: 10 } satisfies Limit,
 	// Per IP. The signup receipt is one call per account created.
 	signupReceipt: { windowSeconds: 3600, max: 10 } satisfies Limit,
+	// Per IP. Fired once per application submitted; a slow founder submitting a
+	// second application in the same hour is normal, a script is not.
+	applicationReceipt: { windowSeconds: 3600, max: 10 } satisfies Limit,
 	// Per IP. The widget verifies once per form; a retry or two is normal.
 	turnstile: { windowSeconds: 600, max: 30 } satisfies Limit,
 	// Per IP. Guards the bootstrap password, which is a plain shared secret.

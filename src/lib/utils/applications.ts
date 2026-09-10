@@ -122,3 +122,21 @@ export async function signMyDocument(path: string, ttlSeconds = 600): Promise<st
 		.createSignedUrl(path, ttlSeconds);
 	return data?.signedUrl ?? null;
 }
+
+// Asks the server to send the "application received" email. Best-effort: the
+// submit already succeeded, so a mail hiccup must not surface as an error. The
+// server re-checks the session and that the application belongs to the caller.
+export async function notifyApplicationSubmitted(applicationId: string): Promise<void> {
+	try {
+		const { data } = await supabase.auth.getSession();
+		const token = data.session?.access_token;
+		if (!token) return;
+		await fetch('/api/application-submitted', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+			body: JSON.stringify({ applicationId })
+		});
+	} catch {
+		// Network error on a courtesy email — nothing to do.
+	}
+}

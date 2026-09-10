@@ -99,7 +99,7 @@
 							Submitted {formatDate(app.created_at)}
 							{#if app.reviewed_at}· Updated {formatDate(app.reviewed_at)}{/if}
 						</p>
-						{#if app.review_note}
+						{#if app.review_note && app.status !== 'submitted'}
 							<div class="app__note">
 								<span class="app__note-label">Note from the reviewer</span>
 								<p>{app.review_note}</p>

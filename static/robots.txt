@@ -6,6 +6,8 @@ Disallow: /tic-admin/
 Disallow: /login
 Disallow: /apply
 Disallow: /application
+Disallow: /account
+Disallow: /account/
 Disallow: /status
 Disallow: /opportunities/job-posting-admin
 Disallow: /opportunities/job-posting-admin/
