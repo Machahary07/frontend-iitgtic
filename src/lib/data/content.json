@@ -2698,10 +2698,154 @@
 			"sectionEyebrow": "The mentors",
 			"mentors": [
 				{
-					"name": "",
-					"affiliation": "",
-					"specialisation": "",
+					"name": "Dr. Pankaj Kalita",
+					"affiliation": "Associate Professor, School of Energy Science & Engineering, IIT Guwahati",
+					"specialisation": "Clean Energy Technology, Gasification, Energy Storage, Solar Energy, Energy Management",
+					"bio": "Experienced researcher in renewable energy, solar technologies, energy storage, biomass gasification, anaerobic digestion, biochar and sustainable energy systems."
+				},
+				{
+					"name": "Prof. Santosh Kr. Dwivedy",
+					"affiliation": "Professor, Department of Mechanical Engineering, IIT Guwahati",
+					"specialisation": "Design & Robotics, Non-linear Dynamics, Vibration",
+					"bio": "Expert in vibration and dynamics of mechanical systems, flexible robotic manipulators, vibration control, FEM, computational mechanics and biomechanics."
+				},
+				{
+					"name": "Ms. Charu Monga",
+					"affiliation": "Assistant Professor, Department of Design, IIT Guwahati",
+					"specialisation": "Visual Communication, Filmmaking, Animation, Digital Media, Game Design, Design Research",
+					"bio": "Works across visual communication, design research, filmmaking, animation, illustration, game design and emerging media, with emphasis on culture and communities."
+				},
+				{
+					"name": "Prof. Prabirkumar Saha",
+					"affiliation": "Professor, Department of Chemical Engineering, IIT Guwahati",
+					"specialisation": "Process Modelling, Optimization & Control, Membrane Separation",
+					"bio": "Specialist in process modelling, advanced control systems and membrane-based separation, with research applications in CO₂ absorption, bioactive compound recovery and water treatment."
+				},
+				{
+					"name": "Prof. Mihir Kumar Purkait",
+					"affiliation": "Professor (HAG), Department of Chemical Engineering, IIT Guwahati",
+					"specialisation": "Membrane Technology, Waste Management, Catalysis, Nanotechnology, Biofuels",
+					"bio": "Experienced researcher in membrane technology, water and wastewater treatment, nanomaterials, catalysis, bio-products and CO₂ conversion, with strong focus on technology development and commercialisation."
+				},
+				{
+					"name": "Dr. Partha Sarathi Mandal",
+					"affiliation": "Professor, Department of Mathematics, IIT Guwahati",
+					"specialisation": "Swarm Robotics, Wireless Sensor Networks, Distributed Algorithms",
+					"bio": "Specialises in distributed computing and autonomous systems, including swarm robotics, fault-tolerant systems, wireless sensor networks and distributed decision-making."
+				},
+				{
+					"name": "Prof. K. Pakshirajan",
+					"affiliation": "Professor, Department of Biosciences & Bioengineering, IIT Guwahati",
+					"specialisation": "Environmental Technology",
+					"bio": "Expert in environmental biotechnology, biofuels, biochemicals, biorefineries and bioprocess technology, with significant work in treatment of contaminated air, soil and water."
+				},
+				{
+					"name": "Prof. Uday S. Dixit",
+					"affiliation": "Professor, Department of Mechanical Engineering, IIT Guwahati",
+					"specialisation": "Design & Manufacturing, FEM, Mechatronics, Neural Networks",
+					"bio": "Works in advanced design and manufacturing, finite element methods, mechatronics, neural networks and intelligent engineering systems."
+				},
+				{
+					"name": "Dr. Supradip Das",
+					"affiliation": "Assistant Professor, Department of Design, IIT Guwahati",
+					"specialisation": "Product Development, Origami Design, Packaging, Furniture Design",
+					"bio": "Specialises in origami-inspired product development, structural packaging, transformable furniture, paper craft and sustainable product design."
+				},
+				{
+					"name": "Prof. Vibin Ramakrishnan",
+					"affiliation": "Professor, Department of Biosciences & Bioengineering, IIT Guwahati",
+					"specialisation": "Computational Biology, Bioinformatics, Biophysics, Bionanotechnology",
+					"bio": "Research expertise in computational biophysics, biotechnology and interdisciplinary bioscience, with extensive publications, patents and industry advisory experience."
+				},
+				{
+					"name": "Prof. V. V. Goud",
+					"affiliation": "Professor, Department of Chemical Engineering, IIT Guwahati",
+					"specialisation": "Biofuels, Bio-lubricants",
+					"bio": "Expert in bio-energy, green engineering, lignocellulosic biomass utilisation, biolubricants and sustainable technologies for biofuels and green chemicals."
+				},
+				{
+					"name": "Prof. Pranab Goswami",
+					"affiliation": "Professor, Department of Biosciences & Bioengineering, IIT Guwahati",
+					"specialisation": "Hydrogen Fuel Cell Systems",
+					"bio": "Works on biosensors, biofuel cells and bioelectrochemical systems with applications in healthcare, environmental monitoring and sustainable energy."
+				},
+				{
+					"name": "Prof. Manoj Majhi",
+					"affiliation": "Associate Professor, Department of Design, IIT Guwahati",
+					"specialisation": "Animation, Special Effects, Cartooning",
+					"bio": "Specialises in animation, traditional animation, special effects, cartooning and visual storytelling, with expertise spanning creative and technical aspects of animation cinema."
+				},
+				{
+					"name": "Prof. Pradeep G. Yammiyavar",
+					"affiliation": "Senior Professor of Design, IIT Guwahati",
+					"specialisation": "HCI, AR/VR, UX, Product Design, Branding, Innovation, Smart Cities",
+					"bio": "Has 30+ years of academic experience in innovation, design research, product development, HCI, UX and strategic design management, with extensive experience mentoring design entrepreneurs."
+				},
+				{
+					"name": "Dr. Pankaj Biswas",
+					"affiliation": "Professor, Department of Mechanical Engineering, IIT Guwahati",
+					"specialisation": "FEM, Welding, Manufacturing, Design",
+					"bio": "Specialist in computational weld mechanics, advanced welding, manufacturing, FEM and intelligent approaches to process optimisation and structural fabrication."
+				},
+				{
+					"name": "Prof. S. R. Mahadeva Prasanna",
+					"affiliation": "Professor, Department of Electronics & Electrical Engineering, IIT Guwahati",
+					"specialisation": "Speech & Signal Processing",
+					"bio": "Accomplished researcher in speech, audio, image and biomedical signal processing and AI, with significant academic, research and institutional leadership experience."
+				},
+				{
+					"name": "Dr. Priyankoo Sarmah",
+					"affiliation": "Professor, Department of Humanities & Social Sciences, IIT Guwahati",
+					"specialisation": "Language Technology, Speech Recognition, Phonetics",
+					"bio": "Specialises in phonetics, phonology, speech recognition and language technologies, particularly for low-resource and Indian languages and Northeast Indian languages."
+				},
+				{
+					"name": "Prof. S. R. Joshi",
+					"affiliation": "Professor, Department of Biotechnology & Bioinformatics, NEHU, Shillong",
+					"specialisation": "Biotechnology, Applied Microbiology",
+					"bio": "Experienced academic and researcher in microbiology, biotechnology and bioinformatics, contributing to life-sciences research and academic development in Northeast India."
+				},
+				{
+					"name": "Dr. T. Venkatesh",
+					"affiliation": "Professor, Department of Computer Science & Engineering, IIT Guwahati",
+					"specialisation": "Network Protocols, Cloud Computing, Multimedia Streaming",
+					"bio": "Researcher in computer networks, cloud computing, wireless networks, network security, data-centre networking, multimedia streaming and content delivery networks."
+				},
+				{
+					"name": "Prof. Shaik Rafi Ahmed",
+					"affiliation": "Professor, Department of Electronics & Electrical Engineering, IIT Guwahati",
+					"specialisation": "VLSI, Machine Learning, Digital IC Design, Biomedical Signal Processing",
+					"bio": "Works on VLSI architectures, digital IC design, machine-learning algorithms, adaptive signal processing, communication systems and biomedical signal processing."
+				},
+				{
+					"name": "Punit Gupta",
+					"affiliation": "Entrepreneur / Strategy & GTM Professional",
+					"specialisation": "GTM, Strategy",
+					"bio": "Experienced in fintech, MSME lending, sales operations and startup growth, with expertise in GTM planning, pitch development, sales strategy and business growth."
+				},
+				{
+					"name": "Abhishek Pradhan",
+					"affiliation": "IIT Guwahati Alumnus; Director, Deloitte Consulting",
+					"specialisation": "Strategy, Business",
+					"bio": "Has 20+ years of experience in business strategy, technology consulting and enterprise transformation, including technology strategy, product development and business transformation."
+				},
+				{
+					"name": "Tahsin Ali",
+					"affiliation": "IIT Guwahati Alumnus; Principal Product Manager, Amazon",
+					"specialisation": "Product Development",
 					"bio": ""
+				},
+				{
+					"name": "Gaurav Kumar",
+					"affiliation": "IIT Guwahati Alumnus; Principal Product Manager",
+					"specialisation": "Strategy",
+					"bio": "Technology leader and entrepreneur with 20+ years of experience in mobile technologies, AI and product development, including experience with Samsung, Intel, Texas Instruments and Qualcomm."
+				},
+				{
+					"name": "Prawin Janardhan Bhagat",
+					"affiliation": "IIT Guwahati Alumnus; Game Developer, Datalogy Software Pvt. Ltd.",
+					"specialisation": "Product Development",
+					"bio": "Senior Unity Game Developer with 6+ years of experience in game engineering and technical product development, specialising in multiplayer mobile games and Unity-based development."
 				}
 			]
 		},
