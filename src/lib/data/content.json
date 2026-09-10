@@ -2328,13 +2328,63 @@
 			"sectionEyebrow": "The committee",
 			"members": [
 				{
-					"name": "",
+					"name": "Prof. Rohit Sinha",
 					"avatar": {
-						"src": "",
-						"alt": ""
+						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1788611455622-Vice_Chairman_Prof_Rohit_Sinha_Dean_Research_Development_IIT.jpg",
+						"alt": "Prof. Rohit Sinha"
+					},
+					"role": "Chairman",
+					"affiliation": "Dean, Research & Development (R&D), IIT Guwahati",
+					"bio": ""
+				},
+				{
+					"name": "Prof. Senthilmurugan Subbiah",
+					"avatar": {
+						"src": "https://iitg.ac.in/chemeng/faculty/887823b1e234f21b80b15a2f9f76c957a518bc1e.jpg",
+						"alt": "Prof. Senthilmurugan Subbiah"
+					},
+					"role": "Member Secretary",
+					"affiliation": "Professor, Department of Chemical Engineering & Professor-in-Charge, IITG-TIC, IIT Guwahati",
+					"bio": ""
+				},
+				{
+					"name": "Dr. Ajeet Kumar",
+					"avatar": {
+						"src": "https://www.iitg.ac.in/design/faculty/ajit-20230615054549.jpg",
+						"alt": "Dr. Ajeet Kumar"
 					},
 					"role": "Member",
-					"affiliation": "",
+					"affiliation": "Faculty, Department of Design, IIT Guwahati",
+					"bio": ""
+				},
+				{
+					"name": "Dr. Rinku Kumar Mittal",
+					"avatar": {
+						"src": "https://www.iitg.ac.in/rkmittal/assets/img/profile.jpg",
+						"alt": "Dr. Rinku Kumar Mittal"
+					},
+					"role": "Member",
+					"affiliation": "Faculty, Department of Mechanical Engineering, IIT Guwahati",
+					"bio": ""
+				},
+				{
+					"name": "Dr. Amit Chintamani Awekar",
+					"avatar": {
+						"src": "https://www.iitg.ac.in/awekar/images/awekarsolo.jpg",
+						"alt": "Dr. Amit Chintamani Awekar"
+					},
+					"role": "Member",
+					"affiliation": "Faculty, Department of Computer Science & Engineering, IIT Guwahati",
+					"bio": ""
+				},
+				{
+					"name": "Urmi Buragohain",
+					"avatar": {
+						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1789012278372-urmi_borgohain.jpg",
+						"alt": "Urmi Buragohain"
+					},
+					"role": "Member",
+					"affiliation": "Chief Executive Officer (CEO), IITG-TIC",
 					"bio": ""
 				}
 			]
