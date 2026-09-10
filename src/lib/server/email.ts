@@ -76,6 +76,30 @@ export function emailConfig(): EmailConfig {
 	};
 }
 
+// The inbox the console notifies about admin sign-ins and new founder signups.
+// In order of preference: an explicit override, the reply-to the console already
+// answers on, then the address it sends from (parsed out of "Name <email>").
+export function adminAlertRecipient(): string {
+	const config = emailConfig();
+	const explicit = env.ADMIN_ALERT_EMAIL?.trim();
+	if (explicit) return explicit;
+	if (config.replyTo) return config.replyTo;
+	const match = config.from.match(/<([^>]+)>/);
+	return (match ? match[1] : config.from).trim();
+}
+
+// A human-readable IST timestamp for the "signed in at" / "signed up at" lines.
+export function formatEventTime(): string {
+	return new Date().toLocaleString('en-GB', {
+		timeZone: 'Asia/Kolkata',
+		day: 'numeric',
+		month: 'short',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit'
+	});
+}
+
 // --- templates --------------------------------------------------------------
 
 export type ResolvedTemplate = Omit<EmailTemplateDef, 'blocks'> & {

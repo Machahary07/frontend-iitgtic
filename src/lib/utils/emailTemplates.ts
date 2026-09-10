@@ -24,6 +24,8 @@ export type EmailTemplateDef = {
 	trigger: string;
 	group:
 		| 'Layout'
+		| 'Founder accounts'
+		| 'Admin'
 		| 'Companies'
 		| 'Incubation applications'
 		| 'Role applicants'
@@ -230,6 +232,120 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		...fromBlocks([
 			{ type: 'heading', text: 'Hello' },
 			{ type: 'text', text: 'Your message here.' }
+		])
+	},
+
+	// --- founder accounts ---------------------------------------------------
+	{
+		key: 'founder-welcome',
+		name: 'Founder welcome & confirm email',
+		description:
+			'Sent when a founder signs up. Welcomes them and carries the link that confirms their email — until they follow it, the final step of the application cannot be submitted.',
+		trigger: 'A founder signs up at /apply (and on "resend" from the application)',
+		group: 'Founder accounts',
+		variables: [
+			{ name: 'fullName', description: 'Founder name', sample: 'Rahul Bora' },
+			{
+				name: 'verifyUrl',
+				description: 'Signed one-off link that confirms the address',
+				sample: 'https://iitgtic.itsjeu.com/verify-email?u=…&e=…&t=…'
+			}
+		],
+		subject: 'Welcome to {{siteName}} — please confirm your email',
+		...fromBlocks([
+			{ type: 'heading', text: 'Welcome, {{fullName}}', showIf: 'fullName' },
+			{ type: 'heading', text: 'Welcome to {{siteName}}', hideIf: 'fullName' },
+			{
+				type: 'text',
+				text: 'Thanks for creating an account. You can start your incubation application straight away and come back to it whenever you like.'
+			},
+			{
+				type: 'text',
+				text: 'One thing before you can submit: please confirm this is your email. It only takes a click and it is how we make sure decisions reach the right inbox.'
+			},
+			{ type: 'button', label: 'Confirm your email', href: '{{verifyUrl}}' },
+			{
+				type: 'note',
+				text: 'If you did not sign up to {{siteName}}, you can ignore this email and nothing further will happen.'
+			}
+		])
+	},
+
+	{
+		key: 'founder-login',
+		name: 'Founder sign-in notice',
+		description:
+			'A "welcome back" heads-up sent when a founder signs in, throttled to at most once a day so it stays a security signal rather than noise.',
+		trigger: 'A founder signs in at /login (at most once per 24h)',
+		group: 'Founder accounts',
+		variables: [
+			{ name: 'fullName', description: 'Founder name', sample: 'Rahul Bora' },
+			{ name: 'loginTime', description: 'When they signed in (dropped if empty)', sample: '' }
+		],
+		subject: 'New sign-in to your {{siteName}} account',
+		...fromBlocks([
+			{ type: 'heading', text: 'Welcome back, {{fullName}}', showIf: 'fullName' },
+			{ type: 'heading', text: 'New sign-in', hideIf: 'fullName' },
+			{ type: 'text', text: 'You just signed in to your {{siteName}} account.' },
+			{ type: 'callout', tone: 'info', label: 'When', text: '{{loginTime}}', showIf: 'loginTime' },
+			{
+				type: 'text',
+				text: 'If this was you, nothing to do. If it was not, reset your password from the sign-in page to secure your account.'
+			},
+			{ type: 'button', label: 'Go to your account', href: '{{siteUrl}}/account' }
+		])
+	},
+
+	// --- admin --------------------------------------------------------------
+	{
+		key: 'admin-signin-alert',
+		name: 'Admin sign-in alert',
+		description:
+			'A security heads-up to the operating inbox whenever someone signs in to the TIC admin console.',
+		trigger: 'Any admin signs in at /tic-admin/login',
+		group: 'Admin',
+		variables: [
+			{ name: 'adminName', description: 'Who signed in', sample: 'Ananya Sharma' },
+			{ name: 'adminEmail', description: 'Their account email', sample: 'ananya@iitg.ac.in' },
+			{ name: 'loginTime', description: 'When they signed in (dropped if empty)', sample: '' }
+		],
+		subject: 'New sign-in to the {{siteName}} admin console',
+		...fromBlocks([
+			{ type: 'heading', text: 'Admin console sign-in' },
+			{ type: 'text', text: 'Someone just signed in to the {{siteName}} admin console.' },
+			{ type: 'callout', tone: 'info', label: 'Account', text: '{{adminName}} — {{adminEmail}}' },
+			{ type: 'callout', tone: 'info', label: 'When', text: '{{loginTime}}', showIf: 'loginTime' },
+			{
+				type: 'text',
+				text: 'If this was you or a colleague, no action is needed. If you do not recognise it, change that account’s password and review recent activity in the console.'
+			}
+		])
+	},
+	{
+		key: 'new-applicant-alert',
+		name: 'New applicant signed up',
+		description:
+			'A heads-up to the operating inbox whenever a new founder creates an account. One per applicant, sent at signup.',
+		trigger: 'A founder signs up at /apply',
+		group: 'Admin',
+		variables: [
+			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
+			{ name: 'email', description: 'Applicant email', sample: 'rahul@brahmaputra.bio' },
+			{ name: 'phone', description: 'Applicant phone (dropped if empty)', sample: '9876543210' },
+			{ name: 'signupTime', description: 'When they signed up (dropped if empty)', sample: '' }
+		],
+		subject: 'New applicant signed up — {{fullName}}',
+		...fromBlocks([
+			{ type: 'heading', text: 'A new applicant just signed up' },
+			{
+				type: 'text',
+				text: 'Someone created a founder account on {{siteName}}. They can now fill in the incubation application.'
+			},
+			{ type: 'callout', tone: 'info', label: 'Name', text: '{{fullName}}' },
+			{ type: 'callout', tone: 'info', label: 'Email', text: '{{email}}' },
+			{ type: 'callout', tone: 'info', label: 'Phone', text: '{{phone}}', showIf: 'phone' },
+			{ type: 'callout', tone: 'info', label: 'Signed up', text: '{{signupTime}}', showIf: 'signupTime' },
+			{ type: 'button', label: 'Open the console', href: '{{siteUrl}}/tic-admin/users' }
 		])
 	},
 

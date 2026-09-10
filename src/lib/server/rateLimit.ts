@@ -24,6 +24,12 @@ export const LIMITS = {
 	// Per IP. Fired once per application submitted; a slow founder submitting a
 	// second application in the same hour is normal, a script is not.
 	applicationReceipt: { windowSeconds: 3600, max: 10 } satisfies Limit,
+	// Per IP. The welcome / confirm-your-email send — once at signup, plus the odd
+	// "resend" from someone who did not get it. A handful an hour is generous.
+	founderWelcome: { windowSeconds: 3600, max: 8 } satisfies Limit,
+	// Per IP. The sign-in notice fires once per login; the real brake on how often
+	// it actually sends is the 24h throttle in the route, so this only stops abuse.
+	founderLogin: { windowSeconds: 3600, max: 20 } satisfies Limit,
 	// Per IP. The widget verifies once per form; a retry or two is normal.
 	turnstile: { windowSeconds: 600, max: 30 } satisfies Limit,
 	// Per IP. Guards the bootstrap password, which is a plain shared secret.

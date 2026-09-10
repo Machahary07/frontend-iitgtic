@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
-	import { loadUserSession } from '$lib/utils/userSession';
+	import { loadUserSession, sendFounderWelcome } from '$lib/utils/userSession';
 	import { submitApplication, notifyApplicationSubmitted } from '$lib/utils/applications';
 	import { clearDraft, loadDraft, saveDraft, savedAgo } from '$lib/utils/applicationDraft';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
@@ -96,6 +96,11 @@
 	let submittedId = $state('');
 	let submitting = $state(false);
 	let submitError = $state('');
+	// Email-confirmation gate for step 8. Defaults to true so the consent boxes are
+	// never blocked before the session has loaded, or if the flag cannot be read.
+	let emailVerified = $state(true);
+	let resending = $state(false);
+	let resent = $state(false);
 	let errors = $state<Record<string, string>>({});
 	let completedSteps = $state(new Set<number>());
 
@@ -285,11 +290,28 @@
 		}
 	}
 
+	async function resendConfirmation() {
+		if (resending) return;
+		resending = true;
+		resent = false;
+		await sendFounderWelcome();
+		resending = false;
+		resent = true;
+	}
+
 	async function submit() {
 		attempted = true;
 		const e = validateStep(step);
 		errors = e;
 		if (Object.keys(e).length > 0) return;
+
+		// The address must be confirmed before an application can be submitted. This
+		// is the friendly gate; the RLS insert policy is the real one, so bypassing
+		// the client still cannot write an application from an unverified account.
+		if (!emailVerified) {
+			submitError = 'Please confirm your email before submitting — check your inbox for the link.';
+			return;
+		}
 
 		submitting = true;
 		submitError = '';
@@ -358,6 +380,7 @@
 			goto(resolve('/apply'));
 			return;
 		}
+		emailVerified = session.emailVerified ?? true;
 		if (session.name && !data.fullName) data.fullName = session.name;
 		if (session.email && !data.email) data.email = session.email;
 		if (session.phone && !data.phone) {
@@ -990,9 +1013,29 @@
 					{/if}
 
 					{#if step === 8}
-						<div class="consent-list">
+						{#if !emailVerified}
+							<div class="verify-gate" role="status" aria-live="polite">
+								<p class="verify-gate__text">
+									Confirm your email to submit. We sent a confirmation link to
+									<strong>{data.email}</strong>. Open it, then come back to this step.
+								</p>
+								<ButtonReveal
+									text={resending ? 'Sending…' : 'Resend confirmation email'}
+									class="resend"
+									loading={resending}
+									onclick={resendConfirmation}
+								/>
+								{#if resent}<span class="verify-gate__done">Sent — check your inbox.</span>{/if}
+							</div>
+						{/if}
+						<div class="consent-list" class:consent-list--locked={!emailVerified}>
 							<label class="consent" class:has-error={errors.infoAccurate}>
-								<input type="checkbox" bind:checked={data.infoAccurate} onchange={revalidate} />
+								<input
+									type="checkbox"
+									bind:checked={data.infoAccurate}
+									onchange={revalidate}
+									disabled={!emailVerified}
+								/>
 								<span class="check__box"></span>
 								<span class="consent__text">
 									I confirm that all information provided is accurate to the best of my knowledge. <em
@@ -1005,7 +1048,12 @@
 							</label>
 
 							<label class="consent" class:has-error={errors.agreeTerms}>
-								<input type="checkbox" bind:checked={data.agreeTerms} onchange={revalidate} />
+								<input
+									type="checkbox"
+									bind:checked={data.agreeTerms}
+									onchange={revalidate}
+									disabled={!emailVerified}
+								/>
 								<span class="check__box"></span>
 								<span class="consent__text">
 									I agree to the IITG TIC application terms and privacy policy. <em class="req"
@@ -1018,7 +1066,12 @@
 							</label>
 
 							<label class="consent" class:has-error={errors.allowReview}>
-								<input type="checkbox" bind:checked={data.allowReview} onchange={revalidate} />
+								<input
+									type="checkbox"
+									bind:checked={data.allowReview}
+									onchange={revalidate}
+									disabled={!emailVerified}
+								/>
 								<span class="check__box"></span>
 								<span class="consent__text">
 									I allow the IITG TIC evaluation committee to review my application and documents. <em
@@ -1553,10 +1606,62 @@
 	}
 
 	// ---- Consent (Step 8) ----
+	.verify-gate {
+		margin-bottom: $space-5;
+		padding: $space-4;
+		border: 1px solid rgba($color-black, 0.15);
+		background: #fff9e9;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: $space-3;
+	}
+
+	.verify-gate__text {
+		margin: 0;
+		font-size: $font-size-sm;
+		line-height: 1.55;
+		color: rgba($color-black, 0.8);
+
+		strong {
+			font-weight: $font-weight-semibold;
+			color: $color-black;
+		}
+	}
+
+	:global(button.button-reveal.resend) {
+		padding: 9px 20px;
+		border: 1px solid $color-black;
+		background: $color-black;
+		color: $color-white;
+		font-size: $font-size-xs;
+		font-weight: $font-weight-bold;
+		letter-spacing: $letter-spacing-wide;
+		text-transform: uppercase;
+	}
+
+	.verify-gate__done {
+		font-size: $font-size-xs;
+		font-weight: $font-weight-semibold;
+		color: #1a6b2f;
+	}
+
 	.consent-list {
 		display: flex;
 		flex-direction: column;
 		gap: $space-4;
+	}
+
+	// Locked until the email is confirmed: the boxes read as unavailable and the
+	// disabled input ignores label clicks, so none of the three can be ticked.
+	.consent-list--locked {
+		.consent {
+			cursor: not-allowed;
+		}
+
+		.check__box {
+			opacity: 0.4;
+		}
 	}
 
 	.consent {

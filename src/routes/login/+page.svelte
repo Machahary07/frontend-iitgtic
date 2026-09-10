@@ -4,7 +4,7 @@
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
 	import Turnstile from '$lib/components/Turnstile.svelte';
-	import { requestPasswordReset, signInFounder } from '$lib/utils/userSession';
+	import { requestPasswordReset, signInFounder, sendFounderLoginNotice } from '$lib/utils/userSession';
 	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	let email = $state('');
@@ -56,6 +56,8 @@
 				return;
 			}
 			error = '';
+			// Fire-and-forget sign-in notice (throttled server-side to once a day).
+			void sendFounderLoginNotice();
 			goto(resolve('/application'));
 		} finally {
 			submitting = false;

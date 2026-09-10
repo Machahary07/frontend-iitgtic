@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 import { error, json } from '@sveltejs/kit';
 import { TIC_ADMIN_PASSWORD } from '$env/static/private';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import { adminAlertRecipient, formatEventTime, sendTemplateEmail } from '$lib/server/email';
 import {
 	clearTicAdminSession,
 	issueTicAdminSession,
@@ -145,6 +146,19 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 		actor_id: session.userId,
 		actor_label: `${session.name || session.email} (admin)`,
 		action: 'signed in to the admin console'
+	});
+
+	// Heads-up to the operating inbox that someone opened the console. Never throws
+	// and every send is logged, so a mail problem cannot fail a valid sign-in.
+	await sendTemplateEmail({
+		templateKey: 'admin-signin-alert',
+		to: adminAlertRecipient(),
+		variables: {
+			adminName: session.name || session.email,
+			adminEmail: session.email,
+			loginTime: formatEventTime()
+		},
+		context: { table: 'profiles', recordId: session.userId }
 	});
 
 	return json({ ok: true, admin: session });

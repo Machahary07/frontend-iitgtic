@@ -4,7 +4,7 @@
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
 	import Turnstile from '$lib/components/Turnstile.svelte';
-	import { signUpFounder } from '$lib/utils/userSession';
+	import { signUpFounder, sendFounderWelcome } from '$lib/utils/userSession';
 	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	let name = $state('');
@@ -120,6 +120,10 @@
 				confirmationEmail = signup.session.email ?? email.trim();
 				return;
 			}
+			// Signed in immediately: send our own welcome / confirm-email message. It
+			// carries the link that lifts the step-8 gate. Fire-and-forget so a mail
+			// hiccup never blocks the account they just created.
+			void sendFounderWelcome();
 			goto(resolve('/application'));
 		} finally {
 			submitting = false;

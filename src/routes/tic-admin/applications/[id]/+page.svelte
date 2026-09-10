@@ -208,12 +208,12 @@
 				</div>
 
 				<label class="field">
-					<span>Internal note</span>
+					<span>Note to applicant</span>
 					<textarea
 						value={reviewNote}
 						oninput={(e) => (noteDraft = (e.currentTarget as HTMLTextAreaElement).value)}
 						rows="4"
-						placeholder="Why this decision — visible to the TIC team only."
+						placeholder="Why this decision — included in the applicant's email."
 					></textarea>
 				</label>
 

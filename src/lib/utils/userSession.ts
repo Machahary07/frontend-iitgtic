@@ -14,6 +14,11 @@ export type UserSession = {
 	name?: string;
 	email?: string;
 	phone?: string;
+	// Whether the address has been confirmed via the /verify-email link. Defaults
+	// to true when it cannot be read, so the step-8 gate stays open until the
+	// email_verified column actually exists — deploying the code ahead of the
+	// migration must not block anyone from submitting.
+	emailVerified?: boolean;
 };
 
 export type AuthResult =
@@ -83,8 +88,22 @@ export async function loadUserSession(): Promise<UserSession> {
 		id: user.id,
 		name: data?.full_name || (user.user_metadata?.full_name as string) || '',
 		email: data?.email || user.email || '',
-		phone: data?.phone || (user.user_metadata?.phone as string) || ''
+		phone: data?.phone || (user.user_metadata?.phone as string) || '',
+		emailVerified: await readEmailVerified(user.id)
 	};
+}
+
+// Read the verification flag on its own, so a pre-migration missing column (or
+// any read error) defaults the step-8 gate to open rather than wiping the whole
+// profile read above. Once the migration is live this returns the real value.
+async function readEmailVerified(userId: string): Promise<boolean> {
+	const { data, error } = await supabase
+		.from('profiles')
+		.select('email_verified')
+		.eq('id', userId)
+		.maybeSingle();
+	if (error || !data) return true;
+	return (data.email_verified as boolean | undefined) ?? true;
 }
 
 export async function saveUserSession(patch: Partial<UserSession>): Promise<void> {
@@ -103,6 +122,43 @@ export async function saveUserSession(patch: Partial<UserSession>): Promise<void
 
 export async function clearUserSession(): Promise<void> {
 	await supabase.auth.signOut();
+}
+
+/**
+ * Asks the server to send the welcome / confirm-your-email message to the
+ * signed-in founder. Best-effort: fired at signup and from the "resend" control
+ * on the application, and never allowed to interrupt either flow.
+ */
+export async function sendFounderWelcome(): Promise<void> {
+	try {
+		const { data } = await supabase.auth.getSession();
+		const token = data.session?.access_token;
+		if (!token) return;
+		await fetch('/api/founder-welcome', {
+			method: 'POST',
+			headers: { authorization: `Bearer ${token}` }
+		});
+	} catch {
+		// A courtesy email that did not go out is not worth interrupting anyone over.
+	}
+}
+
+/**
+ * Asks the server to send the "welcome back" sign-in notice. Best-effort and
+ * throttled server-side to once a day, so calling it on every login is fine.
+ */
+export async function sendFounderLoginNotice(): Promise<void> {
+	try {
+		const { data } = await supabase.auth.getSession();
+		const token = data.session?.access_token;
+		if (!token) return;
+		await fetch('/api/founder-login', {
+			method: 'POST',
+			headers: { authorization: `Bearer ${token}` }
+		});
+	} catch {
+		// A sign-in notice that did not send is not worth interrupting the login.
+	}
 }
 
 /**
