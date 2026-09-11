@@ -1,12 +1,56 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { resolve } from '$app/paths';
+	import { afterNavigate, goto } from '$app/navigation';
+	import type { User } from '@supabase/supabase-js';
 	import LinkReveal from './LinkReveal.svelte';
+	import ButtonReveal from './ButtonReveal.svelte';
 	import { loadGsap } from '$lib/utils/animation';
 	import { images } from '$lib/data/images';
 	import { getContent } from '$lib/content';
+	import { supabase } from '$lib/supabaseClient';
+	import { clearUserSession } from '$lib/utils/userSession';
 
 	const content = getContent();
+
+	// Reflect the signed-in founder/company in the profile menu.
+	let account = $state<{ name: string } | null>(null);
+
+	function readAccount(user: User | null | undefined): { name: string } | null {
+		if (!user) return null;
+		return { name: (user.user_metadata?.full_name as string) || user.email || 'Account' };
+	}
+
+	async function refreshAccount() {
+		const { data } = await supabase.auth.getSession();
+		account = readAccount(data.session?.user);
+	}
+
+	// The nav persists across client-side navigation, so reading the session only
+	// once at mount leaves the menu stuck on "Login / Sign up" if that first read
+	// raced session restore — an already-signed-in user navigating around fires no
+	// new auth event to correct it. Re-reading after every navigation (afterNavigate
+	// also runs on the initial load) keeps the menu honest on every page.
+	afterNavigate(() => {
+		void refreshAccount();
+	});
+
+	onMount(() => {
+		void refreshAccount();
+		// Live updates for a login / logout that happens without a navigation.
+		const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
+			account = readAccount(session?.user);
+		});
+		return () => authSub.subscription.unsubscribe();
+	});
+
+	async function signOut() {
+		profileOpen = false;
+		closeMobileMenu();
+		await clearUserSession();
+		account = null;
+		goto(resolve('/'));
+	}
 
 	type RouteHref = Parameters<typeof resolve>[0];
 	type DropdownItem = { label: string; href: RouteHref };
@@ -203,15 +247,24 @@
 			aria-label="Account menu"
 			onclick={toggleProfile}
 		>
-			<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 				<circle cx="12" cy="8" r="4" />
 				<path d="M4 20c0-3.5 3.6-6 8-6s8 2.5 8 6" />
 			</svg>
 		</button>
 		{#if profileOpen}
 			<div class="profile-menu" role="menu">
-				<LinkReveal href="/login" text="Login" class="profile-item" role="menuitem" />
-				<LinkReveal href="/apply" text="Sign up" class="profile-item" role="menuitem" />
+				{#if account}
+					<div class="profile-id">
+						<span class="profile-id__name">{account.name}</span>
+						<span class="profile-id__status"><span class="profile-id__dot" aria-hidden="true"></span>Logged in</span>
+					</div>
+					<LinkReveal href="/account" text="Your account" class="profile-item" role="menuitem" />
+					<ButtonReveal text="Sign out" class="profile-item profile-signout" onclick={signOut} />
+				{:else}
+					<LinkReveal href="/login" text="Login" class="profile-item" role="menuitem" />
+					<LinkReveal href="/apply" text="Sign up" class="profile-item" role="menuitem" />
+				{/if}
 			</div>
 		{/if}
 	</div>
@@ -284,12 +337,25 @@
 		{/each}
 
 		<!-- Account actions — the desktop profile button is hidden on mobile. -->
-		<div class="mobile-item">
-			<LinkReveal href="/login" text="Login" class="mobile-link" onclick={closeMobileMenu} />
-		</div>
-		<div class="mobile-item">
-			<LinkReveal href="/apply" text="Sign up" class="mobile-link" onclick={closeMobileMenu} />
-		</div>
+		{#if account}
+			<div class="mobile-item mobile-id">
+				<span class="mobile-id__name">{account.name}</span>
+				<span class="mobile-id__status">(logged in)</span>
+			</div>
+			<div class="mobile-item">
+				<LinkReveal href="/account" text="Your account" class="mobile-link" onclick={closeMobileMenu} />
+			</div>
+			<div class="mobile-item">
+				<ButtonReveal text="Sign out" class="mobile-link mobile-signout" onclick={signOut} />
+			</div>
+		{:else}
+			<div class="mobile-item">
+				<LinkReveal href="/login" text="Login" class="mobile-link" onclick={closeMobileMenu} />
+			</div>
+			<div class="mobile-item">
+				<LinkReveal href="/apply" text="Sign up" class="mobile-link" onclick={closeMobileMenu} />
+			</div>
+		{/if}
 	</nav>
 </div>
 
@@ -413,7 +479,7 @@
 
 	.nav-actions {
 		position: fixed;
-		top: calc(var(--event-bar-offset, var(--event-bar-height, 40px)) + ($nav-height - 40px) / 2);
+		top: calc(var(--event-bar-offset, var(--event-bar-height, 40px)) + ($nav-height - 36px) / 2);
 		right: $nav-cluster-gap;
 		display: flex;
 		align-items: center;
@@ -458,8 +524,8 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 40px;
-		height: 40px;
+		width: 36px;
+		height: 36px;
 		border-radius: 50%;
 		border: 1px solid $color-black;
 		background: $color-white;
@@ -477,28 +543,72 @@
 
 	.profile-menu {
 		position: absolute;
-		top: calc(100% + #{$space-2});
+		top: calc(100% + #{$space-1});
 		right: 0;
-		min-width: 184px;
+		min-width: 168px;
 		background: $color-white;
-		border: 1px solid rgba($color-black, 0.08);
-		border-radius: 14px;
-		box-shadow: $shadow-md;
-		padding: $space-2;
+		border: 1px solid $color-border;
+		border-radius: 12px;
+		box-shadow: 0 8px 24px rgba($color-black, 0.1), 0 2px 6px rgba($color-black, 0.05);
+		padding: $space-1;
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
+		gap: 1px;
 	}
 
 	:global(.profile-item) {
 		display: block;
-		padding: $space-2 $space-3;
+		padding: 6px $space-3;
 		border-radius: 8px;
 		font-size: $font-size-base;
 		font-weight: $font-weight-regular;
 		color: $color-fg;
 		white-space: nowrap;
 		pointer-events: auto;
+	}
+
+	.profile-id {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding: 6px $space-3 $space-2;
+		margin-bottom: $space-1;
+		border-bottom: 1px solid $color-subtle;
+	}
+
+	.profile-id__name {
+		font-size: $font-size-base;
+		font-weight: $font-weight-semibold;
+		color: $color-fg;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		max-width: 220px;
+	}
+
+	.profile-id__status {
+		display: inline-flex;
+		align-items: center;
+		gap: $space-1;
+		font-size: $font-size-xs;
+		font-weight: $font-weight-medium;
+		letter-spacing: $letter-spacing-wide;
+		text-transform: uppercase;
+		color: $color-muted;
+	}
+
+	.profile-id__dot {
+		width: 6px;
+		height: 6px;
+		border-radius: $radius-circle;
+		background: $color-primary-green;
+	}
+
+	:global(.profile-signout) {
+		text-align: left;
+		margin-top: $space-1;
+		padding-top: calc(6px + #{$space-1});
+		border-top: 1px solid $color-subtle;
 	}
 
 	.dropdown {
@@ -621,6 +731,24 @@
 
 	.mobile-item {
 		border-bottom: 1px solid rgba($color-white, 0.12);
+	}
+
+	.mobile-id {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding: $space-4 0;
+	}
+
+	.mobile-id__name {
+		font-size: $font-size-md;
+		font-weight: $font-weight-semibold;
+		color: $color-white;
+	}
+
+	.mobile-id__status {
+		font-size: $font-size-sm;
+		color: rgba($color-white, 0.6);
 	}
 
 	:global(.mobile-link) {

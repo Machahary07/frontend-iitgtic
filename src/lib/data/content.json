@@ -3000,7 +3000,8 @@
 					"heading": "Cookies",
 					"paragraphs": [
 						"A cookie is a small piece of data stored by a website in your browser.",
-						"This website does not intentionally use cookies for advertising or tracking purposes. Where essential cookies or similar technologies are introduced for website functionality, security, or service delivery, relevant information will be provided through this Privacy Policy or an appropriate notice."
+						"This website uses only strictly necessary cookies and similar local storage — for signing in, keeping administrator sessions secure, and protecting forms against automated abuse. It does not use advertising, marketing, or cross-site tracking cookies, and our aggregate analytics do not place a persistent identifier in your browser.",
+						"A full description of what is stored, and why, is set out in our Cookie Policy at /cookies."
 					]
 				},
 				{
@@ -3242,6 +3243,14 @@
 			{
 				"label": "Terms of Use",
 				"href": "/terms"
+			},
+			{
+				"label": "Cookie Policy",
+				"href": "/cookies"
+			},
+			{
+				"label": "Fees & Refunds",
+				"href": "/refund"
 			}
 		]
 	}

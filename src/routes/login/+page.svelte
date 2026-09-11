@@ -15,20 +15,28 @@
 	let captcha = $state<{ reset: () => void }>();
 	let submitting = $state(false);
 	let notice = $state('');
+	let showPassword = $state(false);
+	let sendingReset = $state(false);
 
 	// "Forgot password?" was an anchor back to this same page, so choosing it did
 	// nothing at all. It sends the reset link now, using whatever is in the email
 	// field.
 	async function handleForgot(event: MouseEvent) {
 		event.preventDefault();
+		if (sendingReset) return;
 		notice = '';
 		if (!email.trim()) {
 			error = 'Enter your email address first, then choose Forgot password.';
 			return;
 		}
 		error = '';
-		await requestPasswordReset(email);
-		notice = `If ${email.trim()} has an account, a reset link is on its way.`;
+		sendingReset = true;
+		try {
+			await requestPasswordReset(email);
+			notice = `If ${email.trim()} has an account, a reset link is on its way.`;
+		} finally {
+			sendingReset = false;
+		}
 	}
 
 	async function handleSubmit(e: Event) {
@@ -84,7 +92,34 @@
 
 			<label class="field">
 				<span>Password</span>
-				<input type="password" bind:value={password} autocomplete="current-password" required />
+				<div class="field__control">
+					<input
+						type={showPassword ? 'text' : 'password'}
+						value={password}
+						oninput={(e) => (password = e.currentTarget.value)}
+						autocomplete="current-password"
+						required
+					/>
+					<button
+						type="button"
+						class="reveal-toggle"
+						onclick={() => (showPassword = !showPassword)}
+						aria-label={showPassword ? 'Hide password' : 'Show password'}
+						aria-pressed={showPassword}
+					>
+						{#if showPassword}
+							<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+								<line x1="1" y1="1" x2="23" y2="23" />
+							</svg>
+						{:else}
+							<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+								<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+								<circle cx="12" cy="12" r="3" />
+							</svg>
+						{/if}
+					</button>
+				</div>
 			</label>
 
 			<div class="form__meta">
@@ -93,12 +128,17 @@
 					<span class="agree__dot" aria-hidden="true"></span>
 					<span class="agree__text">Remember me</span>
 				</label>
-				<LinkReveal
-					href="/login"
-					text="Forgot password?"
-					class="form__forgot inline-link"
-					onclick={handleForgot}
-				/>
+				<span class="form__forgot-wrap">
+					{#if sendingReset}
+						<span class="spinner" aria-hidden="true"></span>
+					{/if}
+					<LinkReveal
+						href="/login"
+						text={sendingReset ? 'Sending…' : 'Forgot password?'}
+						class="form__forgot inline-link"
+						onclick={handleForgot}
+					/>
+				</span>
 			</div>
 
 			<Turnstile bind:token={turnstileToken} bind:this={captcha} />
@@ -219,6 +259,37 @@
 		}
 	}
 
+	.field__control {
+		position: relative;
+		display: flex;
+		align-items: center;
+
+		input {
+			padding-right: 34px;
+		}
+	}
+
+	.reveal-toggle {
+		position: absolute;
+		right: 0;
+		top: 50%;
+		transform: translateY(-50%);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 30px;
+		height: 30px;
+		padding: 0;
+		background: none;
+		border: 0;
+		color: $color-white;
+		cursor: pointer;
+
+		svg {
+			display: block;
+		}
+	}
+
 	.form__meta {
 		display: flex;
 		align-items: center;
@@ -227,10 +298,38 @@
 		margin-top: $space-1;
 	}
 
+	.form__forgot-wrap {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+	}
+
 	:global(.form__forgot) {
 		font-size: $font-size-sm;
 		color: $color-white;
 		font-weight: $font-weight-semibold;
+	}
+
+	.spinner {
+		flex-shrink: 0;
+		width: 13px;
+		height: 13px;
+		border: 2px solid rgba($color-white, 0.35);
+		border-top-color: $color-white;
+		border-radius: 50%;
+		animation: spin 0.7s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.spinner {
+			animation-duration: 1.6s;
+		}
 	}
 
 	:global(.inline-link) {

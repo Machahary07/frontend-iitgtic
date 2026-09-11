@@ -3,6 +3,13 @@
 
 	// Editable at /tic-admin/content → Pages → Contact.
 	const page = getContent().pages.contact;
+
+	// The Google Maps embed loads Google's own cookies the moment it renders, which
+	// would break our "only essential cookies" promise. So it stays a placeholder
+	// until the visitor asks for it — no third-party call, and no cookie, on load.
+	let mapLoaded = $state(false);
+	const mapsLink =
+		'https://www.google.com/maps/search/?api=1&query=Technology+Incubation+Centre+IITG-TIC+IIT+Guwahati';
 </script>
 
 <svelte:head>
@@ -45,14 +52,27 @@
 		<div class="contact-map">
 			<h2>{page.map.heading}</h2>
 			<div class="map-frame">
-				<iframe
-					src={page.map.embedUrl}
-					title={page.map.title}
-					loading="lazy"
-					referrerpolicy="strict-origin-when-cross-origin"
-					allowfullscreen
-				></iframe>
+				{#if mapLoaded}
+					<iframe
+						src={page.map.embedUrl}
+						title={page.map.title}
+						loading="lazy"
+						referrerpolicy="strict-origin-when-cross-origin"
+						allowfullscreen
+					></iframe>
+				{:else}
+					<button type="button" class="map-facade" onclick={() => (mapLoaded = true)}>
+						<span class="map-facade__title">Load the interactive map</span>
+						<span class="map-facade__note">
+							The map is served by Google Maps, which may set its own cookies. It loads only
+							when you choose to.
+						</span>
+					</button>
+				{/if}
 			</div>
+			<p class="map-link">
+				<a href={mapsLink} target="_blank" rel="noopener noreferrer">Open in Google Maps ↗</a>
+			</p>
 		</div>
 	</div>
 </section>
@@ -158,6 +178,47 @@
 			width: 100%;
 			height: 100%;
 			border: 0;
+		}
+	}
+
+	.map-facade {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		justify-content: flex-end;
+		gap: $space-2;
+		padding: $space-5;
+		text-align: left;
+		background: rgba($color-white, 0.06);
+		border: 0;
+		color: $color-white;
+		cursor: pointer;
+	}
+
+	.map-facade__title {
+		font-size: $font-size-base;
+		font-weight: $font-weight-semibold;
+	}
+
+	.map-facade__note {
+		font-size: $font-size-sm;
+		line-height: $line-height-snug;
+		color: rgba($color-white, 0.82);
+		max-width: 42ch;
+	}
+
+	.map-link {
+		margin: $space-3 0 0;
+		font-size: $font-size-sm;
+
+		a {
+			color: $color-white;
+			text-decoration: underline;
+			text-underline-offset: 2px;
 		}
 	}
 
