@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { resolve } from '$app/paths';
-	import { goto } from '$app/navigation';
+	import { afterNavigate, goto } from '$app/navigation';
 	import type { User } from '@supabase/supabase-js';
 	import LinkReveal from './LinkReveal.svelte';
 	import ButtonReveal from './ButtonReveal.svelte';
@@ -13,8 +13,7 @@
 
 	const content = getContent();
 
-	// Reflect the signed-in founder/company in the profile menu. Read once on mount,
-	// then follow auth changes so a login or logout anywhere updates the nav live.
+	// Reflect the signed-in founder/company in the profile menu.
 	let account = $state<{ name: string } | null>(null);
 
 	function readAccount(user: User | null | undefined): { name: string } | null {
@@ -22,10 +21,23 @@
 		return { name: (user.user_metadata?.full_name as string) || user.email || 'Account' };
 	}
 
+	async function refreshAccount() {
+		const { data } = await supabase.auth.getSession();
+		account = readAccount(data.session?.user);
+	}
+
+	// The nav persists across client-side navigation, so reading the session only
+	// once at mount leaves the menu stuck on "Login / Sign up" if that first read
+	// raced session restore — an already-signed-in user navigating around fires no
+	// new auth event to correct it. Re-reading after every navigation (afterNavigate
+	// also runs on the initial load) keeps the menu honest on every page.
+	afterNavigate(() => {
+		void refreshAccount();
+	});
+
 	onMount(() => {
-		supabase.auth.getSession().then(({ data }) => {
-			account = readAccount(data.session?.user);
-		});
+		void refreshAccount();
+		// Live updates for a login / logout that happens without a navigation.
 		const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
 			account = readAccount(session?.user);
 		});

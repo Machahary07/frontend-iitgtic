@@ -16,20 +16,27 @@
 	let submitting = $state(false);
 	let notice = $state('');
 	let showPassword = $state(false);
+	let sendingReset = $state(false);
 
 	// "Forgot password?" was an anchor back to this same page, so choosing it did
 	// nothing at all. It sends the reset link now, using whatever is in the email
 	// field.
 	async function handleForgot(event: MouseEvent) {
 		event.preventDefault();
+		if (sendingReset) return;
 		notice = '';
 		if (!email.trim()) {
 			error = 'Enter your email address first, then choose Forgot password.';
 			return;
 		}
 		error = '';
-		await requestPasswordReset(email);
-		notice = `If ${email.trim()} has an account, a reset link is on its way.`;
+		sendingReset = true;
+		try {
+			await requestPasswordReset(email);
+			notice = `If ${email.trim()} has an account, a reset link is on its way.`;
+		} finally {
+			sendingReset = false;
+		}
 	}
 
 	async function handleSubmit(e: Event) {
@@ -121,12 +128,17 @@
 					<span class="agree__dot" aria-hidden="true"></span>
 					<span class="agree__text">Remember me</span>
 				</label>
-				<LinkReveal
-					href="/login"
-					text="Forgot password?"
-					class="form__forgot inline-link"
-					onclick={handleForgot}
-				/>
+				<span class="form__forgot-wrap">
+					{#if sendingReset}
+						<span class="spinner" aria-hidden="true"></span>
+					{/if}
+					<LinkReveal
+						href="/login"
+						text={sendingReset ? 'Sending…' : 'Forgot password?'}
+						class="form__forgot inline-link"
+						onclick={handleForgot}
+					/>
+				</span>
 			</div>
 
 			<Turnstile bind:token={turnstileToken} bind:this={captcha} />
@@ -286,10 +298,38 @@
 		margin-top: $space-1;
 	}
 
+	.form__forgot-wrap {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+	}
+
 	:global(.form__forgot) {
 		font-size: $font-size-sm;
 		color: $color-white;
 		font-weight: $font-weight-semibold;
+	}
+
+	.spinner {
+		flex-shrink: 0;
+		width: 13px;
+		height: 13px;
+		border: 2px solid rgba($color-white, 0.35);
+		border-top-color: $color-white;
+		border-radius: 50%;
+		animation: spin 0.7s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.spinner {
+			animation-duration: 1.6s;
+		}
 	}
 
 	:global(.inline-link) {
