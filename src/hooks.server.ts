@@ -1,27 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { dev } from '$app/environment';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { readTicAdminSession } from '$lib/server/ticAdminSession';
 import type { Handle } from '@sveltejs/kit';
 
 // Records one row per page view, admin routes included. Only HTML responses to
 // GET requests are counted, so assets, API calls and the sitemap never land here.
-
-const VISITOR_COOKIE = 'tic_visitor';
-const VISITOR_MAX_AGE = 60 * 60 * 24 * 365;
+//
+// Deliberately sets no visitor cookie: analytics must not plant a tracking
+// identifier in anyone's browser, which keeps the site to strictly necessary
+// cookies only. Each view gets a fresh throwaway id instead — page_views.visitor_id
+// is NOT NULL, so it still needs a value — at the cost of cross-page uniqueness.
 
 export const handle: Handle = async ({ event, resolve }) => {
-	let visitorId = event.cookies.get(VISITOR_COOKIE);
-	if (!visitorId) {
-		visitorId = randomUUID();
-		event.cookies.set(VISITOR_COOKIE, visitorId, {
-			path: '/',
-			httpOnly: true,
-			sameSite: 'lax',
-			secure: !dev,
-			maxAge: VISITOR_MAX_AGE
-		});
-	}
+	const visitorId = randomUUID();
 
 	const startedAt = Date.now();
 	const response = await resolve(event);

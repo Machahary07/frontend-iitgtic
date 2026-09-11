@@ -34,7 +34,8 @@
 </script>
 
 <div class="cookie-notice" class:visible role="status" aria-hidden={!visible}>
-	This site only stores essential cookies.
+	<span>This site only stores essential cookies.</span>
+	<a href="/cookies" tabindex={visible ? 0 : -1}>Learn more</a>
 </div>
 
 <style lang="scss">
@@ -60,9 +61,21 @@
 		pointer-events: none;
 		transition: opacity 0.6s ease, transform 0.6s ease;
 
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+
+		a {
+			color: $color-white;
+			text-decoration: underline;
+			text-underline-offset: 2px;
+			white-space: nowrap;
+		}
+
 		&.visible {
 			opacity: 1;
 			transform: translateX(-50%) translateY(0);
+			pointer-events: auto;
 		}
 
 		@media (max-width: 480px) {
