@@ -247,7 +247,7 @@
 			aria-label="Account menu"
 			onclick={toggleProfile}
 		>
-			<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 				<circle cx="12" cy="8" r="4" />
 				<path d="M4 20c0-3.5 3.6-6 8-6s8 2.5 8 6" />
 			</svg>
@@ -257,7 +257,7 @@
 				{#if account}
 					<div class="profile-id">
 						<span class="profile-id__name">{account.name}</span>
-						<span class="profile-id__status">(logged in)</span>
+						<span class="profile-id__status"><span class="profile-id__dot" aria-hidden="true"></span>Logged in</span>
 					</div>
 					<LinkReveal href="/account" text="Your account" class="profile-item" role="menuitem" />
 					<ButtonReveal text="Sign out" class="profile-item profile-signout" onclick={signOut} />
@@ -479,7 +479,7 @@
 
 	.nav-actions {
 		position: fixed;
-		top: calc(var(--event-bar-offset, var(--event-bar-height, 40px)) + ($nav-height - 40px) / 2);
+		top: calc(var(--event-bar-offset, var(--event-bar-height, 40px)) + ($nav-height - 36px) / 2);
 		right: $nav-cluster-gap;
 		display: flex;
 		align-items: center;
@@ -524,8 +524,8 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 40px;
-		height: 40px;
+		width: 36px;
+		height: 36px;
 		border-radius: 50%;
 		border: 1px solid $color-black;
 		background: $color-white;
@@ -543,22 +543,22 @@
 
 	.profile-menu {
 		position: absolute;
-		top: calc(100% + #{$space-2});
+		top: calc(100% + #{$space-1});
 		right: 0;
-		min-width: 184px;
+		min-width: 168px;
 		background: $color-white;
-		border: 1px solid rgba($color-black, 0.08);
-		border-radius: 14px;
-		box-shadow: $shadow-md;
-		padding: $space-2;
+		border: 1px solid $color-border;
+		border-radius: 12px;
+		box-shadow: 0 8px 24px rgba($color-black, 0.1), 0 2px 6px rgba($color-black, 0.05);
+		padding: $space-1;
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
+		gap: 1px;
 	}
 
 	:global(.profile-item) {
 		display: block;
-		padding: $space-2 $space-3;
+		padding: 6px $space-3;
 		border-radius: 8px;
 		font-size: $font-size-base;
 		font-weight: $font-weight-regular;
@@ -570,10 +570,10 @@
 	.profile-id {
 		display: flex;
 		flex-direction: column;
-		gap: 1px;
-		padding: $space-2 $space-3 $space-3;
-		margin-bottom: 2px;
-		border-bottom: 1px solid rgba($color-black, 0.08);
+		gap: 2px;
+		padding: 6px $space-3 $space-2;
+		margin-bottom: $space-1;
+		border-bottom: 1px solid $color-subtle;
 	}
 
 	.profile-id__name {
@@ -587,12 +587,28 @@
 	}
 
 	.profile-id__status {
+		display: inline-flex;
+		align-items: center;
+		gap: $space-1;
 		font-size: $font-size-xs;
-		color: rgba($color-black, 0.55);
+		font-weight: $font-weight-medium;
+		letter-spacing: $letter-spacing-wide;
+		text-transform: uppercase;
+		color: $color-muted;
+	}
+
+	.profile-id__dot {
+		width: 6px;
+		height: 6px;
+		border-radius: $radius-circle;
+		background: $color-primary-green;
 	}
 
 	:global(.profile-signout) {
 		text-align: left;
+		margin-top: $space-1;
+		padding-top: calc(6px + #{$space-1});
+		border-top: 1px solid $color-subtle;
 	}
 
 	.dropdown {
