@@ -5,6 +5,8 @@
 
 	let companyName = $state('');
 	let contactName = $state('');
+	let contactEmail = $state('');
+	let phone = $state('');
 	let email = $state('');
 	let website = $state('');
 	let password = $state('');
@@ -14,6 +16,8 @@
 	let needsEmailConfirmation = $state(false);
 	let turnstileToken = $state('');
 	let captcha = $state<{ reset: () => void }>();
+	let showPassword = $state(false);
+	let showConfirm = $state(false);
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -31,7 +35,15 @@
 			error = 'Verification failed. Please try again.';
 			return;
 		}
-		const result = await signupCompany({ email, password, companyName, website, contactName });
+		const result = await signupCompany({
+			email,
+			password,
+			companyName,
+			contactName,
+			contactEmail,
+			phone,
+			website
+		});
 		if (!result.ok) {
 			error = result.error;
 			return;
@@ -46,6 +58,20 @@
 <svelte:head>
 	<title>Create company account · IITG TIC</title>
 </svelte:head>
+
+{#snippet eyeIcon(shown: boolean)}
+	{#if shown}
+		<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+			<line x1="1" y1="1" x2="23" y2="23" />
+		</svg>
+	{:else}
+		<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+			<circle cx="12" cy="12" r="3" />
+		</svg>
+	{/if}
+{/snippet}
 
 <section class="page">
 	<div class="card">
@@ -85,28 +111,72 @@
 
 				<label class="field">
 					<span>Contact person</span>
-					<input type="text" bind:value={contactName} autocomplete="name" />
+					<input type="text" bind:value={contactName} autocomplete="name" required />
 				</label>
 
 				<label class="field">
-					<span>Company website</span>
+					<span>Contact person email</span>
+					<input type="email" bind:value={contactEmail} autocomplete="email" required />
+				</label>
+
+				<label class="field">
+					<span>Phone number</span>
+					<input type="tel" bind:value={phone} autocomplete="tel" required />
+				</label>
+
+				<label class="field">
+					<span>Company website <span class="optional">(optional)</span></span>
 					<input type="url" bind:value={website} placeholder="https://" autocomplete="url" />
 				</label>
 
 				<label class="field">
-					<span>Work email</span>
+					<span>Work email <span class="optional">(for sign-in)</span></span>
 					<input type="email" bind:value={email} autocomplete="email" required />
 				</label>
 
 				<div class="row">
 					<label class="field">
 						<span>Password</span>
-						<input type="password" bind:value={password} autocomplete="new-password" required />
+						<div class="field__control">
+							<input
+								type={showPassword ? 'text' : 'password'}
+								value={password}
+								oninput={(e) => (password = e.currentTarget.value)}
+								autocomplete="new-password"
+								required
+							/>
+							<button
+								type="button"
+								class="reveal-toggle"
+								onclick={() => (showPassword = !showPassword)}
+								aria-label={showPassword ? 'Hide password' : 'Show password'}
+								aria-pressed={showPassword}
+							>
+								{@render eyeIcon(showPassword)}
+							</button>
+						</div>
 					</label>
 
 					<label class="field">
 						<span>Confirm</span>
-						<input type="password" bind:value={confirm} autocomplete="new-password" required />
+						<div class="field__control">
+							<input
+								type={showConfirm ? 'text' : 'password'}
+								value={confirm}
+								oninput={(e) => (confirm = e.currentTarget.value)}
+								autocomplete="new-password"
+								required
+							/>
+							<button
+								type="button"
+								class="reveal-toggle"
+								onclick={() => (showConfirm = !showConfirm)}
+								aria-label={showConfirm ? 'Hide password' : 'Show password'}
+								aria-pressed={showConfirm}
+							>
+								{@render eyeIcon(showConfirm)}
+							</button>
+						</div>
 					</label>
 				</div>
 
@@ -201,6 +271,45 @@
 
 		input {
 			@include admin-input;
+		}
+	}
+
+	.optional {
+		font-weight: $font-weight-regular;
+		text-transform: none;
+		letter-spacing: 0;
+		color: $admin-ink-3;
+	}
+
+	.field__control {
+		position: relative;
+		display: flex;
+		align-items: center;
+
+		input {
+			flex: 1;
+			padding-right: 40px;
+		}
+	}
+
+	.reveal-toggle {
+		position: absolute;
+		right: 4px;
+		top: 50%;
+		transform: translateY(-50%);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		padding: 0;
+		background: none;
+		border: 0;
+		color: $admin-ink-3;
+		cursor: pointer;
+
+		svg {
+			display: block;
 		}
 	}
 

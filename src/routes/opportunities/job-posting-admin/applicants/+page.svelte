@@ -141,7 +141,6 @@
 {:else}
 	<AdminShell
 		brand="Company portal"
-		brandSub={account.companyName}
 		navItems={COMPANY_PORTAL_NAV}
 		title="Applicants"
 		eyebrow="Job posting"

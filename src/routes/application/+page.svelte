@@ -353,10 +353,6 @@
 		goto(resolve('/apply'));
 	}
 
-	function goAccount() {
-		goto(resolve('/account'));
-	}
-
 	function viewApplication() {
 		// Runtime path carrying the new application's id, so there is no route id to
 		// resolve it against.
@@ -450,7 +446,6 @@
 						as you go, so you can close this and come back.
 					</p>
 				</div>
-				<ButtonReveal text="Account" class="btn btn--primary app__account" onclick={goAccount} />
 			</header>
 
 			{#if restoredFrom}
@@ -1127,11 +1122,11 @@
 		min-height: 100svh;
 		background: $color-white;
 		color: $color-black;
-		// No navbar on this page, so no shell height to clear — just page padding.
-		padding: $space-8 0 $space-9;
+		// Clear the fixed event bar + navbar before the content starts.
+		padding: calc(var(--page-shell-top, 104px) + #{$space-8}) 0 $space-9;
 
 		@include breakpoint-down($bp-sm) {
-			padding-top: $space-6;
+			padding-top: calc(var(--page-shell-top, 100px) + #{$space-6});
 		}
 	}
 
@@ -1164,10 +1159,6 @@
 
 	.app__header-text {
 		min-width: 0;
-	}
-
-	:global(.app__account) {
-		flex-shrink: 0;
 	}
 
 	.app__sub {

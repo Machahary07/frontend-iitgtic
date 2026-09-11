@@ -158,6 +158,12 @@
 									{:else}
 										<p class="cell__sub">—</p>
 									{/if}
+									{#if company.contactEmail}
+										<p class="cell__sub">{company.contactEmail}</p>
+									{/if}
+									{#if company.phone}
+										<p class="cell__sub">{company.phone}</p>
+									{/if}
 								</td>
 								<td>
 									{#if company.website}

@@ -20,6 +20,8 @@ export type CompanyAccount = {
 	companySlug: string;
 	website: string;
 	contactName: string;
+	contactEmail: string;
+	phone: string;
 	createdAt: string;
 	status: CompanyStatus;
 	rejectionReason?: string;
@@ -32,13 +34,15 @@ type CompanyRow = {
 	company_slug: string;
 	website: string;
 	contact_name: string;
+	contact_email: string;
+	phone: string;
 	status: CompanyStatus;
 	rejection_reason: string | null;
 	created_at: string;
 };
 
 const COLUMNS =
-	'id, email, company_name, company_slug, website, contact_name, status, rejection_reason, created_at';
+	'id, email, company_name, company_slug, website, contact_name, contact_email, phone, status, rejection_reason, created_at';
 
 function toAccount(row: CompanyRow): CompanyAccount {
 	return {
@@ -48,6 +52,8 @@ function toAccount(row: CompanyRow): CompanyAccount {
 		companySlug: row.company_slug,
 		website: row.website,
 		contactName: row.contact_name,
+		contactEmail: row.contact_email,
+		phone: row.phone,
 		status: row.status,
 		rejectionReason: row.rejection_reason ?? undefined,
 		createdAt: row.created_at
@@ -83,14 +89,22 @@ export async function signupCompany(input: {
 	email: string;
 	password: string;
 	companyName: string;
+	contactName: string;
+	contactEmail: string;
+	phone: string;
 	website?: string;
-	contactName?: string;
 }): Promise<SignupResult> {
 	const email = input.email.trim().toLowerCase();
 	const companyName = input.companyName.trim();
+	const contactName = input.contactName.trim();
+	const contactEmail = input.contactEmail.trim().toLowerCase();
+	const phone = input.phone.trim();
 
-	if (!email || !input.password || !companyName) {
-		return { ok: false, error: 'Email, password and company name are all required.' };
+	if (!email || !input.password || !companyName || !contactName || !contactEmail || !phone) {
+		return {
+			ok: false,
+			error: 'Company name, contact person, contact email, phone, work email and password are all required.'
+		};
 	}
 	if (input.password.length < 6) {
 		return { ok: false, error: 'Password must be at least 6 characters.' };
@@ -106,8 +120,10 @@ export async function signupCompany(input: {
 				role: 'company',
 				company_name: companyName,
 				website: input.website?.trim() ?? '',
-				contact_name: input.contactName?.trim() ?? '',
-				full_name: input.contactName?.trim() ?? ''
+				contact_name: contactName,
+				contact_email: contactEmail,
+				phone,
+				full_name: contactName
 			}
 		}
 	});
@@ -174,7 +190,9 @@ export async function getCurrentCompany(): Promise<CompanyAccount | null> {
 }
 
 export async function updateCurrentCompany(
-	patch: Partial<Pick<CompanyAccount, 'companyName' | 'website' | 'contactName'>>
+	patch: Partial<
+		Pick<CompanyAccount, 'companyName' | 'website' | 'contactName' | 'contactEmail' | 'phone'>
+	>
 ): Promise<CompanyAccount | null> {
 	const { data: sessionData } = await supabase.auth.getSession();
 	const userId = sessionData.session?.user.id;
@@ -187,6 +205,8 @@ export async function updateCurrentCompany(
 	}
 	if (patch.website !== undefined) update.website = patch.website.trim();
 	if (patch.contactName !== undefined) update.contact_name = patch.contactName.trim();
+	if (patch.contactEmail !== undefined) update.contact_email = patch.contactEmail.trim().toLowerCase();
+	if (patch.phone !== undefined) update.phone = patch.phone.trim();
 
 	const { data, error } = await supabase
 		.from('companies')

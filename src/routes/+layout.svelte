@@ -32,10 +32,6 @@
 		page.url.pathname.startsWith('/tic-admin') ||
 			page.url.pathname.startsWith('/opportunities/job-posting-admin')
 	);
-
-	// The application flow is a focused page — no top nav or announcement strip.
-	// The footer stays; only the top chrome is dropped.
-	const hideTopChrome = $derived(page.url.pathname === '/application');
 </script>
 
 <svelte:head>
@@ -46,7 +42,7 @@
      It does not set <title> — the pages already do, and two would collide. -->
 <Seo />
 
-{#if !isAdmin && !hideTopChrome}
+{#if !isAdmin}
 	<EventBar />
 	<Navbar />
 {/if}

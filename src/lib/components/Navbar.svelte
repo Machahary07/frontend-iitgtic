@@ -556,7 +556,7 @@
 		gap: 1px;
 	}
 
-	:global(.profile-item) {
+	.profile-menu :global(.profile-item) {
 		display: block;
 		padding: 6px $space-3;
 		border-radius: 8px;
@@ -604,8 +604,9 @@
 		background: $color-primary-green;
 	}
 
-	:global(.profile-signout) {
+	.profile-menu :global(.profile-signout) {
 		text-align: left;
+		width: 100%;
 		margin-top: $space-1;
 		padding-top: calc(6px + #{$space-1});
 		border-top: 1px solid $color-subtle;
@@ -751,7 +752,7 @@
 		color: rgba($color-white, 0.6);
 	}
 
-	:global(.mobile-link) {
+	.mobile-menu :global(.mobile-link) {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;

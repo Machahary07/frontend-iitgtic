@@ -154,11 +154,12 @@
 								</td>
 								<td class="actions-col">
 									<div class="actions">
-										{#if application.status !== 'under-review'}
-											<button class="btn" onclick={() => setStatus(application.id, 'under-review')}>
-												Review
-											</button>
-										{/if}
+										<a
+											class="btn"
+											href={resolve('/tic-admin/applications/[id]', { id: application.id })}
+										>
+											Review
+										</a>
 										{#if application.status !== 'accepted'}
 											<button
 												class="btn btn--primary"
@@ -362,6 +363,7 @@
 	}
 
 	.btn {
+		display: inline-block;
 		padding: 6px 12px;
 		font: inherit;
 		font-family: $font-family-base;
@@ -371,6 +373,7 @@
 		background: #fff;
 		border: 1px solid $admin-line;
 		border-radius: $admin-radius-sm;
+		text-decoration: none;
 		cursor: pointer;
 		&--primary {
 			color: #fff;

@@ -15,7 +15,7 @@ export function adminDb(admin: AdminSession): SupabaseClient {
 }
 
 const COMPANY_COLUMNS =
-	'id, email, company_name, company_slug, website, contact_name, status, rejection_reason, created_at';
+	'id, email, company_name, company_slug, website, contact_name, contact_email, phone, status, rejection_reason, created_at';
 
 export type CompanyRow = {
 	id: string;
@@ -24,6 +24,8 @@ export type CompanyRow = {
 	company_slug: string;
 	website: string;
 	contact_name: string;
+	contact_email: string;
+	phone: string;
 	status: 'pending' | 'verified' | 'rejected';
 	rejection_reason: string | null;
 	created_at: string;
@@ -37,6 +39,8 @@ export function toAccount(row: CompanyRow) {
 		companySlug: row.company_slug,
 		website: row.website,
 		contactName: row.contact_name,
+		contactEmail: row.contact_email,
+		phone: row.phone,
 		status: row.status,
 		rejectionReason: row.rejection_reason ?? undefined,
 		createdAt: row.created_at
