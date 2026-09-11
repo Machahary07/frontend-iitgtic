@@ -1,12 +1,44 @@
 <script lang="ts">
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { resolve } from '$app/paths';
+	import { goto } from '$app/navigation';
+	import type { User } from '@supabase/supabase-js';
 	import LinkReveal from './LinkReveal.svelte';
+	import ButtonReveal from './ButtonReveal.svelte';
 	import { loadGsap } from '$lib/utils/animation';
 	import { images } from '$lib/data/images';
 	import { getContent } from '$lib/content';
+	import { supabase } from '$lib/supabaseClient';
+	import { clearUserSession } from '$lib/utils/userSession';
 
 	const content = getContent();
+
+	// Reflect the signed-in founder/company in the profile menu. Read once on mount,
+	// then follow auth changes so a login or logout anywhere updates the nav live.
+	let account = $state<{ name: string } | null>(null);
+
+	function readAccount(user: User | null | undefined): { name: string } | null {
+		if (!user) return null;
+		return { name: (user.user_metadata?.full_name as string) || user.email || 'Account' };
+	}
+
+	onMount(() => {
+		supabase.auth.getSession().then(({ data }) => {
+			account = readAccount(data.session?.user);
+		});
+		const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
+			account = readAccount(session?.user);
+		});
+		return () => authSub.subscription.unsubscribe();
+	});
+
+	async function signOut() {
+		profileOpen = false;
+		closeMobileMenu();
+		await clearUserSession();
+		account = null;
+		goto(resolve('/'));
+	}
 
 	type RouteHref = Parameters<typeof resolve>[0];
 	type DropdownItem = { label: string; href: RouteHref };
@@ -210,8 +242,17 @@
 		</button>
 		{#if profileOpen}
 			<div class="profile-menu" role="menu">
-				<LinkReveal href="/login" text="Login" class="profile-item" role="menuitem" />
-				<LinkReveal href="/apply" text="Sign up" class="profile-item" role="menuitem" />
+				{#if account}
+					<div class="profile-id">
+						<span class="profile-id__name">{account.name}</span>
+						<span class="profile-id__status">(logged in)</span>
+					</div>
+					<LinkReveal href="/account" text="Your account" class="profile-item" role="menuitem" />
+					<ButtonReveal text="Sign out" class="profile-item profile-signout" onclick={signOut} />
+				{:else}
+					<LinkReveal href="/login" text="Login" class="profile-item" role="menuitem" />
+					<LinkReveal href="/apply" text="Sign up" class="profile-item" role="menuitem" />
+				{/if}
 			</div>
 		{/if}
 	</div>
@@ -284,12 +325,25 @@
 		{/each}
 
 		<!-- Account actions — the desktop profile button is hidden on mobile. -->
-		<div class="mobile-item">
-			<LinkReveal href="/login" text="Login" class="mobile-link" onclick={closeMobileMenu} />
-		</div>
-		<div class="mobile-item">
-			<LinkReveal href="/apply" text="Sign up" class="mobile-link" onclick={closeMobileMenu} />
-		</div>
+		{#if account}
+			<div class="mobile-item mobile-id">
+				<span class="mobile-id__name">{account.name}</span>
+				<span class="mobile-id__status">(logged in)</span>
+			</div>
+			<div class="mobile-item">
+				<LinkReveal href="/account" text="Your account" class="mobile-link" onclick={closeMobileMenu} />
+			</div>
+			<div class="mobile-item">
+				<ButtonReveal text="Sign out" class="mobile-link mobile-signout" onclick={signOut} />
+			</div>
+		{:else}
+			<div class="mobile-item">
+				<LinkReveal href="/login" text="Login" class="mobile-link" onclick={closeMobileMenu} />
+			</div>
+			<div class="mobile-item">
+				<LinkReveal href="/apply" text="Sign up" class="mobile-link" onclick={closeMobileMenu} />
+			</div>
+		{/if}
 	</nav>
 </div>
 
@@ -501,6 +555,34 @@
 		pointer-events: auto;
 	}
 
+	.profile-id {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		padding: $space-2 $space-3 $space-3;
+		margin-bottom: 2px;
+		border-bottom: 1px solid rgba($color-black, 0.08);
+	}
+
+	.profile-id__name {
+		font-size: $font-size-base;
+		font-weight: $font-weight-semibold;
+		color: $color-fg;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		max-width: 220px;
+	}
+
+	.profile-id__status {
+		font-size: $font-size-xs;
+		color: rgba($color-black, 0.55);
+	}
+
+	:global(.profile-signout) {
+		text-align: left;
+	}
+
 	.dropdown {
 		position: absolute;
 		top: 100%;
@@ -621,6 +703,24 @@
 
 	.mobile-item {
 		border-bottom: 1px solid rgba($color-white, 0.12);
+	}
+
+	.mobile-id {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding: $space-4 0;
+	}
+
+	.mobile-id__name {
+		font-size: $font-size-md;
+		font-weight: $font-weight-semibold;
+		color: $color-white;
+	}
+
+	.mobile-id__status {
+		font-size: $font-size-sm;
+		color: rgba($color-white, 0.6);
 	}
 
 	:global(.mobile-link) {
