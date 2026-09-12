@@ -155,7 +155,7 @@
 	{/if}
 
 	<div class="editor">
-		<ContentField node={draft} field="root" label={data.section.label} />
+		<ContentField node={draft} field="root" label={data.section.label} path={data.section.key} />
 	</div>
 
 	<footer class="foot">

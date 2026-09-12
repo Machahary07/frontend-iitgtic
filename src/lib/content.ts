@@ -66,6 +66,58 @@ export const CONTENT_SECTIONS: { key: string; label: string; group: string }[] =
 	{ key: 'pages.terms', label: 'Terms of use', group: 'Pages' }
 ];
 
+// Shapes for list fields the editor cannot infer on its own.
+//
+// "Add" clones the first item of a list, which works everywhere except a list
+// that is currently empty — there is nothing to clone, so the editor would add a
+// bare text box instead of a properly shaped entry. These templates fill that
+// gap. The key is the list's own path within the content document; the value
+// returns the shape of one item in it.
+export const LIST_TEMPLATES: Record<string, () => unknown> = {
+	// A role at the centre itself. Pre-filled with the parts that are the same on
+	// every TIC posting, so what is left to write is the role and the description.
+	'pages.ticJobs.posts': () => ({
+		slug: '',
+		role: '',
+		company: 'IITG TIC',
+		companySlug: 'iitg-tic',
+		location: 'IIT Guwahati · in-person',
+		type: 'Full-time',
+		sector: '',
+		posted: new Date().toISOString().slice(0, 10),
+		description: '',
+		applyLink: 'mailto:tic@iitg.ac.in'
+	}),
+	'pages.startupJobs.posts': () => ({
+		slug: '',
+		role: '',
+		company: '',
+		companySlug: '',
+		location: '',
+		type: 'Full-time',
+		sector: '',
+		posted: new Date().toISOString().slice(0, 10),
+		description: '',
+		applyLink: ''
+	}),
+	'pages.ticCoordinators.members': () => ({
+		name: '',
+		avatar: { src: '', alt: '' },
+		role: '',
+		bio: '',
+		email: '',
+		phone: ''
+	}),
+	'pages.schemes.schemes': () => ({
+		name: '',
+		shortName: '',
+		provider: '',
+		summary: '',
+		support: [],
+		href: ''
+	})
+};
+
 export function readPath(doc: unknown, key: string): unknown {
 	return key
 		.split('.')

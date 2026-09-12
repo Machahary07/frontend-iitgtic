@@ -110,8 +110,13 @@
 	</div>
 
 	<p class="note">
-		Seed roles come from <code>content.json</code> and can only be changed in the codebase. Company-posted
-		roles can be removed here, or by the company from its own dashboard.
+		Company-posted roles can be removed here, or by the company from its own dashboard. Seed roles
+		are content: edit them under Content → <a
+			href={resolve('/tic-admin/content/[...key]', { key: 'pages.ticJobs' })}>TIC jobs</a
+		>
+		and
+		<a href={resolve('/tic-admin/content/[...key]', { key: 'pages.startupJobs' })}>Startup jobs</a>,
+		where they can also be added and taken down.
 	</p>
 
 	<div class="panel">
@@ -356,11 +361,10 @@
 		}
 	}
 
-	.note code {
-		font-size: 11px;
-		background: $admin-line-soft;
-		padding: 1px 5px;
-		border-radius: 3px;
+	.note a {
+		color: inherit;
+		text-decoration: underline;
+		text-underline-offset: 2px;
 	}
 
 	.actions-col {
