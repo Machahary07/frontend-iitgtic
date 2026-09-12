@@ -13,11 +13,16 @@ import type { RequestHandler } from './$types';
 // The queue itself is what tells TIC there is something to look at: it surfaces
 // on /tic-admin/approvals and in the overview counts. No mail is sent from here.
 //
-// POST   { job }        create, queued for approval
-// PATCH  { id, job }    edit; the trigger sends it back to the queue
-// DELETE ?id=           withdraw a posting
+// Every call names the company it is for, and requireFounder checks that against
+// the caller's own — a founder with three startups must not be able to post a
+// role for someone else's by changing one field.
+//
+// POST   { companyId, job }        create, queued for approval
+// PATCH  { companyId, id, job }    edit; queued again
+// DELETE ?companyId=&id=           withdraw a posting
 
 type JobInput = {
+	companyId?: string;
 	role?: string;
 	company?: string;
 	location?: string;
@@ -62,8 +67,11 @@ function clean(
 }
 
 export const POST: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireFounder(cookies);
 	const body = (await request.json().catch(() => ({}))) as JobInput;
+	const ctx = await requireFounder(cookies, body.companyId);
+	if (ctx.company.status !== 'verified') {
+		return json({ ok: false, error: 'TIC has not verified this startup yet.' }, { status: 403 });
+	}
 
 	const parsed = clean(body);
 	if (!parsed.ok) return json({ ok: false, error: parsed.error }, { status: 400 });
@@ -96,8 +104,8 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 };
 
 export const PATCH: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireFounder(cookies);
 	const body = (await request.json().catch(() => ({}))) as JobInput & { id?: string };
+	const ctx = await requireFounder(cookies, body.companyId);
 	if (!body.id) error(400, 'Missing job id.');
 
 	const parsed = clean(body);
@@ -140,7 +148,7 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 };
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireFounder(cookies);
+	const ctx = await requireFounder(cookies, url.searchParams.get('companyId'));
 	const id = url.searchParams.get('id');
 	if (!id) error(400, 'Missing job id.');
 

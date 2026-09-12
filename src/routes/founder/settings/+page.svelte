@@ -3,7 +3,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import FounderShell from '$lib/components/FounderShell.svelte';
-	import { changePassword, deleteCurrentCompany } from '$lib/utils/companyAuth';
+	import { changePassword, deleteMyAccount } from '$lib/utils/accountActions';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 	import { showToast } from '$lib/utils/toast.svelte';
 	import type { PageData } from './$types';
@@ -11,7 +11,9 @@
 	let { data }: { data: PageData } = $props();
 
 	const company = $derived(data.company);
-	const isOwner = $derived(data.founder.memberRole === 'owner');
+	const isOwner = $derived(
+		data.companies.find((c) => c.id === data.activeCompanyId)?.relation === 'owner'
+	);
 
 	type PendingChange = {
 		id: string;
@@ -55,7 +57,14 @@
 			const res = await fetch('/api/founder/profile', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ companyName, website, contactName, contactEmail, phone })
+				body: JSON.stringify({
+					companyId: data.activeCompanyId,
+					companyName,
+					website,
+					contactName,
+					contactEmail,
+					phone
+				})
 			});
 			const body = (await res.json().catch(() => ({}))) as {
 				ok?: boolean;
@@ -83,7 +92,10 @@
 		});
 		if (!ok) return;
 
-		const res = await fetch(`/api/founder/profile?id=${pending.id}`, { method: 'DELETE' });
+		const res = await fetch(
+			`/api/founder/profile?companyId=${data.activeCompanyId}&id=${pending.id}`,
+			{ method: 'DELETE' }
+		);
 		if (!res.ok) {
 			showToast('Could not withdraw the request.', 'err');
 			return;
@@ -93,15 +105,15 @@
 
 	async function closeAccount() {
 		const ok = await askConfirm({
-			title: `Close ${company?.companyName ?? 'this account'}?`,
-			body: 'Every role you posted comes off the board, your team loses access, and the login stops working. This cannot be undone.',
+			title: 'Close your account?',
+			body: 'Every startup you registered goes with it: their roles come off the board and their teams lose access. Your login stops working. This cannot be undone.',
 			confirmLabel: 'Close the account',
 			tone: 'danger'
 		});
 		if (!ok) return;
 
 		closing = true;
-		const done = await deleteCurrentCompany();
+		const done = await deleteMyAccount();
 		if (!done) {
 			closing = false;
 			showToast('Could not close the account. Ask TIC on the Support page.', 'err');
@@ -133,7 +145,13 @@
 	<title>Founder Console · Company</title>
 </svelte:head>
 
-<FounderShell founder={data.founder} company={data.company} title="Company" eyebrow="Your details">
+<FounderShell
+	founder={data.founder}
+	company={data.company}
+	companies={data.companies}
+	title="Company"
+	eyebrow="Your details"
+>
 	{#if pending}
 		<div class="note" role="status">
 			<p class="note__title">A change is waiting for TIC</p>
@@ -226,10 +244,10 @@
 
 	{#if isOwner}
 		<section class="card card--danger">
-			<h2 class="card__title">Close this account</h2>
+			<h2 class="card__title">Close your account</h2>
 			<p class="card__sub">
-				Everything goes: the roles you posted, your team's access, and this login. Your submitted
-				incubation application stays with TIC. There is no way back from this.
+				This closes the whole account, not one startup — to remove a single one, use Startups.
+				Submitted incubation applications stay with TIC. There is no way back from this.
 			</p>
 			<button type="button" class="btn-danger" onclick={closeAccount} disabled={closing}>
 				{closing ? 'Closing…' : 'Close account'}

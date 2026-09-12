@@ -1,25 +1,26 @@
 import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
-import { logFounderAction, requireFounderOwner } from '$lib/server/founderGuard';
+import { logFounderAction, requireCompanyOwner } from '$lib/server/founderGuard';
 import type { RequestHandler } from './$types';
 
-// The people a founder adds to their own startup.
+// The people a founder adds to one of their startups.
 //
 // The account is created straight away and can sign in, but it lands on a
 // waiting screen: profiles.member_status starts at 'pending' and only a TIC
 // admin moves it to 'approved'. That is the whole point of the queue — a founder
 // must not be able to hand out access to the console by themselves.
 //
-// POST   { fullName, email, password }  add a member, pending TIC approval
-// DELETE ?id=                           remove a member from the company
+// POST   { companyId, fullName, email, password }  add a member, pending TIC
+// DELETE ?companyId=&id=                           remove a member
 
 export const POST: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireFounderOwner(cookies);
 	const body = (await request.json().catch(() => ({}))) as {
+		companyId?: string;
 		fullName?: string;
 		email?: string;
 		password?: string;
 	};
+	const ctx = await requireCompanyOwner(cookies, body.companyId);
 
 	const email = body.email?.trim().toLowerCase() ?? '';
 	const fullName = body.fullName?.trim() ?? '';
@@ -37,11 +38,7 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 		email,
 		password,
 		email_confirm: true,
-		user_metadata: {
-			role: 'company',
-			full_name: fullName,
-			company_id: ctx.companyId
-		}
+		user_metadata: { full_name: fullName, company_id: ctx.companyId }
 	});
 
 	if (createError || !created.user) {
@@ -60,7 +57,6 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 		.from('profiles')
 		.update({
 			company_id: ctx.companyId,
-			member_role: 'member',
 			member_status: 'pending',
 			full_name: fullName,
 			email
@@ -78,24 +74,24 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 };
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireFounderOwner(cookies);
+	const ctx = await requireCompanyOwner(cookies, url.searchParams.get('companyId'));
 	const id = url.searchParams.get('id');
 	if (!id) error(400, 'Missing member id.');
 	if (id === ctx.founder.userId) {
 		return json({ ok: false, error: 'You cannot remove yourself.' }, { status: 400 });
 	}
 
-	// Scoped to this company, and to members only — the owner's own row is not
-	// removable through here.
+	// Scoped to this company. The owner is not a row here at all — they are
+	// companies.owner_id — so there is no way to remove them through this route.
 	const { data, error: dbError } = await ctx.db
 		.from('profiles')
-		.select('full_name, email, member_role')
+		.select('full_name, email')
 		.eq('id', id)
 		.eq('company_id', ctx.companyId)
 		.maybeSingle();
 
 	if (dbError) error(500, dbError.message);
-	if (!data || data.member_role !== 'member') {
+	if (!data) {
 		return json({ ok: false, error: 'Member not found.' }, { status: 404 });
 	}
 

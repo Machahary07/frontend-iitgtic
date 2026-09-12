@@ -198,40 +198,82 @@
 			note: 'Public detail page for both seed and user-posted roles; apply panel writes to job_applications with the resume in a private bucket'
 		},
 		{
-			name: 'Job-posting admin',
-			path: '/opportunities/job-posting-admin',
+			name: 'Founder console · Overview',
+			path: '/founder',
 			status: 'done',
-			note: 'Company login (Turnstile-gated) + dashboard; status-gated (pending / verified / rejected) banner'
+			note: 'Server-guarded shell; company switcher, queue counts, and what still needs TIC sign-off'
 		},
 		{
-			name: 'Job-posting · Signup',
-			path: '/opportunities/job-posting-admin/signup',
+			name: 'Founder console · Startups',
+			path: '/founder/companies',
 			status: 'done',
-			note: 'Creates pending account (Turnstile-gated); shows "TIC team will verify" confirmation card'
+			note: 'A founder registers one or many startups; each starts pending TIC verification'
 		},
 		{
-			name: 'Job-posting · Edit / create',
-			path: '/opportunities/job-posting-admin/edit/new',
+			name: 'Founder console · Application',
+			path: '/founder/application',
 			status: 'done',
-			note: 'edit/[id] handles both new and existing; verified-only (redirects otherwise)'
+			note: 'The eight-step wizard, filled in per startup, with the draft keyed per startup'
 		},
 		{
-			name: 'Job-posting · Account settings',
-			path: '/opportunities/job-posting-admin/admin-settings',
+			name: 'Founder console · Job postings',
+			path: '/founder/jobs',
 			status: 'done',
-			note: 'Profile, password change, delete account'
+			note: 'Write a role and send it for approval; an edit to a live role takes it off the board and re-queues it'
 		},
 		{
-			name: 'TIC team admin · Login',
+			name: 'Founder console · Applicants',
+			path: '/founder/applicants',
+			status: 'done',
+			note: "Read-only inbox for the active startup's roles; a status stays TIC's to set"
+		},
+		{
+			name: 'Founder console · Team',
+			path: '/founder/users',
+			status: 'done',
+			note: 'The owner adds people to a startup; each waits for TIC before the account can act'
+		},
+		{
+			name: 'Founder console · Details',
+			path: '/founder/settings',
+			status: 'done',
+			note: 'Company details go to TIC as a change request; password and account closure are immediate'
+		},
+		{
+			name: 'Founder console · Activity',
+			path: '/founder/activity',
+			status: 'done',
+			note: "This startup's own audit trail — what its people did, and what TIC did in review"
+		},
+		{
+			name: 'Founder console · Support',
+			path: '/founder/support',
+			status: 'done',
+			note: "IITG-TIC's own contact details, read from the same copy the public contact page uses"
+		},
+		{
+			name: 'Sign in',
+			path: '/login',
+			status: 'done',
+			note: 'One door for both roles: Supabase Auth + Turnstile, then /api/session-login reads the role server-side and issues the matching signed cookie'
+		},
+		{
+			name: 'First-admin setup',
 			path: '/tic-admin/login',
 			status: 'done',
-			note: 'Individual admin accounts via Supabase Auth + Turnstile; first-run setup creates admin #1'
+			note: 'All that is left of the old admin login: creates admin #1 on an empty console, then hands over to /login'
 		},
 		{
 			name: 'TIC team admin · Overview',
 			path: '/tic-admin',
 			status: 'done',
 			note: 'Stat tiles for pending / verified / rejected / jobs; recent pending signups list'
+		},
+		{
+			name: 'TIC team admin · Approvals',
+			path: '/tic-admin/approvals',
+			status: 'done',
+			note: 'The four founder queues in one screen: new startups, job postings, team members, company detail changes. A refusal needs a reason, which the founder reads in their console'
 		},
 		{
 			name: 'TIC team admin · Companies',
@@ -312,15 +354,9 @@
 		},
 		{
 			name: 'Application',
-			path: '/application',
+			path: '/founder/application',
 			status: 'done',
-			note: '8-step wizard; submits to public.applications with documents in Supabase Storage, reviewable at /tic-admin/applications'
-		},
-		{
-			name: 'Login',
-			path: '/login',
-			status: 'done',
-			note: 'Turnstile-gated Supabase Auth sign-in'
+			note: 'The 8-step wizard moved into the founder console, one application per startup; submits to public.applications with documents in Supabase Storage, reviewable at /tic-admin/applications'
 		},
 		{
 			name: 'Newsletter unsubscribe',
@@ -342,7 +378,7 @@
 		},
 		{
 			name: 'Company · applicants',
-			path: '/opportunities/job-posting-admin/applicants',
+			path: '/founder/applicants',
 			status: 'done',
 			note: "A verified company's own applicants, with status tabs, a per-role filter, signed resume links and a CSV export"
 		}
@@ -405,7 +441,7 @@
 		{
 			name: 'Company auth',
 			status: 'done',
-			note: 'companyAuth.ts — Supabase Auth + public.companies; status workflow (pending → verified → rejected)'
+			note: 'companies.ts + /api/founder/companies — a founder owns one or many startups; status workflow (pending → verified → rejected)'
 		},
 		{
 			name: 'Job-posting storage',
@@ -455,7 +491,7 @@
 		{
 			name: 'Admin layout isolation',
 			status: 'done',
-			note: 'Root layout hides Navbar / Footer / EventBar on /tic-admin and /opportunities/job-posting-admin'
+			note: 'Root layout hides Navbar / Footer / EventBar on /tic-admin and /founder'
 		},
 		{
 			name: 'Real auth backend',
@@ -700,7 +736,7 @@
 			note: 'Public role application: Turnstile, server-side role lookup, resume upload, insert; a repeat email returns 409 rather than a second row'
 		},
 		{
-			name: 'DELETE /api/company-account',
+			name: 'DELETE /api/account',
 			status: 'done',
 			note: 'A company closing its own account — RLS can drop the row, but only the service role can delete the auth user behind it'
 		},
@@ -767,7 +803,7 @@
 		{
 			name: 'POST /api/tic-admin/ai',
 			status: 'done',
-			note: "The assistant turn loop against Sarvam — streams steps, reasoning, text and edit proposals as NDJSON, runs read tools inline, and holds every write for approval (a send always, an edit unless Auto is on)"
+			note: 'The assistant turn loop against Sarvam — streams steps, reasoning, text and edit proposals as NDJSON, runs read tools inline, and holds every write for approval (a send always, an edit unless Auto is on)'
 		},
 		{
 			name: 'GET / PUT / DELETE /api/tic-admin/ai/conversations',
@@ -825,7 +861,7 @@
 		{
 			name: 'Company-side applicant inbox',
 			status: 'done',
-			note: "A verified company reads the applicants for roles it posted at /opportunities/job-posting-admin/applicants — contact details, answers and a signed resume link. TIC's review notes are held back by a column grant, and there is no write path, so a status stays TIC's to set"
+			note: "A verified startup reads the applicants for roles it posted at /founder/applicants — contact details, answers and a signed resume link. TIC's review notes are held back by a column grant, and there is no write path, so a status stays TIC's to set"
 		},
 		{
 			name: 'Rate limiting on public writes',

@@ -26,10 +26,11 @@ const FILE_FIELDS = [
 ] as const;
 const CONSENT_FIELDS = ['infoAccurate', 'agreeTerms', 'allowReview'] as const;
 
-// Keyed per account: a shared machine must not show one founder the other's
-// half-written application.
-function keyFor(userId: string): string {
-	return `iitgtic:application-draft:${userId}`;
+// Keyed per account AND per startup: a shared machine must not show one founder
+// the other's half-written application, and a founder running two startups must
+// not have the second one overwrite the first's draft.
+function keyFor(userId: string, companyId: string): string {
+	return `iitgtic:application-draft:${userId}:${companyId}`;
 }
 
 export type Draft = {
@@ -53,11 +54,12 @@ function stripped(values: Record<string, unknown>): Record<string, unknown> {
  */
 export function saveDraft(
 	userId: string,
+	companyId: string,
 	values: Record<string, unknown>,
 	step: number,
 	completedSteps: number[]
 ): void {
-	if (!userId) return;
+	if (!userId || !companyId) return;
 	try {
 		const draft: Draft = {
 			version: VERSION,
@@ -66,17 +68,17 @@ export function saveDraft(
 			completedSteps,
 			values: stripped(values)
 		};
-		localStorage.setItem(keyFor(userId), JSON.stringify(draft));
+		localStorage.setItem(keyFor(userId, companyId), JSON.stringify(draft));
 	} catch {
 		// Out of quota or storage blocked — the form still works, it just will not
 		// survive a refresh. Not worth interrupting anyone over.
 	}
 }
 
-export function loadDraft(userId: string): Draft | null {
-	if (!userId) return null;
+export function loadDraft(userId: string, companyId: string): Draft | null {
+	if (!userId || !companyId) return null;
 	try {
-		const raw = localStorage.getItem(keyFor(userId));
+		const raw = localStorage.getItem(keyFor(userId, companyId));
 		if (!raw) return null;
 
 		const draft = JSON.parse(raw) as Draft;
@@ -89,10 +91,10 @@ export function loadDraft(userId: string): Draft | null {
 	}
 }
 
-export function clearDraft(userId: string): void {
-	if (!userId) return;
+export function clearDraft(userId: string, companyId: string): void {
+	if (!userId || !companyId) return;
 	try {
-		localStorage.removeItem(keyFor(userId));
+		localStorage.removeItem(keyFor(userId, companyId));
 	} catch {
 		// Nothing to do — a draft that cannot be cleared is also one that was
 		// probably never written.

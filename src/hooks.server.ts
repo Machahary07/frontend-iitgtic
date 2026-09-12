@@ -23,7 +23,10 @@ const MOVED: Record<string, string> = {
 	'/opportunities/job-posting-admin': '/founder',
 	'/opportunities/job-posting-admin/applicants': '/founder/applicants',
 	'/opportunities/job-posting-admin/admin-settings': '/founder/settings',
-	'/opportunities/job-posting-admin/signup': '/signup',
+	// Registering a startup moved inside the console, so the way in is an account
+	// first. /signup was the company sign-up and is gone with it.
+	'/opportunities/job-posting-admin/signup': '/apply',
+	'/signup': '/apply',
 	'/opportunities/job-posting-admin/edit/new': '/founder/jobs/new',
 	'/application': '/founder/application',
 	'/account': '/founder/application'

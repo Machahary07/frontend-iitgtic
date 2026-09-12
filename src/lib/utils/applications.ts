@@ -20,12 +20,19 @@ export type DocumentField = (typeof DOCUMENT_FIELDS)[number];
 
 export async function submitApplication(
 	answers: Record<string, unknown>,
-	files: Partial<Record<DocumentField, File | null>>
+	files: Partial<Record<DocumentField, File | null>>,
+	// Which startup this application is for. A founder may run several, and each
+	// one applies on its own, so the row carries the company rather than only the
+	// person who typed it.
+	companyId: string | null
 ): Promise<SubmitResult> {
 	const { data: sessionData } = await supabase.auth.getSession();
 	const userId = sessionData.session?.user.id;
 	if (!userId) {
 		return { ok: false, error: 'Please sign in before submitting your application.' };
+	}
+	if (!companyId) {
+		return { ok: false, error: 'Choose which startup this application is for.' };
 	}
 
 	// Second gate behind the form's own step validation. Checked before anything is
@@ -68,6 +75,7 @@ export async function submitApplication(
 		.from('applications')
 		.insert({
 			user_id: userId,
+			company_id: companyId,
 			full_name: String(answers.fullName ?? ''),
 			email: String(answers.email ?? ''),
 			startup_name: String(answers.startupName ?? ''),
@@ -92,9 +100,9 @@ export type MyApplication = {
 	applicant_message: string | null;
 };
 
-// The applicant's own applications, newest first. RLS ("applications: read own")
-// scopes this to the signed-in user, so no user_id filter is needed here — the
-// select would return nothing for anyone else regardless. review_note is the
+// The applicant's own applications, newest first. RLS ("applications: read mine")
+// scopes this to the signed-in user and the startups they work for, so no filter
+// is needed here — the select would return nothing for anyone else regardless. review_note is the
 // team's private note and is not selectable by a founder; applicant_message is
 // the line written for them.
 export async function getMyApplications(): Promise<MyApplication[]> {

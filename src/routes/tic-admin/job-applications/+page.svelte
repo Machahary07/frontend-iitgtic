@@ -2,6 +2,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
+	import Select from '$lib/components/Select.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import {
@@ -203,15 +204,21 @@
 		</div>
 
 		{#if roles.length > 1}
-			<label class="picker">
+			<div class="picker">
 				<span class="picker__label">Role</span>
-				<select bind:value={role}>
-					<option value="all">Every role</option>
-					{#each roles as slug (slug)}
-						<option value={slug}>{roleLabel(slug)}</option>
-					{/each}
-				</select>
-			</label>
+				<div class="picker__control">
+					<Select
+						id="admin-applicants-role"
+						bind:value={role}
+						options={[
+							{ value: 'all', label: 'Every role' },
+							...roles.map((slug) => ({ value: slug, label: roleLabel(slug) }))
+						]}
+						size="sm"
+						ariaLabel="Filter applicants by role"
+					/>
+				</div>
+			</div>
 		{/if}
 
 		<div class="retention">
@@ -361,17 +368,10 @@
 		align-items: center;
 		gap: 8px;
 		font-family: $font-family-base;
+	}
 
-		select {
-			font: inherit;
-			font-size: 13px;
-			padding: 7px 10px;
-			color: #111;
-			background: #fff;
-			border: 1px solid $admin-line-soft;
-			border-radius: $admin-radius-sm;
-			max-width: 260px;
-		}
+	.picker__control {
+		min-width: 230px;
 	}
 
 	.picker__label {

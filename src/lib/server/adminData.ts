@@ -15,10 +15,11 @@ export function adminDb(admin: AdminSession): SupabaseClient {
 }
 
 const COMPANY_COLUMNS =
-	'id, email, company_name, company_slug, website, contact_name, contact_email, phone, status, rejection_reason, created_at';
+	'id, owner_id, email, company_name, company_slug, website, contact_name, contact_email, phone, status, rejection_reason, created_at';
 
 export type CompanyRow = {
 	id: string;
+	owner_id: string;
 	email: string;
 	company_name: string;
 	company_slug: string;
@@ -34,6 +35,7 @@ export type CompanyRow = {
 export function toAccount(row: CompanyRow) {
 	return {
 		id: row.id,
+		ownerId: row.owner_id,
 		email: row.email,
 		companyName: row.company_name,
 		companySlug: row.company_slug,

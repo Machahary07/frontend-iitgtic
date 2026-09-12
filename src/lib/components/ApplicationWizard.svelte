@@ -8,11 +8,32 @@
 	import { clearDraft, loadDraft, saveDraft, savedAgo } from '$lib/utils/applicationDraft';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 
-	// The wizard is rendered in two places: on its own at /application, and inside
-	// the founder console at /founder/application. `embedded` drops the standalone
-	// page chrome — the navbar clearance and the centring — so it sits flush in
-	// the console's content column.
-	let { embedded = false }: { embedded?: boolean } = $props();
+	import Select from '$lib/components/Select.svelte';
+
+	// The application belongs to a startup, not to the person filling it in: a
+	// founder may run several, and each applies separately. The console hands the
+	// wizard the startups on the account and which one is in view, and the whole
+	// form — including the saved draft, which is keyed per startup — follows that
+	// choice.
+	//
+	// `embedded` drops the standalone page chrome (navbar clearance, centring) so
+	// the wizard sits flush inside the console's content column.
+	interface Props {
+		embedded?: boolean;
+		companies?: { id: string; name: string; status: string }[];
+		companyId?: string | null;
+		/** Asks the console to switch startup, so the whole page follows. */
+		onCompanyChange?: (id: string) => void;
+	}
+
+	let { embedded = false, companies = [], companyId = null, onCompanyChange }: Props = $props();
+
+	const activeCompany = $derived(companies.find((c) => c.id === companyId) ?? null);
+
+	let chosenCompany = $state('');
+	$effect(() => {
+		chosenCompany = companyId ?? '';
+	});
 
 	const STEPS = [
 		{ n: 1, title: 'Founder Info' },
@@ -365,7 +386,8 @@
 				founderCv: data.founderCv,
 				financialProjections: data.financialProjections,
 				incorporationCert: data.incorporationCert
-			}
+			},
+			companyId
 		);
 		submitting = false;
 
@@ -378,7 +400,7 @@
 		submitted = true;
 		submittedId = result.id;
 		// The row in public.applications is the record now, so the draft is done.
-		clearDraft(userId);
+		if (companyId) clearDraft(userId, companyId);
 		restoredFrom = '';
 		// Fire-and-forget: the receipt email must not hold up or fail the submit.
 		void notifyApplicationSubmitted(result.id);
@@ -413,7 +435,7 @@
 			tone: 'danger'
 		});
 		if (!ok) return;
-		clearDraft(userId);
+		if (companyId) clearDraft(userId, companyId);
 		restoredFrom = '';
 		location.reload();
 	}
@@ -430,6 +452,9 @@
 		}
 		emailVerified = session.emailVerified ?? true;
 		if (session.name && !data.fullName) data.fullName = session.name;
+		// The startup name is the company's, not a free-text answer: the row it
+		// creates is about that company, so the two must not be able to disagree.
+		if (activeCompany) data.startupName = activeCompany.name;
 		if (session.email && !data.email) data.email = session.email;
 		if (session.phone && !data.phone) {
 			const digits = session.phone.replace(/\D/g, '').slice(0, 10);
@@ -439,7 +464,7 @@
 		// The draft wins over the profile prefill: what someone typed is more
 		// current than what their account happens to hold.
 		userId = session.id;
-		const draft = loadDraft(userId);
+		const draft = companyId ? loadDraft(userId, companyId) : null;
 		if (draft) {
 			for (const [key, value] of Object.entries(draft.values)) {
 				if (key in data) (data as Record<string, unknown>)[key] = value;
@@ -455,10 +480,10 @@
 	// Autosaved on every change. Reading the serialised form inside the effect is
 	// what subscribes it to all forty fields without listing them.
 	$effect(() => {
-		if (!draftReady || !userId || submitted) return;
+		if (!draftReady || !userId || !companyId || submitted) return;
 		const snapshot = { ...data };
 		void JSON.stringify({ snapshot, step, completed: [...completedSteps] });
-		saveDraft(userId, snapshot as Record<string, unknown>, step, [...completedSteps]);
+		saveDraft(userId, companyId, snapshot as Record<string, unknown>, step, [...completedSteps]);
 	});
 </script>
 
@@ -492,7 +517,38 @@
 				</div>
 			</header>
 
-			{#if restoredFrom}
+			{#if companies.length === 0}
+				<div class="picker picker--empty" role="status">
+					<p class="picker__title">Which startup is applying?</p>
+					<p class="picker__body">
+						An application is made by a startup, so there has to be one on the account first.
+						Register it under Startups and the form opens here.
+					</p>
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a class="picker__cta" href="/founder/companies">Register a startup</a>
+				</div>
+			{:else}
+				<div class="picker">
+					<div class="picker__text">
+						<p class="picker__title">Applying as</p>
+						<p class="picker__body">
+							Each startup applies separately, and its draft is kept separately. Switching here
+							switches the whole console.
+						</p>
+					</div>
+					<div class="picker__control">
+						<Select
+							id="application-company"
+							bind:value={chosenCompany}
+							options={companies.map((c) => ({ value: c.id, label: c.name }))}
+							ariaLabel="Which startup this application is for"
+							onchange={(id) => onCompanyChange?.(id)}
+						/>
+					</div>
+				</div>
+			{/if}
+
+			{#if companies.length > 0 && restoredFrom}
 				<div class="draft" role="status">
 					<p class="draft__text">
 						Picked up where you left off — saved {savedAgo(restoredFrom)}. Your uploads and the
@@ -502,656 +558,687 @@
 				</div>
 			{/if}
 
-			<!-- Progress bar -->
-			<div class="progress" aria-label="Application progress">
-				<div class="progress__steps">
-					{#each STEPS as s, i (s.n)}
-						{#if i > 0}
-							<div class="progress__line" class:is-done={completedSteps.has(s.n - 1)}></div>
-						{/if}
-						<button
-							type="button"
-							class="progress__step"
-							class:is-done={completedSteps.has(s.n)}
-							class:is-current={s.n === step}
-							onclick={() => jumpToStep(s.n)}
-						>
-							<span class="progress__dot">{s.n}</span>
-							<span class="progress__label">{s.title}</span>
-						</button>
-					{/each}
-				</div>
-			</div>
-
-			<div class="step">
-				<p class="step__eyebrow">Step {step} of {STEPS.length}</p>
-				<h2 class="step__title">{STEPS[step - 1].title}</h2>
-
-				<form
-					class="form"
-					onsubmit={(e) => {
-						e.preventDefault();
-						if (step === STEPS.length) submit();
-						else next();
-					}}
-					novalidate
-				>
-					{#if step === 1}
-						<label class="field" class:has-error={errors.fullName}>
-							<span class="field__label">
-								<span class="field__name">Full name <em class="req">*</em></span>
-								{#if errors.fullName}<span class="field__error">{errors.fullName}</span>{/if}
-							</span>
-							<input type="text" bind:value={data.fullName} oninput={revalidate} />
-						</label>
-
-						<label class="field" class:has-error={errors.email}>
-							<span class="field__label">
-								<span class="field__name">Email address <em class="req">*</em></span>
-								{#if errors.email}<span class="field__error">{errors.email}</span>{/if}
-							</span>
-							<input type="email" bind:value={data.email} oninput={revalidate} />
-						</label>
-
-						<label class="field" class:has-error={errors.phone}>
-							<span class="field__label">
-								<span class="field__name">Phone number <em class="req">*</em></span>
-								{#if errors.phone}<span class="field__error">{errors.phone}</span>{/if}
-							</span>
-							<input
-								type="tel"
-								inputmode="numeric"
-								maxlength="10"
-								value={data.phone}
-								oninput={onPhoneInput}
-							/>
-						</label>
-
-						<label class="field" class:has-error={errors.role}>
-							<span class="field__label">
-								<span class="field__name">Role in startup <em class="req">*</em></span>
-								{#if errors.role}<span class="field__error">{errors.role}</span>{/if}
-							</span>
-							<input
-								type="text"
-								bind:value={data.role}
-								oninput={revalidate}
-								placeholder="e.g. CEO, CTO"
-							/>
-						</label>
-
-						<div class="form__row">
-							<label class="field" class:has-error={errors.location}>
-								<span class="field__label">
-									<span class="field__name">City / Country <em class="req">*</em></span>
-									{#if errors.location}<span class="field__error">{errors.location}</span>{/if}
-								</span>
-								<input type="text" bind:value={data.location} oninput={revalidate} />
-							</label>
-							<label class="field" class:has-error={errors.university}>
-								<span class="field__label">
-									<span class="field__name">University / Organization <em class="req">*</em></span>
-									{#if errors.university}<span class="field__error">{errors.university}</span>{/if}
-								</span>
-								<input type="text" bind:value={data.university} oninput={revalidate} />
-							</label>
-						</div>
-
-						<label class="field" class:has-error={errors.linkedin}>
-							<span class="field__label">
-								<span class="field__name">LinkedIn profile <span class="opt">(optional)</span></span
-								>
-								{#if errors.linkedin}<span class="field__error">{errors.linkedin}</span>{/if}
-							</span>
-							<input
-								type="url"
-								bind:value={data.linkedin}
-								oninput={revalidate}
-								placeholder="https://linkedin.com/in/..."
-							/>
-						</label>
-
-						<div class="field">
-							<span class="field__label">
-								<span class="field__name"
-									>Co-founder details <span class="opt">(optional)</span></span
-								>
-							</span>
-							{#each data.coFounders as cf, i (i)}
-								<div class="cf">
-									<input type="text" class="cf__input" placeholder="Name" bind:value={cf.name} />
-									<input type="email" class="cf__input" placeholder="Email" bind:value={cf.email} />
-									<input type="text" class="cf__input" placeholder="Role" bind:value={cf.role} />
-									<button
-										type="button"
-										class="cf__remove"
-										onclick={() => removeCoFounder(i)}
-										aria-label="Remove co-founder">×</button
-									>
-								</div>
-							{/each}
-							<ButtonReveal
-								text="+ Add co-founder"
-								class="btn btn--ghost btn--sm"
-								onclick={addCoFounder}
-							/>
-						</div>
-					{/if}
-
-					{#if step === 2}
-						<label class="field" class:has-error={errors.startupName}>
-							<span class="field__label">
-								<span class="field__name">Startup name <em class="req">*</em></span>
-								{#if errors.startupName}<span class="field__error">{errors.startupName}</span>{/if}
-							</span>
-							<input type="text" bind:value={data.startupName} oninput={revalidate} />
-						</label>
-
-						<label class="field" class:has-error={errors.stage}>
-							<span class="field__label">
-								<span class="field__name">Startup stage <em class="req">*</em></span>
-								{#if errors.stage}<span class="field__error">{errors.stage}</span>{/if}
-							</span>
-							<div class="radio-group">
-								{#each STAGES as s}
-									<label class="radio">
-										<input
-											type="radio"
-											name="stage"
-											value={s}
-											checked={data.stage === s}
-											onchange={() => {
-												data.stage = s;
-												revalidate();
-											}}
-										/>
-										<span class="radio__dot"></span>
-										<span>{s}</span>
-									</label>
-								{/each}
-							</div>
-						</label>
-
-						<div class="form__row">
-							<label class="field" class:has-error={errors.industry}>
-								<span class="field__label">
-									<span class="field__name">Industry / Domain <em class="req">*</em></span>
-									{#if errors.industry}<span class="field__error">{errors.industry}</span>{/if}
-								</span>
-								<input type="text" bind:value={data.industry} oninput={revalidate} />
-							</label>
-							<label class="field" class:has-error={errors.yearFounded}>
-								<span class="field__label">
-									<span class="field__name">Year founded <em class="req">*</em></span>
-									{#if errors.yearFounded}<span class="field__error">{errors.yearFounded}</span
-										>{/if}
-								</span>
-								<input
-									type="text"
-									inputmode="numeric"
-									maxlength="4"
-									bind:value={data.yearFounded}
-									oninput={revalidate}
-								/>
-							</label>
-						</div>
-
-						<div class="form__row">
-							<label class="field" class:has-error={errors.teamSize}>
-								<span class="field__label">
-									<span class="field__name">Team size <em class="req">*</em></span>
-									{#if errors.teamSize}<span class="field__error">{errors.teamSize}</span>{/if}
-								</span>
-								<input
-									type="text"
-									inputmode="numeric"
-									bind:value={data.teamSize}
-									oninput={revalidate}
-								/>
-							</label>
-							<label class="field" class:has-error={errors.website}>
-								<span class="field__label">
-									<span class="field__name">Website URL <span class="opt">(optional)</span></span>
-									{#if errors.website}<span class="field__error">{errors.website}</span>{/if}
-								</span>
-								<input type="url" bind:value={data.website} oninput={revalidate} />
-							</label>
-						</div>
-
-						<label class="field">
-							<span class="field__label">
-								<span class="field__name"
-									>Incorporation status <span class="opt">(optional)</span></span
-								>
-							</span>
-							<input
-								type="text"
-								bind:value={data.incorporation}
-								placeholder="e.g. Pvt. Ltd., LLP, not yet incorporated"
-							/>
-						</label>
-					{/if}
-
-					{#if step === 3}
-						<label class="field" class:has-error={errors.problem}>
-							<span class="field__label">
-								<span class="field__name">Problem statement <em class="req">*</em></span>
-								{#if errors.problem}<span class="field__error">{errors.problem}</span>{/if}
-							</span>
-							<textarea rows="3" bind:value={data.problem} oninput={revalidate}></textarea>
-						</label>
-
-						<label class="field" class:has-error={errors.solution}>
-							<span class="field__label">
-								<span class="field__name">Your solution <em class="req">*</em></span>
-								{#if errors.solution}<span class="field__error">{errors.solution}</span>{/if}
-							</span>
-							<textarea rows="3" bind:value={data.solution} oninput={revalidate}></textarea>
-						</label>
-
-						<label class="field" class:has-error={errors.differentiation}>
-							<span class="field__label">
-								<span class="field__name">What makes you different? <em class="req">*</em></span>
-								{#if errors.differentiation}<span class="field__error"
-										>{errors.differentiation}</span
-									>{/if}
-							</span>
-							<textarea rows="3" bind:value={data.differentiation} oninput={revalidate}></textarea>
-						</label>
-
-						<label class="field" class:has-error={errors.whyNow}>
-							<span class="field__label">
-								<span class="field__name">Why now? <em class="req">*</em></span>
-								{#if errors.whyNow}<span class="field__error">{errors.whyNow}</span>{/if}
-							</span>
-							<textarea rows="3" bind:value={data.whyNow} oninput={revalidate}></textarea>
-						</label>
-					{/if}
-
-					{#if step === 4}
-						<label class="field" class:has-error={errors.productDescription}>
-							<span class="field__label">
-								<span class="field__name">Product description <em class="req">*</em></span>
-								{#if errors.productDescription}<span class="field__error"
-										>{errors.productDescription}</span
-									>{/if}
-							</span>
-							<textarea rows="3" bind:value={data.productDescription} oninput={revalidate}
-							></textarea>
-						</label>
-
-						<label class="field" class:has-error={errors.techStack}>
-							<span class="field__label">
-								<span class="field__name">Tech stack <em class="req">*</em></span>
-								{#if errors.techStack}<span class="field__error">{errors.techStack}</span>{/if}
-							</span>
-							<input type="text" bind:value={data.techStack} oninput={revalidate} />
-						</label>
-
-						<label class="field" class:has-error={errors.targetCustomers}>
-							<span class="field__label">
-								<span class="field__name">Target customers <em class="req">*</em></span>
-								{#if errors.targetCustomers}<span class="field__error"
-										>{errors.targetCustomers}</span
-									>{/if}
-							</span>
-							<textarea rows="2" bind:value={data.targetCustomers} oninput={revalidate}></textarea>
-						</label>
-
-						<div class="form__row">
-							<label class="field">
-								<span class="field__label">
-									<span class="field__name"
-										>Users / customers <span class="opt">(optional)</span></span
-									>
-								</span>
-								<input type="text" bind:value={data.users} />
-							</label>
-							<label class="field">
-								<span class="field__label">
-									<span class="field__name"
-										>Revenue generated <span class="opt">(optional)</span></span
-									>
-								</span>
-								<input type="text" bind:value={data.revenue} />
-							</label>
-						</div>
-
-						<label class="field" class:has-error={errors.demoLink}>
-							<span class="field__label">
-								<span class="field__name"
-									>Demo / GitHub link <span class="opt">(optional)</span></span
-								>
-								{#if errors.demoLink}<span class="field__error">{errors.demoLink}</span>{/if}
-							</span>
-							<input type="url" bind:value={data.demoLink} oninput={revalidate} />
-						</label>
-
-						<label class="field">
-							<span class="field__label">
-								<span class="field__name"
-									>Partnerships or pilots <span class="opt">(optional)</span></span
-								>
-							</span>
-							<textarea rows="2" bind:value={data.partnerships}></textarea>
-						</label>
-					{/if}
-
-					{#if step === 5}
-						<label class="field" class:has-error={errors.revenueModel}>
-							<span class="field__label">
-								<span class="field__name">Revenue model <em class="req">*</em></span>
-								{#if errors.revenueModel}<span class="field__error">{errors.revenueModel}</span
-									>{/if}
-							</span>
-							<textarea rows="2" bind:value={data.revenueModel} oninput={revalidate}></textarea>
-						</label>
-
-						<label class="field" class:has-error={errors.gtmStrategy}>
-							<span class="field__label">
-								<span class="field__name">Go-to-market strategy <em class="req">*</em></span>
-								{#if errors.gtmStrategy}<span class="field__error">{errors.gtmStrategy}</span>{/if}
-							</span>
-							<textarea rows="2" bind:value={data.gtmStrategy} oninput={revalidate}></textarea>
-						</label>
-
-						<label class="field" class:has-error={errors.fundingStatus}>
-							<span class="field__label">
-								<span class="field__name">Funding status <em class="req">*</em></span>
-								{#if errors.fundingStatus}<span class="field__error">{errors.fundingStatus}</span
-									>{/if}
-							</span>
-							<div class="radio-group">
-								{#each FUNDING_STATUS as s}
-									<label class="radio">
-										<input
-											type="radio"
-											name="fundingStatus"
-											value={s}
-											checked={data.fundingStatus === s}
-											onchange={() => {
-												data.fundingStatus = s;
-												revalidate();
-											}}
-										/>
-										<span class="radio__dot"></span>
-										<span>{s}</span>
-									</label>
-								{/each}
-							</div>
-						</label>
-
-						<div class="form__row">
-							<label class="field" class:has-error={errors.investmentRequired}>
-								<span class="field__label">
-									<span class="field__name">Investment required <em class="req">*</em></span>
-									{#if errors.investmentRequired}<span class="field__error"
-											>{errors.investmentRequired}</span
-										>{/if}
-								</span>
-								<input
-									type="text"
-									bind:value={data.investmentRequired}
-									oninput={revalidate}
-									placeholder="₹"
-								/>
-							</label>
-							<label class="field">
-								<span class="field__label">
-									<span class="field__name"
-										>Previous funding raised <span class="opt">(optional)</span></span
-									>
-								</span>
-								<input type="text" bind:value={data.previousFunding} />
-							</label>
-						</div>
-
-						<label class="field" class:has-error={errors.useOfFunds}>
-							<span class="field__label">
-								<span class="field__name">Use of funds <em class="req">*</em></span>
-								{#if errors.useOfFunds}<span class="field__error">{errors.useOfFunds}</span>{/if}
-							</span>
-							<textarea rows="2" bind:value={data.useOfFunds} oninput={revalidate}></textarea>
-						</label>
-
-						<label class="field">
-							<span class="field__label">
-								<span class="field__name">Competitors <span class="opt">(optional)</span></span>
-							</span>
-							<textarea rows="2" bind:value={data.competitors}></textarea>
-						</label>
-					{/if}
-
-					{#if step === 6}
-						<label class="field" class:has-error={errors.whyTic}>
-							<span class="field__label">
-								<span class="field__name">Why IITG TIC? <em class="req">*</em></span>
-								{#if errors.whyTic}<span class="field__error">{errors.whyTic}</span>{/if}
-							</span>
-							<textarea rows="3" bind:value={data.whyTic} oninput={revalidate}></textarea>
-						</label>
-
-						<label class="field" class:has-error={errors.expectedOutcomes}>
-							<span class="field__label">
-								<span class="field__name">Expected outcomes <em class="req">*</em></span>
-								{#if errors.expectedOutcomes}<span class="field__error"
-										>{errors.expectedOutcomes}</span
-									>{/if}
-							</span>
-							<textarea rows="3" bind:value={data.expectedOutcomes} oninput={revalidate}></textarea>
-						</label>
-
-						<label class="field" class:has-error={errors.biggestChallenge}>
-							<span class="field__label">
-								<span class="field__name">Biggest current challenge <em class="req">*</em></span>
-								{#if errors.biggestChallenge}<span class="field__error"
-										>{errors.biggestChallenge}</span
-									>{/if}
-							</span>
-							<textarea rows="2" bind:value={data.biggestChallenge} oninput={revalidate}></textarea>
-						</label>
-
-						<label class="field">
-							<span class="field__label">
-								<span class="field__name">Long-term vision <span class="opt">(optional)</span></span
-								>
-							</span>
-							<textarea rows="2" bind:value={data.longTermVision}></textarea>
-						</label>
-
-						<div class="field" class:has-error={errors.supportNeeded}>
-							<span class="field__label">
-								<span class="field__name">Support needed <em class="req">*</em></span>
-								{#if errors.supportNeeded}<span class="field__error">{errors.supportNeeded}</span
-									>{/if}
-							</span>
-							<div class="check-group">
-								{#each SUPPORT_OPTIONS as option}
-									<label class="check">
-										<input
-											type="checkbox"
-											checked={data.supportNeeded.includes(option)}
-											onchange={() => toggleSupport(option)}
-										/>
-										<span class="check__box"></span>
-										<span>{option}</span>
-									</label>
-								{/each}
-							</div>
-						</div>
-					{/if}
-
-					{#if step === 7}
-						<div class="field" class:has-error={errors.pitchDeck}>
-							<span class="field__label">
-								<span class="field__name">Pitch deck PDF <em class="req">*</em></span>
-								{#if errors.pitchDeck}<span class="field__error">{errors.pitchDeck}</span>{/if}
-							</span>
-							<label class="file">
-								<input
-									type="file"
-									accept="application/pdf"
-									onchange={(e) => onFile('pitchDeck', e)}
-								/>
-								<span class="file__btn">Choose file</span>
-								<span class="file__name"
-									>{data.pitchDeck ? data.pitchDeck.name : 'No file selected'}</span
-								>
-							</label>
-						</div>
-
-						<div class="field">
-							<span class="field__label">
-								<span class="field__name">Founder CV <span class="opt">(optional)</span></span>
-							</span>
-							<label class="file">
-								<input
-									type="file"
-									accept=".pdf,.doc,.docx"
-									onchange={(e) => onFile('founderCv', e)}
-								/>
-								<span class="file__btn">Choose file</span>
-								<span class="file__name"
-									>{data.founderCv ? data.founderCv.name : 'No file selected'}</span
-								>
-							</label>
-						</div>
-
-						<div class="field">
-							<span class="field__label">
-								<span class="field__name"
-									>Financial projections <span class="opt">(optional)</span></span
-								>
-							</span>
-							<label class="file">
-								<input
-									type="file"
-									accept=".pdf,.xlsx,.xls"
-									onchange={(e) => onFile('financialProjections', e)}
-								/>
-								<span class="file__btn">Choose file</span>
-								<span class="file__name"
-									>{data.financialProjections
-										? data.financialProjections.name
-										: 'No file selected'}</span
-								>
-							</label>
-						</div>
-
-						<div class="field">
-							<span class="field__label">
-								<span class="field__name"
-									>Incorporation certificate <span class="opt">(optional)</span></span
-								>
-							</span>
-							<label class="file">
-								<input
-									type="file"
-									accept="application/pdf"
-									onchange={(e) => onFile('incorporationCert', e)}
-								/>
-								<span class="file__btn">Choose file</span>
-								<span class="file__name"
-									>{data.incorporationCert ? data.incorporationCert.name : 'No file selected'}</span
-								>
-							</label>
-						</div>
-					{/if}
-
-					{#if step === 8}
-						{#if !emailVerified}
-							<div class="verify-gate" role="status" aria-live="polite">
-								<p class="verify-gate__text">
-									Confirm your email to submit. We sent a confirmation link to
-									<strong>{data.email}</strong>. Open it, then come back to this step.
-								</p>
-								<ButtonReveal
-									text={resending ? 'Sending…' : 'Resend confirmation email'}
-									class="resend"
-									loading={resending}
-									onclick={resendConfirmation}
-								/>
-								{#if resent}<span class="verify-gate__done">Sent — check your inbox.</span>{/if}
-							</div>
-						{/if}
-						<div class="consent-list" class:consent-list--locked={!emailVerified}>
-							<label class="consent" class:has-error={errors.infoAccurate}>
-								<input
-									type="checkbox"
-									bind:checked={data.infoAccurate}
-									onchange={revalidate}
-									disabled={!emailVerified}
-								/>
-								<span class="check__box"></span>
-								<span class="consent__text">
-									I confirm that all information provided is accurate to the best of my knowledge. <em
-										class="req">*</em
-									>
-									{#if errors.infoAccurate}<span class="field__error field__error--block"
-											>{errors.infoAccurate}</span
-										>{/if}
-								</span>
-							</label>
-
-							<label class="consent" class:has-error={errors.agreeTerms}>
-								<input
-									type="checkbox"
-									bind:checked={data.agreeTerms}
-									onchange={revalidate}
-									disabled={!emailVerified}
-								/>
-								<span class="check__box"></span>
-								<span class="consent__text">
-									I agree to the IITG TIC application terms and privacy policy. <em class="req"
-										>*</em
-									>
-									{#if errors.agreeTerms}<span class="field__error field__error--block"
-											>{errors.agreeTerms}</span
-										>{/if}
-								</span>
-							</label>
-
-							<label class="consent" class:has-error={errors.allowReview}>
-								<input
-									type="checkbox"
-									bind:checked={data.allowReview}
-									onchange={revalidate}
-									disabled={!emailVerified}
-								/>
-								<span class="check__box"></span>
-								<span class="consent__text">
-									I allow the IITG TIC evaluation committee to review my application and documents. <em
-										class="req">*</em
-									>
-									{#if errors.allowReview}<span class="field__error field__error--block"
-											>{errors.allowReview}</span
-										>{/if}
-								</span>
-							</label>
-						</div>
-					{/if}
-
-					{#if submitError}
-						<p class="submit-error" role="alert">{submitError}</p>
-					{/if}
-
-					<div class="nav">
-						{#if step > 1}
-							<ButtonReveal text="← Previous" class="btn btn--ghost" onclick={prev} />
-						{/if}
-						{#if step < STEPS.length}
-							<ButtonReveal type="submit" text="Next →" class="btn btn--primary nav__next" />
-						{:else}
-							<ButtonReveal
-								type="submit"
-								text={submitting ? 'Submitting…' : 'Submit application'}
-								class="btn btn--primary nav__next"
-								loading={submitting}
-							/>
-						{/if}
+			<!-- The steps only exist once there is a startup to apply as: every
+			     answer, and the draft they are saved into, belongs to one. -->
+			{#if companies.length > 0}
+				<!-- Progress bar -->
+				<div class="progress" aria-label="Application progress">
+					<div class="progress__steps">
+						{#each STEPS as s, i (s.n)}
+							{#if i > 0}
+								<div class="progress__line" class:is-done={completedSteps.has(s.n - 1)}></div>
+							{/if}
+							<button
+								type="button"
+								class="progress__step"
+								class:is-done={completedSteps.has(s.n)}
+								class:is-current={s.n === step}
+								onclick={() => jumpToStep(s.n)}
+							>
+								<span class="progress__dot">{s.n}</span>
+								<span class="progress__label">{s.title}</span>
+							</button>
+						{/each}
 					</div>
-				</form>
-			</div>
+				</div>
+
+				<div class="step">
+					<p class="step__eyebrow">Step {step} of {STEPS.length}</p>
+					<h2 class="step__title">{STEPS[step - 1].title}</h2>
+
+					<form
+						class="form"
+						onsubmit={(e) => {
+							e.preventDefault();
+							if (step === STEPS.length) submit();
+							else next();
+						}}
+						novalidate
+					>
+						{#if step === 1}
+							<label class="field" class:has-error={errors.fullName}>
+								<span class="field__label">
+									<span class="field__name">Full name <em class="req">*</em></span>
+									{#if errors.fullName}<span class="field__error">{errors.fullName}</span>{/if}
+								</span>
+								<input type="text" bind:value={data.fullName} oninput={revalidate} />
+							</label>
+
+							<label class="field" class:has-error={errors.email}>
+								<span class="field__label">
+									<span class="field__name">Email address <em class="req">*</em></span>
+									{#if errors.email}<span class="field__error">{errors.email}</span>{/if}
+								</span>
+								<input type="email" bind:value={data.email} oninput={revalidate} />
+							</label>
+
+							<label class="field" class:has-error={errors.phone}>
+								<span class="field__label">
+									<span class="field__name">Phone number <em class="req">*</em></span>
+									{#if errors.phone}<span class="field__error">{errors.phone}</span>{/if}
+								</span>
+								<input
+									type="tel"
+									inputmode="numeric"
+									maxlength="10"
+									value={data.phone}
+									oninput={onPhoneInput}
+								/>
+							</label>
+
+							<label class="field" class:has-error={errors.role}>
+								<span class="field__label">
+									<span class="field__name">Role in startup <em class="req">*</em></span>
+									{#if errors.role}<span class="field__error">{errors.role}</span>{/if}
+								</span>
+								<input
+									type="text"
+									bind:value={data.role}
+									oninput={revalidate}
+									placeholder="e.g. CEO, CTO"
+								/>
+							</label>
+
+							<div class="form__row">
+								<label class="field" class:has-error={errors.location}>
+									<span class="field__label">
+										<span class="field__name">City / Country <em class="req">*</em></span>
+										{#if errors.location}<span class="field__error">{errors.location}</span>{/if}
+									</span>
+									<input type="text" bind:value={data.location} oninput={revalidate} />
+								</label>
+								<label class="field" class:has-error={errors.university}>
+									<span class="field__label">
+										<span class="field__name">University / Organization <em class="req">*</em></span
+										>
+										{#if errors.university}<span class="field__error">{errors.university}</span
+											>{/if}
+									</span>
+									<input type="text" bind:value={data.university} oninput={revalidate} />
+								</label>
+							</div>
+
+							<label class="field" class:has-error={errors.linkedin}>
+								<span class="field__label">
+									<span class="field__name"
+										>LinkedIn profile <span class="opt">(optional)</span></span
+									>
+									{#if errors.linkedin}<span class="field__error">{errors.linkedin}</span>{/if}
+								</span>
+								<input
+									type="url"
+									bind:value={data.linkedin}
+									oninput={revalidate}
+									placeholder="https://linkedin.com/in/..."
+								/>
+							</label>
+
+							<div class="field">
+								<span class="field__label">
+									<span class="field__name"
+										>Co-founder details <span class="opt">(optional)</span></span
+									>
+								</span>
+								{#each data.coFounders as cf, i (i)}
+									<div class="cf">
+										<input type="text" class="cf__input" placeholder="Name" bind:value={cf.name} />
+										<input
+											type="email"
+											class="cf__input"
+											placeholder="Email"
+											bind:value={cf.email}
+										/>
+										<input type="text" class="cf__input" placeholder="Role" bind:value={cf.role} />
+										<button
+											type="button"
+											class="cf__remove"
+											onclick={() => removeCoFounder(i)}
+											aria-label="Remove co-founder">×</button
+										>
+									</div>
+								{/each}
+								<ButtonReveal
+									text="+ Add co-founder"
+									class="btn btn--ghost btn--sm"
+									onclick={addCoFounder}
+								/>
+							</div>
+						{/if}
+
+						{#if step === 2}
+							<label class="field" class:has-error={errors.startupName}>
+								<span class="field__label">
+									<span class="field__name">Startup name <em class="req">*</em></span>
+									{#if errors.startupName}<span class="field__error">{errors.startupName}</span
+										>{/if}
+								</span>
+								<input
+									type="text"
+									bind:value={data.startupName}
+									oninput={revalidate}
+									readonly={!!activeCompany}
+								/>
+								{#if activeCompany}
+									<span class="field__hint">
+										This is the startup this application is for. To apply as a different one, change
+										it at the top of the page.
+									</span>
+								{/if}
+							</label>
+
+							<label class="field" class:has-error={errors.stage}>
+								<span class="field__label">
+									<span class="field__name">Startup stage <em class="req">*</em></span>
+									{#if errors.stage}<span class="field__error">{errors.stage}</span>{/if}
+								</span>
+								<div class="radio-group">
+									{#each STAGES as s}
+										<label class="radio">
+											<input
+												type="radio"
+												name="stage"
+												value={s}
+												checked={data.stage === s}
+												onchange={() => {
+													data.stage = s;
+													revalidate();
+												}}
+											/>
+											<span class="radio__dot"></span>
+											<span>{s}</span>
+										</label>
+									{/each}
+								</div>
+							</label>
+
+							<div class="form__row">
+								<label class="field" class:has-error={errors.industry}>
+									<span class="field__label">
+										<span class="field__name">Industry / Domain <em class="req">*</em></span>
+										{#if errors.industry}<span class="field__error">{errors.industry}</span>{/if}
+									</span>
+									<input type="text" bind:value={data.industry} oninput={revalidate} />
+								</label>
+								<label class="field" class:has-error={errors.yearFounded}>
+									<span class="field__label">
+										<span class="field__name">Year founded <em class="req">*</em></span>
+										{#if errors.yearFounded}<span class="field__error">{errors.yearFounded}</span
+											>{/if}
+									</span>
+									<input
+										type="text"
+										inputmode="numeric"
+										maxlength="4"
+										bind:value={data.yearFounded}
+										oninput={revalidate}
+									/>
+								</label>
+							</div>
+
+							<div class="form__row">
+								<label class="field" class:has-error={errors.teamSize}>
+									<span class="field__label">
+										<span class="field__name">Team size <em class="req">*</em></span>
+										{#if errors.teamSize}<span class="field__error">{errors.teamSize}</span>{/if}
+									</span>
+									<input
+										type="text"
+										inputmode="numeric"
+										bind:value={data.teamSize}
+										oninput={revalidate}
+									/>
+								</label>
+								<label class="field" class:has-error={errors.website}>
+									<span class="field__label">
+										<span class="field__name">Website URL <span class="opt">(optional)</span></span>
+										{#if errors.website}<span class="field__error">{errors.website}</span>{/if}
+									</span>
+									<input type="url" bind:value={data.website} oninput={revalidate} />
+								</label>
+							</div>
+
+							<label class="field">
+								<span class="field__label">
+									<span class="field__name"
+										>Incorporation status <span class="opt">(optional)</span></span
+									>
+								</span>
+								<input
+									type="text"
+									bind:value={data.incorporation}
+									placeholder="e.g. Pvt. Ltd., LLP, not yet incorporated"
+								/>
+							</label>
+						{/if}
+
+						{#if step === 3}
+							<label class="field" class:has-error={errors.problem}>
+								<span class="field__label">
+									<span class="field__name">Problem statement <em class="req">*</em></span>
+									{#if errors.problem}<span class="field__error">{errors.problem}</span>{/if}
+								</span>
+								<textarea rows="3" bind:value={data.problem} oninput={revalidate}></textarea>
+							</label>
+
+							<label class="field" class:has-error={errors.solution}>
+								<span class="field__label">
+									<span class="field__name">Your solution <em class="req">*</em></span>
+									{#if errors.solution}<span class="field__error">{errors.solution}</span>{/if}
+								</span>
+								<textarea rows="3" bind:value={data.solution} oninput={revalidate}></textarea>
+							</label>
+
+							<label class="field" class:has-error={errors.differentiation}>
+								<span class="field__label">
+									<span class="field__name">What makes you different? <em class="req">*</em></span>
+									{#if errors.differentiation}<span class="field__error"
+											>{errors.differentiation}</span
+										>{/if}
+								</span>
+								<textarea rows="3" bind:value={data.differentiation} oninput={revalidate}
+								></textarea>
+							</label>
+
+							<label class="field" class:has-error={errors.whyNow}>
+								<span class="field__label">
+									<span class="field__name">Why now? <em class="req">*</em></span>
+									{#if errors.whyNow}<span class="field__error">{errors.whyNow}</span>{/if}
+								</span>
+								<textarea rows="3" bind:value={data.whyNow} oninput={revalidate}></textarea>
+							</label>
+						{/if}
+
+						{#if step === 4}
+							<label class="field" class:has-error={errors.productDescription}>
+								<span class="field__label">
+									<span class="field__name">Product description <em class="req">*</em></span>
+									{#if errors.productDescription}<span class="field__error"
+											>{errors.productDescription}</span
+										>{/if}
+								</span>
+								<textarea rows="3" bind:value={data.productDescription} oninput={revalidate}
+								></textarea>
+							</label>
+
+							<label class="field" class:has-error={errors.techStack}>
+								<span class="field__label">
+									<span class="field__name">Tech stack <em class="req">*</em></span>
+									{#if errors.techStack}<span class="field__error">{errors.techStack}</span>{/if}
+								</span>
+								<input type="text" bind:value={data.techStack} oninput={revalidate} />
+							</label>
+
+							<label class="field" class:has-error={errors.targetCustomers}>
+								<span class="field__label">
+									<span class="field__name">Target customers <em class="req">*</em></span>
+									{#if errors.targetCustomers}<span class="field__error"
+											>{errors.targetCustomers}</span
+										>{/if}
+								</span>
+								<textarea rows="2" bind:value={data.targetCustomers} oninput={revalidate}
+								></textarea>
+							</label>
+
+							<div class="form__row">
+								<label class="field">
+									<span class="field__label">
+										<span class="field__name"
+											>Users / customers <span class="opt">(optional)</span></span
+										>
+									</span>
+									<input type="text" bind:value={data.users} />
+								</label>
+								<label class="field">
+									<span class="field__label">
+										<span class="field__name"
+											>Revenue generated <span class="opt">(optional)</span></span
+										>
+									</span>
+									<input type="text" bind:value={data.revenue} />
+								</label>
+							</div>
+
+							<label class="field" class:has-error={errors.demoLink}>
+								<span class="field__label">
+									<span class="field__name"
+										>Demo / GitHub link <span class="opt">(optional)</span></span
+									>
+									{#if errors.demoLink}<span class="field__error">{errors.demoLink}</span>{/if}
+								</span>
+								<input type="url" bind:value={data.demoLink} oninput={revalidate} />
+							</label>
+
+							<label class="field">
+								<span class="field__label">
+									<span class="field__name"
+										>Partnerships or pilots <span class="opt">(optional)</span></span
+									>
+								</span>
+								<textarea rows="2" bind:value={data.partnerships}></textarea>
+							</label>
+						{/if}
+
+						{#if step === 5}
+							<label class="field" class:has-error={errors.revenueModel}>
+								<span class="field__label">
+									<span class="field__name">Revenue model <em class="req">*</em></span>
+									{#if errors.revenueModel}<span class="field__error">{errors.revenueModel}</span
+										>{/if}
+								</span>
+								<textarea rows="2" bind:value={data.revenueModel} oninput={revalidate}></textarea>
+							</label>
+
+							<label class="field" class:has-error={errors.gtmStrategy}>
+								<span class="field__label">
+									<span class="field__name">Go-to-market strategy <em class="req">*</em></span>
+									{#if errors.gtmStrategy}<span class="field__error">{errors.gtmStrategy}</span
+										>{/if}
+								</span>
+								<textarea rows="2" bind:value={data.gtmStrategy} oninput={revalidate}></textarea>
+							</label>
+
+							<label class="field" class:has-error={errors.fundingStatus}>
+								<span class="field__label">
+									<span class="field__name">Funding status <em class="req">*</em></span>
+									{#if errors.fundingStatus}<span class="field__error">{errors.fundingStatus}</span
+										>{/if}
+								</span>
+								<div class="radio-group">
+									{#each FUNDING_STATUS as s}
+										<label class="radio">
+											<input
+												type="radio"
+												name="fundingStatus"
+												value={s}
+												checked={data.fundingStatus === s}
+												onchange={() => {
+													data.fundingStatus = s;
+													revalidate();
+												}}
+											/>
+											<span class="radio__dot"></span>
+											<span>{s}</span>
+										</label>
+									{/each}
+								</div>
+							</label>
+
+							<div class="form__row">
+								<label class="field" class:has-error={errors.investmentRequired}>
+									<span class="field__label">
+										<span class="field__name">Investment required <em class="req">*</em></span>
+										{#if errors.investmentRequired}<span class="field__error"
+												>{errors.investmentRequired}</span
+											>{/if}
+									</span>
+									<input
+										type="text"
+										bind:value={data.investmentRequired}
+										oninput={revalidate}
+										placeholder="₹"
+									/>
+								</label>
+								<label class="field">
+									<span class="field__label">
+										<span class="field__name"
+											>Previous funding raised <span class="opt">(optional)</span></span
+										>
+									</span>
+									<input type="text" bind:value={data.previousFunding} />
+								</label>
+							</div>
+
+							<label class="field" class:has-error={errors.useOfFunds}>
+								<span class="field__label">
+									<span class="field__name">Use of funds <em class="req">*</em></span>
+									{#if errors.useOfFunds}<span class="field__error">{errors.useOfFunds}</span>{/if}
+								</span>
+								<textarea rows="2" bind:value={data.useOfFunds} oninput={revalidate}></textarea>
+							</label>
+
+							<label class="field">
+								<span class="field__label">
+									<span class="field__name">Competitors <span class="opt">(optional)</span></span>
+								</span>
+								<textarea rows="2" bind:value={data.competitors}></textarea>
+							</label>
+						{/if}
+
+						{#if step === 6}
+							<label class="field" class:has-error={errors.whyTic}>
+								<span class="field__label">
+									<span class="field__name">Why IITG TIC? <em class="req">*</em></span>
+									{#if errors.whyTic}<span class="field__error">{errors.whyTic}</span>{/if}
+								</span>
+								<textarea rows="3" bind:value={data.whyTic} oninput={revalidate}></textarea>
+							</label>
+
+							<label class="field" class:has-error={errors.expectedOutcomes}>
+								<span class="field__label">
+									<span class="field__name">Expected outcomes <em class="req">*</em></span>
+									{#if errors.expectedOutcomes}<span class="field__error"
+											>{errors.expectedOutcomes}</span
+										>{/if}
+								</span>
+								<textarea rows="3" bind:value={data.expectedOutcomes} oninput={revalidate}
+								></textarea>
+							</label>
+
+							<label class="field" class:has-error={errors.biggestChallenge}>
+								<span class="field__label">
+									<span class="field__name">Biggest current challenge <em class="req">*</em></span>
+									{#if errors.biggestChallenge}<span class="field__error"
+											>{errors.biggestChallenge}</span
+										>{/if}
+								</span>
+								<textarea rows="2" bind:value={data.biggestChallenge} oninput={revalidate}
+								></textarea>
+							</label>
+
+							<label class="field">
+								<span class="field__label">
+									<span class="field__name"
+										>Long-term vision <span class="opt">(optional)</span></span
+									>
+								</span>
+								<textarea rows="2" bind:value={data.longTermVision}></textarea>
+							</label>
+
+							<div class="field" class:has-error={errors.supportNeeded}>
+								<span class="field__label">
+									<span class="field__name">Support needed <em class="req">*</em></span>
+									{#if errors.supportNeeded}<span class="field__error">{errors.supportNeeded}</span
+										>{/if}
+								</span>
+								<div class="check-group">
+									{#each SUPPORT_OPTIONS as option}
+										<label class="check">
+											<input
+												type="checkbox"
+												checked={data.supportNeeded.includes(option)}
+												onchange={() => toggleSupport(option)}
+											/>
+											<span class="check__box"></span>
+											<span>{option}</span>
+										</label>
+									{/each}
+								</div>
+							</div>
+						{/if}
+
+						{#if step === 7}
+							<div class="field" class:has-error={errors.pitchDeck}>
+								<span class="field__label">
+									<span class="field__name">Pitch deck PDF <em class="req">*</em></span>
+									{#if errors.pitchDeck}<span class="field__error">{errors.pitchDeck}</span>{/if}
+								</span>
+								<label class="file">
+									<input
+										type="file"
+										accept="application/pdf"
+										onchange={(e) => onFile('pitchDeck', e)}
+									/>
+									<span class="file__btn">Choose file</span>
+									<span class="file__name"
+										>{data.pitchDeck ? data.pitchDeck.name : 'No file selected'}</span
+									>
+								</label>
+							</div>
+
+							<div class="field">
+								<span class="field__label">
+									<span class="field__name">Founder CV <span class="opt">(optional)</span></span>
+								</span>
+								<label class="file">
+									<input
+										type="file"
+										accept=".pdf,.doc,.docx"
+										onchange={(e) => onFile('founderCv', e)}
+									/>
+									<span class="file__btn">Choose file</span>
+									<span class="file__name"
+										>{data.founderCv ? data.founderCv.name : 'No file selected'}</span
+									>
+								</label>
+							</div>
+
+							<div class="field">
+								<span class="field__label">
+									<span class="field__name"
+										>Financial projections <span class="opt">(optional)</span></span
+									>
+								</span>
+								<label class="file">
+									<input
+										type="file"
+										accept=".pdf,.xlsx,.xls"
+										onchange={(e) => onFile('financialProjections', e)}
+									/>
+									<span class="file__btn">Choose file</span>
+									<span class="file__name"
+										>{data.financialProjections
+											? data.financialProjections.name
+											: 'No file selected'}</span
+									>
+								</label>
+							</div>
+
+							<div class="field">
+								<span class="field__label">
+									<span class="field__name"
+										>Incorporation certificate <span class="opt">(optional)</span></span
+									>
+								</span>
+								<label class="file">
+									<input
+										type="file"
+										accept="application/pdf"
+										onchange={(e) => onFile('incorporationCert', e)}
+									/>
+									<span class="file__btn">Choose file</span>
+									<span class="file__name"
+										>{data.incorporationCert
+											? data.incorporationCert.name
+											: 'No file selected'}</span
+									>
+								</label>
+							</div>
+						{/if}
+
+						{#if step === 8}
+							{#if !emailVerified}
+								<div class="verify-gate" role="status" aria-live="polite">
+									<p class="verify-gate__text">
+										Confirm your email to submit. We sent a confirmation link to
+										<strong>{data.email}</strong>. Open it, then come back to this step.
+									</p>
+									<ButtonReveal
+										text={resending ? 'Sending…' : 'Resend confirmation email'}
+										class="resend"
+										loading={resending}
+										onclick={resendConfirmation}
+									/>
+									{#if resent}<span class="verify-gate__done">Sent — check your inbox.</span>{/if}
+								</div>
+							{/if}
+							<div class="consent-list" class:consent-list--locked={!emailVerified}>
+								<label class="consent" class:has-error={errors.infoAccurate}>
+									<input
+										type="checkbox"
+										bind:checked={data.infoAccurate}
+										onchange={revalidate}
+										disabled={!emailVerified}
+									/>
+									<span class="check__box"></span>
+									<span class="consent__text">
+										I confirm that all information provided is accurate to the best of my knowledge. <em
+											class="req">*</em
+										>
+										{#if errors.infoAccurate}<span class="field__error field__error--block"
+												>{errors.infoAccurate}</span
+											>{/if}
+									</span>
+								</label>
+
+								<label class="consent" class:has-error={errors.agreeTerms}>
+									<input
+										type="checkbox"
+										bind:checked={data.agreeTerms}
+										onchange={revalidate}
+										disabled={!emailVerified}
+									/>
+									<span class="check__box"></span>
+									<span class="consent__text">
+										I agree to the IITG TIC application terms and privacy policy. <em class="req"
+											>*</em
+										>
+										{#if errors.agreeTerms}<span class="field__error field__error--block"
+												>{errors.agreeTerms}</span
+											>{/if}
+									</span>
+								</label>
+
+								<label class="consent" class:has-error={errors.allowReview}>
+									<input
+										type="checkbox"
+										bind:checked={data.allowReview}
+										onchange={revalidate}
+										disabled={!emailVerified}
+									/>
+									<span class="check__box"></span>
+									<span class="consent__text">
+										I allow the IITG TIC evaluation committee to review my application and
+										documents. <em class="req">*</em>
+										{#if errors.allowReview}<span class="field__error field__error--block"
+												>{errors.allowReview}</span
+											>{/if}
+									</span>
+								</label>
+							</div>
+						{/if}
+
+						{#if submitError}
+							<p class="submit-error" role="alert">{submitError}</p>
+						{/if}
+
+						<div class="nav">
+							{#if step > 1}
+								<ButtonReveal text="← Previous" class="btn btn--ghost" onclick={prev} />
+							{/if}
+							{#if step < STEPS.length}
+								<ButtonReveal type="submit" text="Next →" class="btn btn--primary nav__next" />
+							{:else}
+								<ButtonReveal
+									type="submit"
+									text={submitting ? 'Submitting…' : 'Submit application'}
+									class="btn btn--primary nav__next"
+									loading={submitting}
+								/>
+							{/if}
+						</div>
+					</form>
+				</div>
+			{/if}
 		{/if}
 	</div>
 </section>
@@ -1222,6 +1309,64 @@
 		margin: 0;
 		font-size: $font-size-base;
 		color: rgba($color-black, 0.7);
+	}
+
+	// ---- Which startup is applying ----
+	.picker {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: $space-4;
+		flex-wrap: wrap;
+		margin-bottom: $space-6;
+		padding: $space-4;
+		border: 1px solid rgba($color-black, 0.12);
+		border-left: 2px solid $color-black;
+		border-radius: 4px;
+		background: rgba($color-black, 0.02);
+
+		&--empty {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: $space-2;
+		}
+	}
+
+	.picker__text {
+		min-width: 0;
+	}
+
+	.picker__title {
+		margin: 0 0 4px;
+		font-size: $font-size-sm;
+		font-weight: $font-weight-bold;
+		letter-spacing: $letter-spacing-wide;
+		text-transform: uppercase;
+	}
+
+	.picker__body {
+		margin: 0;
+		font-size: $font-size-sm;
+		line-height: 1.55;
+		color: rgba($color-black, 0.7);
+		max-width: 54ch;
+	}
+
+	.picker__control {
+		width: 100%;
+		max-width: 280px;
+	}
+
+	.picker__cta {
+		margin-top: $space-2;
+		padding: 10px 20px;
+		font-size: $font-size-sm;
+		font-weight: $font-weight-bold;
+		letter-spacing: $letter-spacing-wide;
+		text-transform: uppercase;
+		color: $color-white;
+		background: $color-black;
+		text-decoration: none;
 	}
 
 	// ---- Restored draft ----

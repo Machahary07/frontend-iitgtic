@@ -1,8 +1,6 @@
 import { error, json } from '@sveltejs/kit';
-import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
 import { sendTemplateEmail } from '$lib/server/email';
-import { removeApplicationDocuments } from '$lib/server/storageCleanup';
 import type { RequestHandler } from './$types';
 
 // Company moderation. `status` and `rejection_reason` are not granted to the
@@ -88,23 +86,19 @@ export const DELETE: RequestHandler = async ({ cookies, url }) => {
 	const id = url.searchParams.get('id');
 	if (!id) error(400, 'Missing company id.');
 
-	await logAdminAction(ctx, 'deleted a company account', {
+	await logAdminAction(ctx, 'deleted a company', {
 		table: 'companies',
 		recordId: id
 	});
 
-	// Anything this account uploaded to the application bucket goes first — the
-	// cascade below removes the rows that name those files, and an object nothing
-	// points at can never be found again.
+	// The company is deleted, not the founder who created it: one person may run
+	// several, and removing their login because one startup was withdrawn would
+	// take the others with it. Deleting the account itself is /api/tic-admin/users.
 	//
-	// Resumes are deliberately left alone: job_applications.company_id is `on
-	// delete set null`, so applications outlive the company that posted the role
-	// and the TIC console still needs to open them.
-	await removeApplicationDocuments(id);
-
-	// companies.id references auth.users on delete cascade, and jobs.company_id
-	// cascades from companies — so removing the auth user clears all three.
-	const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
-	if (authError) error(500, authError.message);
+	// jobs.company_id cascades from here. Resumes and any incubation application
+	// are deliberately left: both are `on delete set null`, so TIC's record of
+	// what it reviewed outlives the company.
+	const { error: dbError } = await ctx.db.from('companies').delete().eq('id', id);
+	if (dbError) error(500, dbError.message);
 	return json({ ok: true });
 };

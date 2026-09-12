@@ -7,7 +7,7 @@ import type { PageServerLoad } from './$types';
 // able to see their own pending rows, which the public policies hide.
 
 export const load: PageServerLoad = async ({ parent }) => {
-	const { founder, company } = await parent();
+	const { founder, company, activeCompanyId } = await parent();
 
 	const empty = {
 		jobs: { approved: 0, pending: 0, rejected: 0 },
@@ -22,19 +22,21 @@ export const load: PageServerLoad = async ({ parent }) => {
 		profileChangePending: false
 	};
 
-	if (!founder.companyId || !company || founder.memberStatus !== 'approved') return empty;
+	if (!activeCompanyId || !company) return empty;
 
 	const db = founderDb(founder.userId);
-	const companyId = founder.companyId;
+	const companyId = activeCompanyId;
 
 	const [jobs, applicants, team, application, profileChange] = await Promise.all([
 		db.from('jobs').select('id, status').eq('company_id', companyId),
 		db.from('job_applications').select('id, status').eq('company_id', companyId),
 		db.from('profiles').select('id, member_status').eq('company_id', companyId),
+		// The application belongs to the startup, not to the person — a founder
+		// running three of them has three separate applications.
 		db
 			.from('applications')
 			.select('id, status, startup_name, created_at')
-			.eq('user_id', founder.userId)
+			.eq('company_id', companyId)
 			.order('created_at', { ascending: false })
 			.limit(1)
 			.maybeSingle(),

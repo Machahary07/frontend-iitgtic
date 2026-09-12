@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import FounderShell from '$lib/components/FounderShell.svelte';
+	import Select from '$lib/components/Select.svelte';
 	import {
 		getMyApplicants,
 		resumeUrl,
@@ -123,6 +124,7 @@
 <FounderShell
 	founder={data.founder}
 	company={data.company}
+	companies={data.companies}
 	title="Applicants"
 	eyebrow="Hiring"
 	requiresVerifiedCompany
@@ -171,15 +173,21 @@
 			</div>
 
 			{#if roles.length > 1}
-				<label class="picker">
-					<span>Role</span>
-					<select bind:value={role}>
-						<option value="all">Every role</option>
-						{#each roles as slug (slug)}
-							<option value={slug}>{roleLabel(slug)}</option>
-						{/each}
-					</select>
-				</label>
+				<div class="picker">
+					<span class="picker__label">Role</span>
+					<div class="picker__control">
+						<Select
+							id="applicants-role"
+							bind:value={role}
+							options={[
+								{ value: 'all', label: 'Every role' },
+								...roles.map((slug) => ({ value: slug, label: roleLabel(slug) }))
+							]}
+							size="sm"
+							ariaLabel="Filter applicants by role"
+						/>
+					</div>
+				</div>
 			{/if}
 		</div>
 
@@ -325,15 +333,14 @@
 		display: flex;
 		align-items: center;
 		gap: 8px;
+	}
 
-		> span {
-			@include admin-field-label;
-		}
+	.picker__label {
+		@include admin-field-label;
+	}
 
-		select {
-			@include admin-input;
-			min-width: 200px;
-		}
+	.picker__control {
+		min-width: 210px;
 	}
 
 	.panel {

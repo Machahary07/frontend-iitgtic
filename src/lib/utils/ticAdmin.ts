@@ -2,7 +2,7 @@
 // service-role server route guarded by the admin session cookie, because the
 // admin is not a Supabase Auth user and so cannot satisfy RLS directly.
 
-import type { CompanyStatus } from '$lib/utils/companyAuth';
+import type { CompanyStatus } from '$lib/utils/companies';
 
 export async function adminSetCompanyStatus(
 	id: string,
@@ -190,7 +190,9 @@ export async function adminListNewsletter(): Promise<NewsletterSubscriber[]> {
 
 // --- users -----------------------------------------------------------------
 
-export type UserRole = 'founder' | 'company' | 'admin';
+// Two roles. 'company' is gone: an account is a person, and a company is
+// something a founder creates — possibly several.
+export type UserRole = 'founder' | 'admin';
 
 export type ManagedUser = {
 	id: string;
@@ -202,8 +204,8 @@ export type ManagedUser = {
 	lastSignInAt: string | null;
 	emailConfirmed: boolean;
 	banned: boolean;
-	companyName: string | null;
-	companyStatus: string | null;
+	/** The startups this person created. A founder may run several. */
+	companies: { name: string; status: string }[];
 };
 
 async function readError(res: Response): Promise<string> {

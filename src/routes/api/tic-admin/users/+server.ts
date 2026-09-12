@@ -8,7 +8,7 @@ import type { RequestHandler } from './$types';
 // Account management. Roles, sign-in state and password resets all live here;
 // every mutation is attributed to the acting admin through the guard's client.
 
-const ROLES = ['founder', 'company', 'admin'] as const;
+const ROLES = ['founder', 'admin'] as const;
 type Role = (typeof ROLES)[number];
 
 export const PATCH: RequestHandler = async ({ cookies, request }) => {

@@ -8,18 +8,22 @@ import type { PageServerLoad } from './$types';
 // anything the browser sends.
 
 export const load: PageServerLoad = async ({ parent }) => {
-	const { founder } = await parent();
-	if (!founder.companyId || founder.memberStatus !== 'approved') return { entries: [] };
+	const { founder, activeCompanyId } = await parent();
+	if (!activeCompanyId) return { entries: [] };
 
 	const db = founderDb(founder.userId);
-	const companyId = founder.companyId;
+	const companyId = activeCompanyId;
 
-	const [members, jobs] = await Promise.all([
+	const [members, jobs, owner] = await Promise.all([
 		db.from('profiles').select('id').eq('company_id', companyId),
-		db.from('jobs').select('id').eq('company_id', companyId)
+		db.from('jobs').select('id').eq('company_id', companyId),
+		db.from('companies').select('owner_id').eq('id', companyId).maybeSingle()
 	]);
 
-	const memberIds = ((members.data ?? []) as { id: string }[]).map((m) => m.id);
+	const memberIds = [
+		...((members.data ?? []) as { id: string }[]).map((m) => m.id),
+		...(owner.data?.owner_id ? [owner.data.owner_id as string] : [])
+	];
 	const recordIds = [
 		companyId,
 		...memberIds,

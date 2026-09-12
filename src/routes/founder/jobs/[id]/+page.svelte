@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import FounderShell from '$lib/components/FounderShell.svelte';
+	import Select from '$lib/components/Select.svelte';
 	import { showToast } from '$lib/utils/toast.svelte';
 	import type { PageData } from './$types';
 
@@ -42,7 +43,16 @@
 		if (submitting) return;
 		submitting = true;
 		try {
-			const payload = { role, company, location, type, sector, description, applyLink };
+			const payload = {
+				companyId: data.activeCompanyId,
+				role,
+				company,
+				location,
+				type,
+				sector,
+				description,
+				applyLink
+			};
 			const res = await fetch('/api/founder/jobs', {
 				method: data.isNew ? 'POST' : 'PATCH',
 				headers: { 'content-type': 'application/json' },
@@ -72,6 +82,7 @@
 <FounderShell
 	founder={data.founder}
 	company={data.company}
+	companies={data.companies}
 	title={data.isNew ? 'Post a role' : 'Edit role'}
 	eyebrow={data.isNew ? 'New posting' : 'Editing'}
 	requiresVerifiedCompany
@@ -107,13 +118,18 @@
 		</label>
 
 		<div class="row">
-			<label class="field">
-				<span>Type</span>
-				<select bind:value={type}>
-					<option value="Full-time">Full-time</option>
-					<option value="Internship">Internship</option>
-				</select>
-			</label>
+			<div class="field">
+				<span class="field__label" id="job-type-label">Type</span>
+				<Select
+					id="job-type"
+					bind:value={type}
+					options={[
+						{ value: 'Full-time', label: 'Full-time' },
+						{ value: 'Internship', label: 'Internship' }
+					]}
+					ariaLabel="Type of role"
+				/>
+			</div>
 
 			<label class="field">
 				<span>Location</span>
@@ -214,13 +230,8 @@
 		}
 
 		input,
-		select,
 		textarea {
 			@include admin-input;
-		}
-
-		select {
-			cursor: pointer;
 		}
 
 		textarea {

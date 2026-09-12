@@ -56,7 +56,6 @@ const PRIVATE_PREFIXES = [
 	'/founder',
 	'/auth',
 	'/login',
-	'/signup',
 	'/status',
 	// static/robots.txt already disallows this one; the two should not disagree.
 	'/apply'

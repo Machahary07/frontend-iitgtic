@@ -1,5 +1,5 @@
 import { error, json } from '@sveltejs/kit';
-import { logFounderAction, requireFounderOwner } from '$lib/server/founderGuard';
+import { logFounderAction, requireCompanyOwner } from '$lib/server/founderGuard';
 import type { RequestHandler } from './$types';
 
 // A company's name, website and contact details sit next to every role it posts,
@@ -7,15 +7,17 @@ import type { RequestHandler } from './$types';
 // instead of into public.companies — the grant was revoked for exactly that
 // reason — and a TIC admin's verdict is what applies it.
 //
-// POST    { changes }  ask for a change
-// DELETE  ?id=         take a pending request back
+// POST    { companyId, changes }  ask for a change
+// DELETE  ?companyId=&id=         take a pending request back
 
 const FIELDS = ['companyName', 'website', 'contactName', 'contactEmail', 'phone'] as const;
 type Field = (typeof FIELDS)[number];
 
 export const POST: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireFounderOwner(cookies);
-	const body = (await request.json().catch(() => ({}))) as Partial<Record<Field, string>>;
+	const body = (await request.json().catch(() => ({}))) as Partial<Record<Field, string>> & {
+		companyId?: string;
+	};
+	const ctx = await requireCompanyOwner(cookies, body.companyId);
 
 	const { data: current } = await ctx.db
 		.from('companies')
@@ -80,7 +82,7 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 };
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireFounderOwner(cookies);
+	const ctx = await requireCompanyOwner(cookies, url.searchParams.get('companyId'));
 	const id = url.searchParams.get('id');
 	if (!id) error(400, 'Missing request id.');
 

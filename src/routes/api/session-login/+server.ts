@@ -34,7 +34,7 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 
 	const { data: profile } = await supabaseAdmin
 		.from('profiles')
-		.select('role, full_name, email, company_id, member_role, member_status')
+		.select('role, full_name, email')
 		.eq('id', data.user.id)
 		.maybeSingle();
 
@@ -66,35 +66,11 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 		return json({ ok: true, role: 'admin' as LoginRole, redirect: '/tic-admin', name, email });
 	}
 
-	// --- founders and the people they add ------------------------------------
-	// A company row may exist without profiles.company_id being set on an account
-	// created before this console did, so the company is looked up by id as well.
-	let companyId = (profile?.company_id as string | null) ?? null;
-	if (!companyId) {
-		const { data: company } = await supabaseAdmin
-			.from('companies')
-			.select('id')
-			.eq('id', data.user.id)
-			.maybeSingle();
-		if (company) {
-			companyId = company.id as string;
-			await supabaseAdmin
-				.from('profiles')
-				.update({ company_id: companyId, member_role: 'owner', member_status: 'approved' })
-				.eq('id', data.user.id);
-		}
-	}
-
-	const session = {
-		userId: data.user.id,
-		email,
-		name,
-		companyId,
-		memberRole: ((profile?.member_role as string) === 'member' ? 'member' : 'owner') as
-			'owner' | 'member',
-		memberStatus: ((profile?.member_status as string) ?? 'approved') as
-			'pending' | 'approved' | 'rejected'
-	};
+	// --- founders -------------------------------------------------------------
+	// There is no third case. Every non-admin account is a founder: which
+	// companies they hold, and whether TIC has verified them, is looked up per
+	// request by the console rather than frozen into a cookie here.
+	const session = { userId: data.user.id, email, name };
 	issueFounderSession(cookies, session);
 	clearTicAdminSession(cookies);
 

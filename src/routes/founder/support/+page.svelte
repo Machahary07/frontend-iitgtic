@@ -23,6 +23,7 @@
 <FounderShell
 	founder={data.founder}
 	company={data.company}
+	companies={data.companies}
 	title="Support"
 	eyebrow="Help"
 	alwaysAvailable
@@ -62,8 +63,8 @@
 		</div>
 
 		<p class="foot">
-			The public <a href={resolve('/contact')}>contact page</a> has the same details, a map, and an enquiry form
-			if you would rather write from there.
+			The public <a href={resolve('/contact')}>contact page</a> has the same details, a map, and an enquiry
+			form if you would rather write from there.
 		</p>
 	</div>
 </FounderShell>

@@ -40,7 +40,13 @@
 	<title>Founder Console · Activity</title>
 </svelte:head>
 
-<FounderShell founder={data.founder} company={data.company} title="Activity" eyebrow="History">
+<FounderShell
+	founder={data.founder}
+	company={data.company}
+	companies={data.companies}
+	title="Activity"
+	eyebrow="History"
+>
 	<p class="lede">
 		Everything that happened to this startup's records — what your team did here, and what TIC did
 		in review. The hundred most recent entries.

@@ -7,10 +7,10 @@ import type { RequestHandler } from './$types';
 // reason the founder will read — and because the approvals screen sends them all
 // from one place.
 //
-// PATCH { kind: 'job' | 'member' | 'profile', id, decision: 'approve' | 'reject', note? }
+// PATCH { kind: 'company' | 'job' | 'member' | 'profile', id, decision, note? }
 
 type Body = {
-	kind?: 'job' | 'member' | 'profile';
+	kind?: 'company' | 'job' | 'member' | 'profile';
 	id?: string;
 	decision?: 'approve' | 'reject';
 	note?: string;
@@ -25,6 +25,34 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 
 	const approved = body.decision === 'approve';
 	const note = body.note?.trim() || null;
+
+	if (body.kind === 'company') {
+		// Verifying a startup is the first gate of the four: until it passes, the
+		// company cannot post at all, so nothing downstream of it can be public.
+		const { data, error: dbError } = await ctx.db
+			.from('companies')
+			.update({
+				status: approved ? 'verified' : 'rejected',
+				rejection_reason: approved ? null : note
+			})
+			.eq('id', body.id)
+			.select('company_name')
+			.maybeSingle();
+
+		if (dbError) error(500, dbError.message);
+		if (!data) error(404, 'Company not found.');
+
+		await logAdminAction(
+			ctx,
+			`${approved ? 'verified' : 'rejected'} ${data.company_name as string}`,
+			{
+				table: 'companies',
+				recordId: body.id,
+				after: { status: approved ? 'verified' : 'rejected', note }
+			}
+		);
+		return json({ ok: true });
+	}
 
 	if (body.kind === 'job') {
 		const { data, error: dbError } = await ctx.db

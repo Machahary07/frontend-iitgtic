@@ -41,7 +41,9 @@
 		});
 		if (!ok) return;
 
-		const res = await fetch(`/api/founder/jobs?id=${job.id}`, { method: 'DELETE' });
+		const res = await fetch(`/api/founder/jobs?companyId=${data.activeCompanyId}&id=${job.id}`, {
+			method: 'DELETE'
+		});
 		if (!res.ok) {
 			showToast('Could not withdraw the role.', 'err');
 			return;
@@ -66,6 +68,7 @@
 <FounderShell
 	founder={data.founder}
 	company={data.company}
+	companies={data.companies}
 	title="Job postings"
 	eyebrow="Hiring"
 	requiresVerifiedCompany

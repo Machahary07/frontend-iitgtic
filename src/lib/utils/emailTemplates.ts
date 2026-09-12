@@ -302,7 +302,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		name: 'Admin sign-in alert',
 		description:
 			'A security heads-up to the operating inbox whenever someone signs in to the TIC admin console.',
-		trigger: 'Any admin signs in at /tic-admin/login',
+		trigger: 'Any admin signs in at /login',
 		group: 'Admin',
 		variables: [
 			{ name: 'adminName', description: 'Who signed in', sample: 'Ananya Sharma' },
@@ -360,7 +360,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		key: 'company-signup',
 		name: 'Company signup received',
 		description: 'Confirms a job-portal signup and sets the expectation that TIC verifies it.',
-		trigger: 'A company creates an account at /signup',
+		trigger: 'A founder registers a startup in the console',
 		group: 'Companies',
 		variables: [
 			{ name: 'companyName', description: 'Company name', sample: 'Northeast Robotics' },
@@ -455,7 +455,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		name: 'Application received',
 		description:
 			'Receipt to a founder the moment they submit an incubation application, linking them to their account to view it.',
-		trigger: 'A founder submits the application at /application',
+		trigger: 'A founder submits the application at /founder/application',
 		group: 'Incubation applications',
 		variables: [
 			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },

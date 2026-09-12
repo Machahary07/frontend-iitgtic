@@ -11,13 +11,16 @@
 		id: string;
 		full_name: string;
 		email: string;
-		member_role: 'owner' | 'member';
 		member_status: 'pending' | 'approved' | 'rejected';
 		created_at: string;
 	};
 
 	const members = $derived(data.members as Member[]);
-	const isOwner = $derived(data.founder.memberRole === 'owner');
+	// The founder who registered the startup is not in the members table — they
+	// are its owner_id — so ownership is read from the switcher's own view of it.
+	const isOwner = $derived(
+		data.companies.find((c) => c.id === data.activeCompanyId)?.relation === 'owner'
+	);
 
 	const STATUS: Record<string, { label: string; tone: string }> = {
 		pending: { label: 'Waiting for TIC', tone: 'warn' },
@@ -41,7 +44,7 @@
 			const res = await fetch('/api/founder/users', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ fullName, email, password })
+				body: JSON.stringify({ companyId: data.activeCompanyId, fullName, email, password })
 			});
 			const body = (await res.json().catch(() => ({}))) as {
 				ok?: boolean;
@@ -72,7 +75,10 @@
 		});
 		if (!ok) return;
 
-		const res = await fetch(`/api/founder/users?id=${member.id}`, { method: 'DELETE' });
+		const res = await fetch(
+			`/api/founder/users?companyId=${data.activeCompanyId}&id=${member.id}`,
+			{ method: 'DELETE' }
+		);
 		if (!res.ok) {
 			showToast('Could not remove this person.', 'err');
 			return;
@@ -94,7 +100,13 @@
 	<title>Founder Console · Team</title>
 </svelte:head>
 
-<FounderShell founder={data.founder} company={data.company} title="Team" eyebrow="Your company">
+<FounderShell
+	founder={data.founder}
+	company={data.company}
+	companies={data.companies}
+	title="Team"
+	eyebrow="Your company"
+>
 	{#snippet pageActions()}
 		{#if isOwner}
 			<button class="btn-primary" onclick={() => (adding = !adding)}>
@@ -148,7 +160,7 @@
 		</form>
 	{/if}
 
-	{#if members.length === 0}
+	{#if members.length === 0 && !data.owner}
 		<div class="empty"><p>No one on the team yet.</p></div>
 	{:else}
 		<div class="panel">
@@ -164,15 +176,25 @@
 						</tr>
 					</thead>
 					<tbody>
+						{#if data.owner}
+							<tr>
+								<td>
+									<p class="cell__name">{data.owner.name || '—'}</p>
+									<p class="cell__sub">{data.owner.email}</p>
+								</td>
+								<td><span class="badge">Founder</span></td>
+								<td><span class="badge badge--good">Active</span></td>
+								<td><p class="cell__sub">Registered it</p></td>
+								<td class="actions-col"></td>
+							</tr>
+						{/if}
 						{#each members as member (member.id)}
 							<tr>
 								<td>
 									<p class="cell__name">{member.full_name || '—'}</p>
 									<p class="cell__sub">{member.email}</p>
 								</td>
-								<td>
-									<span class="badge">{member.member_role === 'owner' ? 'Owner' : 'Member'}</span>
-								</td>
+								<td><span class="badge">Member</span></td>
 								<td>
 									<span class="badge badge--{STATUS[member.member_status].tone}">
 										{STATUS[member.member_status].label}
@@ -180,7 +202,7 @@
 								</td>
 								<td><p class="cell__sub">{formatDate(member.created_at)}</p></td>
 								<td class="actions-col">
-									{#if isOwner && member.member_role === 'member'}
+									{#if isOwner}
 										<button type="button" class="link link--danger" onclick={() => remove(member)}>
 											Remove
 										</button>

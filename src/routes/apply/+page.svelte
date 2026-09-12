@@ -126,7 +126,7 @@
 			// carries the link that lifts the step-8 gate. Fire-and-forget so a mail
 			// hiccup never blocks the account they just created.
 			void sendFounderWelcome();
-			goto(resolve('/founder/application'));
+			goto(resolve('/founder'));
 		} finally {
 			submitting = false;
 		}

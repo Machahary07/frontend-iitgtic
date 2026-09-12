@@ -239,7 +239,6 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 				profiles,
 				admins,
 				founders,
-				companyUsers,
 				subscribers,
 				emails
 			] = await Promise.all([
@@ -257,7 +256,6 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 				countOf(db, 'profiles'),
 				countWhere(db, 'profiles', 'role', 'admin'),
 				countWhere(db, 'profiles', 'role', 'founder'),
-				countWhere(db, 'profiles', 'role', 'company'),
 				countOf(db, 'newsletter_subscribers'),
 				countOf(db, 'email_log')
 			]);
@@ -278,7 +276,7 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 				},
 				posted_jobs: jobs,
 				role_applicants: jobApplicants,
-				users: { total: profiles, admin: admins, founder: founders, company: companyUsers },
+				users: { total: profiles, admin: admins, founder: founders },
 				newsletter_subscribers: subscribers,
 				emails_logged: emails
 			};

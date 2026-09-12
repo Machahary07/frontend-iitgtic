@@ -3,14 +3,14 @@ import { founderDb } from '$lib/server/founderGuard';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent, params }) => {
-	const { founder, company } = await parent();
+	const { founder, company, activeCompanyId } = await parent();
 	const isNew = params.id === 'new';
 
 	if (isNew) {
 		return { isNew: true, job: null, defaultCompanyName: company?.companyName ?? '' };
 	}
 
-	if (!founder.companyId) error(404, 'Role not found.');
+	if (!activeCompanyId) error(404, 'Role not found.');
 
 	const { data } = await founderDb(founder.userId)
 		.from('jobs')
@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 			'id, role, company, location, type, sector, description, apply_link, status, review_note'
 		)
 		.eq('id', params.id)
-		.eq('company_id', founder.companyId)
+		.eq('company_id', activeCompanyId)
 		.maybeSingle();
 
 	if (!data) error(404, 'Role not found.');

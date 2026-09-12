@@ -86,7 +86,13 @@
 	<title>Founder Console · Overview</title>
 </svelte:head>
 
-<FounderShell founder={data.founder} company={data.company} title="Overview" eyebrow="Dashboard">
+<FounderShell
+	founder={data.founder}
+	company={data.company}
+	companies={data.companies}
+	title="Overview"
+	eyebrow="Dashboard"
+>
 	{#if company && company.status !== 'verified'}
 		<div class="note" class:note--stop={company.status === 'rejected'} role="status">
 			<p class="note__title">

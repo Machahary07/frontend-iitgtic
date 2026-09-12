@@ -12,19 +12,21 @@ import type { Cookies } from '@sveltejs/kit';
 // Two cookies rather than one with a role field: a person can legitimately hold
 // both (a TIC admin who also runs an incubated startup), and mixing them would
 // mean signing out of one console to use the other.
+//
+// The signed cookie carries identity ONLY. Which company a founder is working on
+// is a separate, unsigned cookie, because a founder may have several and the
+// answer changes as they switch — and because every request re-checks that
+// choice against the companies they actually hold. Nothing here is trusted as an
+// authorisation claim on its own.
 
 const COOKIE = 'tic_founder_session';
+const COMPANY_COOKIE = 'tic_founder_company';
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 export type FounderSession = {
 	userId: string;
 	email: string;
 	name: string;
-	/** The company this person works under. Null until TIC attaches them to one. */
-	companyId: string | null;
-	/** 'owner' signed the company up; 'member' was added by an owner. */
-	memberRole: 'owner' | 'member';
-	memberStatus: 'pending' | 'approved' | 'rejected';
 };
 
 function sign(payload: string): string {
@@ -52,6 +54,7 @@ export function issueFounderSession(cookies: Cookies, session: FounderSession): 
 
 export function clearFounderSession(cookies: Cookies): void {
 	cookies.delete(COOKIE, { path: '/' });
+	cookies.delete(COMPANY_COOKIE, { path: '/' });
 }
 
 // Returns the signed-in founder, or null. Never throws on malformed input.
@@ -73,15 +76,25 @@ export function readFounderSession(cookies: Cookies): FounderSession | null {
 		const parsed = JSON.parse(decode(payload)) as FounderSession & { exp: number };
 		if (!parsed.exp || parsed.exp < Date.now()) return null;
 		if (!parsed.userId) return null;
-		return {
-			userId: parsed.userId,
-			email: parsed.email,
-			name: parsed.name,
-			companyId: parsed.companyId ?? null,
-			memberRole: parsed.memberRole === 'member' ? 'member' : 'owner',
-			memberStatus: parsed.memberStatus ?? 'approved'
-		};
+		return { userId: parsed.userId, email: parsed.email, name: parsed.name };
 	} catch {
 		return null;
 	}
+}
+
+// Which company the console is currently pointed at. A preference, not a
+// permission: every read of it is checked against the caller's own companies
+// before it is used, so a hand-edited value selects nothing.
+export function readActiveCompany(cookies: Cookies): string | null {
+	return cookies.get(COMPANY_COOKIE) ?? null;
+}
+
+export function setActiveCompany(cookies: Cookies, companyId: string): void {
+	cookies.set(COMPANY_COOKIE, companyId, {
+		path: '/',
+		httpOnly: true,
+		sameSite: 'lax',
+		secure: !dev,
+		maxAge: MAX_AGE_SECONDS
+	});
 }

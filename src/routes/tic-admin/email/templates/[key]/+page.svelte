@@ -2,6 +2,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
+	import Select from '$lib/components/Select.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import {
@@ -672,14 +673,19 @@
 												data-insertable="true"
 											/>
 										</label>
-										<label class="field">
+										<div class="field">
 											<span class="field__label">Tone</span>
-											<select class="input" bind:value={block.tone}>
-												{#each TONES as tone (tone)}
-													<option value={tone}>{TONE_LABELS[tone]}</option>
-												{/each}
-											</select>
-										</label>
+											<Select
+												id="block-{i}-tone"
+												bind:value={block.tone}
+												options={TONES.map((tone) => ({
+													value: tone,
+													label: TONE_LABELS[tone]
+												}))}
+												size="sm"
+												ariaLabel="Tone of this callout"
+											/>
+										</div>
 									</div>
 									<textarea
 										class="input textarea textarea--copy"
@@ -725,14 +731,19 @@
 												placeholder="The TIC building at dusk"
 											/>
 										</label>
-										<label class="field">
+										<div class="field">
 											<span class="field__label">Size</span>
-											<select class="input" bind:value={block.width}>
-												{#each WIDTHS as width (width)}
-													<option value={width}>{IMAGE_WIDTH_LABELS[width]}</option>
-												{/each}
-											</select>
-										</label>
+											<Select
+												id="block-{i}-width"
+												bind:value={block.width}
+												options={WIDTHS.map((width) => ({
+													value: width,
+													label: IMAGE_WIDTH_LABELS[width]
+												}))}
+												size="sm"
+												ariaLabel="How wide the image is"
+											/>
+										</div>
 									</div>
 									<label class="field">
 										<span class="field__label">Clicking it opens <em>optional</em></span>
@@ -800,32 +811,44 @@
 										</label>
 									</div>
 								{:else if block.type === 'spacer'}
-									<label class="field">
+									<div class="field field--narrow">
 										<span class="field__label">How much room</span>
-										<select class="input input--small" bind:value={block.size}>
-											{#each SPACERS as size (size)}
-												<option value={size}>{SPACER_LABELS[size]}</option>
-											{/each}
-										</select>
-									</label>
+										<Select
+											id="block-{i}-size"
+											bind:value={block.size}
+											options={SPACERS.map((size) => ({
+												value: size,
+												label: SPACER_LABELS[size]
+											}))}
+											size="sm"
+											ariaLabel="How much room this spacer leaves"
+										/>
+									</div>
 								{/if}
 
-								<label class="gate">
+								<div class="gate">
 									<span class="gate__label">Only show</span>
-									<select
-										class="input input--small"
-										value={gateValue(block)}
-										onchange={(e) => setGate(i, e.currentTarget.value)}
-									>
-										<option value="">always</option>
-										{#each variableNames as name (name)}
-											<option value="show:{name}">when {name} is filled in</option>
-										{/each}
-										{#each variableNames as name (name)}
-											<option value="hide:{name}">when {name} is empty</option>
-										{/each}
-									</select>
-								</label>
+									<div class="gate__control">
+										<Select
+											id="block-{i}-gate"
+											value={gateValue(block)}
+											options={[
+												{ value: '', label: 'always' },
+												...variableNames.map((name) => ({
+													value: `show:${name}`,
+													label: `when ${name} is filled in`
+												})),
+												...variableNames.map((name) => ({
+													value: `hide:${name}`,
+													label: `when ${name} is empty`
+												}))
+											]}
+											size="sm"
+											ariaLabel="When this block appears"
+											onchange={(value) => setGate(i, value)}
+										/>
+									</div>
+								</div>
 							</article>
 
 							{@render inserter(i + 1)}
@@ -1218,13 +1241,6 @@
 		width: 100%;
 	}
 
-	.input--small {
-		padding: 5px 8px;
-		font-size: 12px;
-		width: auto;
-		max-width: 100%;
-	}
-
 	.textarea {
 		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 		font-size: 12px;
@@ -1324,6 +1340,14 @@
 	.gate__label {
 		font-size: 11px;
 		color: #999;
+	}
+
+	.gate__control {
+		min-width: 240px;
+	}
+
+	.field--narrow {
+		max-width: 220px;
 	}
 
 	.add__btn {

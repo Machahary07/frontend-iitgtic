@@ -5,7 +5,7 @@
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import { seedStartupJobs, ticJobs, type AnyJob } from '$lib/utils/jobPostings';
-	import type { CompanyAccount } from '$lib/utils/companyAuth';
+	import type { CompanyAccount } from '$lib/utils/companies';
 	import { adminDeleteJob } from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
