@@ -8,6 +8,12 @@
 	import { clearDraft, loadDraft, saveDraft, savedAgo } from '$lib/utils/applicationDraft';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 
+	// The wizard is rendered in two places: on its own at /application, and inside
+	// the founder console at /founder/application. `embedded` drops the standalone
+	// page chrome — the navbar clearance and the centring — so it sits flush in
+	// the console's content column.
+	let { embedded = false }: { embedded?: boolean } = $props();
+
 	const STEPS = [
 		{ n: 1, title: 'Founder Info' },
 		{ n: 2, title: 'Startup Basics' },
@@ -415,8 +421,11 @@
 	onMount(async () => {
 		const session = await loadUserSession();
 		if (!session.id) {
-			// The application is tied to an account — send anonymous visitors to sign up.
-			goto(resolve('/apply'));
+			// The application is tied to an account. Anonymous visitors sign in
+			// first and are brought straight back to it.
+			// A path on this site with a query string, which resolve() cannot express.
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
+			goto('/login?next=/founder/application');
 			return;
 		}
 		emailVerified = session.emailVerified ?? true;
@@ -453,11 +462,7 @@
 	});
 </script>
 
-<svelte:head>
-	<title>Application · IITG TIC</title>
-</svelte:head>
-
-<section class="app">
+<section class="app" class:app--embedded={embedded}>
 	<div class="app__inner">
 		{#if submitted}
 			<div class="success" role="status" aria-live="polite">
@@ -1166,6 +1171,19 @@
 
 		@include breakpoint-down($bp-sm) {
 			padding-top: calc(var(--page-shell-top, 100px) + #{$space-6});
+		}
+	}
+
+	// Inside the console the shell already supplies the ground, the page header
+	// and the gutters, so the wizard gives all three back.
+	.app--embedded {
+		min-height: 0;
+		padding: 0;
+		background: transparent;
+
+		.app__inner {
+			max-width: none;
+			padding-inline: 0;
 		}
 	}
 

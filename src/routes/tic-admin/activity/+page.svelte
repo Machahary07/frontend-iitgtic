@@ -117,7 +117,15 @@
 		'/tic-admin/applications': 'Admin · Applications',
 		'/tic-admin/jobs': 'Admin · Posted Jobs',
 		'/tic-admin/home-page': 'Admin · Home Page',
-		'/opportunities/job-posting-admin': 'Company Portal'
+		'/tic-admin/approvals': 'Admin · Approvals',
+		'/founder': 'Founder Console',
+		'/founder/application': 'Founder · Application',
+		'/founder/jobs': 'Founder · Job Postings',
+		'/founder/applicants': 'Founder · Applicants',
+		'/founder/users': 'Founder · Team',
+		'/founder/settings': 'Founder · Company',
+		'/founder/activity': 'Founder · Activity',
+		'/founder/support': 'Founder · Support'
 	};
 
 	function pageTitle(path: string): string {
@@ -138,7 +146,7 @@
 
 	async function handleLogout() {
 		await logoutTicAdmin();
-		goto(resolve('/tic-admin/login'));
+		goto(resolve('/login'));
 	}
 
 	function fmtTime(iso: string) {

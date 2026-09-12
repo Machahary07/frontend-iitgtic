@@ -59,7 +59,7 @@ export async function loadJobs(db: SupabaseClient) {
 	const { data } = await db
 		.from('jobs')
 		.select(
-			'id, company_id, slug, role, company, company_slug, location, type, sector, posted, description, apply_link, created_at, updated_at'
+			'id, company_id, slug, role, company, company_slug, location, type, sector, posted, description, apply_link, status, review_note, created_at, updated_at'
 		)
 		.order('posted', { ascending: false });
 	return data ?? [];

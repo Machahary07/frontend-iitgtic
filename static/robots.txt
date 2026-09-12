@@ -3,12 +3,18 @@ Allow: /
 
 Disallow: /tic-admin
 Disallow: /tic-admin/
+Disallow: /founder
+Disallow: /founder/
 Disallow: /login
 Disallow: /apply
+Disallow: /signup
+Disallow: /status
+
+# Gone — everything they did happens inside /founder now. Kept listed so a
+# crawler holding an old URL does not follow the redirect and index the console.
 Disallow: /application
 Disallow: /account
 Disallow: /account/
-Disallow: /status
 Disallow: /opportunities/job-posting-admin
 Disallow: /opportunities/job-posting-admin/
 

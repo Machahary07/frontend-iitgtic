@@ -28,9 +28,9 @@
 	untrack(() => setContent(data.content));
 	$effect.pre(() => setContent(data.content));
 
+	// Both consoles bring their own shell, so the public chrome stands down for them.
 	const isAdmin = $derived(
-		page.url.pathname.startsWith('/tic-admin') ||
-			page.url.pathname.startsWith('/opportunities/job-posting-admin')
+		page.url.pathname.startsWith('/tic-admin') || page.url.pathname.startsWith('/founder')
 	);
 </script>
 

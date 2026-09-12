@@ -89,9 +89,7 @@
 			<h1>Link could not be used</h1>
 			<p class="sub">{failure}</p>
 			<div class="actions">
-				<a class="btn-primary" href={resolve('/opportunities/job-posting-admin')}>Company sign in</a
-				>
-				<a class="btn" href={resolve('/login')}>Founder sign in</a>
+				<a class="btn-primary" href={resolve('/login')}>Go to sign in</a>
 			</div>
 		{:else}
 			<p class="eyebrow">{heading}</p>
@@ -160,11 +158,6 @@
 
 	.btn-primary {
 		@include admin-btn-primary;
-		justify-content: center;
-	}
-
-	.btn {
-		@include admin-btn-base;
 		justify-content: center;
 	}
 </style>

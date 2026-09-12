@@ -1,10 +1,15 @@
-// Job postings, backed by the public.jobs table.
+// Job postings as the public boards read them.
 //
-// Two boards sit on top of this. Startup Jobs is the union of the seed posts in
-// content.json and every live company posting — RLS does the gatekeeping there,
-// exposing only jobs whose company is verified, plus a signed-in company's own
-// postings whatever its status. TIC Jobs is the centre's own openings, which are
-// curated content rather than company submissions and never touch the table.
+// Startup Jobs is the union of the seed posts in content.json and every approved
+// company posting. RLS does the gatekeeping: a row is visible here only once TIC
+// has both verified the company and approved the posting, so a pending or
+// rejected role cannot leak onto the board through this path.
+//
+// TIC Jobs is the centre's own openings, which are curated content rather than
+// company submissions and never touch the table.
+//
+// Writing a posting lives in the founder console instead — /api/founder/jobs —
+// because a posting's approval state must not be settable by its author.
 
 import { getContent } from '$lib/content';
 import { supabase } from '$lib/supabaseClient';
@@ -163,136 +168,4 @@ export async function getJob(slug: string): Promise<AnyJob | null> {
 
 	if (error || !data) return null;
 	return { ...toJob(data as JobRow), source: 'user' as const };
-}
-
-export async function getMyJobs(companyId: string): Promise<PostedJob[]> {
-	const { data, error } = await supabase
-		.from('jobs')
-		.select(COLUMNS)
-		.eq('company_id', companyId)
-		.order('posted', { ascending: false });
-
-	if (error || !data) return [];
-	return (data as JobRow[]).map(toJob);
-}
-
-export async function getMyJobById(id: string, companyId: string): Promise<PostedJob | null> {
-	const { data, error } = await supabase
-		.from('jobs')
-		.select(COLUMNS)
-		.eq('id', id)
-		.eq('company_id', companyId)
-		.maybeSingle();
-
-	if (error || !data) return null;
-	return toJob(data as JobRow);
-}
-
-export type JobInput = {
-	role: string;
-	company: string;
-	companySlug?: string;
-	location: string;
-	type: string;
-	sector: string;
-	description: string;
-	applyLink: string;
-};
-
-function isSafeApplyLink(s: string) {
-	const v = s.trim().toLowerCase();
-	return v.startsWith('http://') || v.startsWith('https://') || v.startsWith('mailto:');
-}
-
-function slugifyCompany(value: string) {
-	return (
-		value
-			.toLowerCase()
-			.replace(/[^a-z0-9]+/g, '-')
-			.replace(/^-+|-+$/g, '') || 'company'
-	);
-}
-
-export async function createJob(
-	companyId: string,
-	input: JobInput
-): Promise<{ ok: true; job: PostedJob } | { ok: false; error: string }> {
-	if (!input.role.trim() || !input.company.trim() || !input.description.trim()) {
-		return { ok: false, error: 'Role, company and description are required.' };
-	}
-	if (!isSafeApplyLink(input.applyLink)) {
-		return { ok: false, error: 'Apply link must start with https://, http:// or mailto:.' };
-	}
-
-	// slug and posted are filled by the column defaults (job-no-N from a sequence).
-	const { data, error } = await supabase
-		.from('jobs')
-		.insert({
-			company_id: companyId,
-			role: input.role.trim(),
-			company: input.company.trim(),
-			company_slug: slugifyCompany(input.companySlug ?? input.company),
-			location: input.location.trim(),
-			type: input.type,
-			sector: input.sector.trim(),
-			description: input.description.trim(),
-			apply_link: input.applyLink.trim()
-		})
-		.select(COLUMNS)
-		.single();
-
-	if (error) return { ok: false, error: friendlyDbError(error.message) };
-	return { ok: true, job: toJob(data as JobRow) };
-}
-
-export async function updateJob(
-	id: string,
-	companyId: string,
-	patch: Partial<JobInput>
-): Promise<{ ok: true; job: PostedJob } | { ok: false; error: string }> {
-	if (patch.applyLink !== undefined && !isSafeApplyLink(patch.applyLink)) {
-		return { ok: false, error: 'Apply link must start with https://, http:// or mailto:.' };
-	}
-
-	const update: Record<string, string> = {};
-	if (patch.role !== undefined) update.role = patch.role.trim();
-	if (patch.company !== undefined) update.company = patch.company.trim();
-	if (patch.companySlug !== undefined) update.company_slug = slugifyCompany(patch.companySlug);
-	if (patch.location !== undefined) update.location = patch.location.trim();
-	if (patch.type !== undefined) update.type = patch.type;
-	if (patch.sector !== undefined) update.sector = patch.sector.trim();
-	if (patch.description !== undefined) update.description = patch.description.trim();
-	if (patch.applyLink !== undefined) update.apply_link = patch.applyLink.trim();
-
-	const { data, error } = await supabase
-		.from('jobs')
-		.update(update)
-		.eq('id', id)
-		.eq('company_id', companyId)
-		.select(COLUMNS)
-		.maybeSingle();
-
-	if (error) return { ok: false, error: friendlyDbError(error.message) };
-	if (!data) return { ok: false, error: 'Job not found.' };
-	return { ok: true, job: toJob(data as JobRow) };
-}
-
-export async function deleteJob(id: string, companyId: string): Promise<boolean> {
-	const { error, count } = await supabase
-		.from('jobs')
-		.delete({ count: 'exact' })
-		.eq('id', id)
-		.eq('company_id', companyId);
-
-	return !error && (count ?? 0) > 0;
-}
-
-function friendlyDbError(message: string): string {
-	if (message.includes('jobs_apply_link_scheme')) {
-		return 'Apply link must start with https://, http:// or mailto:.';
-	}
-	if (message.toLowerCase().includes('row-level security')) {
-		return 'Your account is not verified yet, so it cannot post roles.';
-	}
-	return message;
 }

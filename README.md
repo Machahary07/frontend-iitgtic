@@ -25,13 +25,13 @@ The public website, the company job portal, the incubation application, and the 
   <a href="#routes"><b>All page links</b></a> ·
   <a href="https://iitgtic.itsjeu.com/status">Project status</a> ·
   <a href="https://iitgtic.itsjeu.com/opportunities">Opportunities</a> ·
-  <a href="https://iitgtic.itsjeu.com/application">Apply for incubation</a>
+  <a href="https://iitgtic.itsjeu.com/founder/application">Apply for incubation</a>
 </p>
 
 <p>
-  <a href="https://iitgtic.itsjeu.com/login">Sign in</a> ·
-  <a href="https://iitgtic.itsjeu.com/opportunities/job-posting-admin">Company portal</a> ·
-  <a href="https://iitgtic.itsjeu.com/tic-admin/login"><b>TIC admin login</b></a>
+  <a href="https://iitgtic.itsjeu.com/login"><b>Sign in</b></a> — one door, for everyone ·
+  <a href="https://iitgtic.itsjeu.com/founder">Founder console</a> ·
+  <a href="https://iitgtic.itsjeu.com/tic-admin">TIC admin console</a>
 </p>
 
 </div>
@@ -276,50 +276,61 @@ Links marked 🔒 need a session; opening one signed-out redirects to the matchi
 | Roles at TIC            | [`/opportunities/tic-jobs`](https://iitgtic.itsjeu.com/opportunities/tic-jobs)                            | The centre's own openings                                         |
 | Roles at startups       | [`/opportunities/startup-jobs`](https://iitgtic.itsjeu.com/opportunities/startup-jobs)                    | Openings at incubated startups                                    |
 | Role detail + apply     | `/opportunities/[id]`                                                                                    | One role, with the Turnstile-gated apply form — no account needed |
-| Incubation application  | [`/application`](https://iitgtic.itsjeu.com/application)                                                 | Eight-step wizard, 38 questions, four document uploads            |
+| Incubation application  | [`/founder/application`](https://iitgtic.itsjeu.com/founder/application)                                 | Eight-step wizard, 38 questions, four document uploads. Sign in first |
 
 </details>
 
 <details>
 <summary><b>Accounts and auth</b></summary>
 
-| Page                | Link                                                                                   | What it is                                                     |
-| ------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| Sign in             | [`/login`](https://iitgtic.itsjeu.com/login)                                           | Founder and company sign-in, Turnstile-gated                   |
-| Sign up             | [`/apply`](https://iitgtic.itsjeu.com/apply)                                           | Create a founder account, Turnstile-gated                      |
-| Your applications 🔒 | [`/account`](https://iitgtic.itsjeu.com/account) · `/account/[id]`                      | A founder's own incubation applications and one in full        |
-| Auth callback       | [`/auth/callback`](https://iitgtic.itsjeu.com/auth/callback)                            | Where every link in an auth email lands; forwards to `?next=`  |
-| Reset password      | [`/auth/reset-password`](https://iitgtic.itsjeu.com/auth/reset-password)                | The end of a recovery link — sets a new password               |
-| Confirm email       | [`/verify-email`](https://iitgtic.itsjeu.com/verify-email)                              | Lands from a confirmation mail                                 |
-| Unsubscribe         | [`/unsubscribe`](https://iitgtic.itsjeu.com/unsubscribe)                                | One-click newsletter opt-out from a signed link                |
+One sign-in for everyone. `/login` authenticates with supabase-js, hands the token to
+`/api/session-login`, and the server reads the account's role, issues the matching signed
+cookie and says which console to open. There is no second sign-in page.
+
+| Page               | Link                                                                     | What it is                                                      |
+| ------------------ | ------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| **Sign in**        | [`/login`](https://iitgtic.itsjeu.com/login)                             | The one door — TIC team, founders, and company team members     |
+| Sign up            | [`/apply`](https://iitgtic.itsjeu.com/apply)                             | Create a personal account, Turnstile-gated                      |
+| Register a startup | [`/signup`](https://iitgtic.itsjeu.com/signup)                           | Creates a pending company; TIC verifies it before roles go live |
+| Auth callback      | [`/auth/callback`](https://iitgtic.itsjeu.com/auth/callback)             | Where every link in an auth email lands; forwards to `?next=`   |
+| Reset password     | [`/auth/reset-password`](https://iitgtic.itsjeu.com/auth/reset-password) | The end of a recovery link — sets a new password                |
+| Confirm email      | [`/verify-email`](https://iitgtic.itsjeu.com/verify-email)               | Lands from a confirmation mail                                  |
+| Unsubscribe        | [`/unsubscribe`](https://iitgtic.itsjeu.com/unsubscribe)                 | One-click newsletter opt-out from a signed link                 |
 
 </details>
 
 <details>
-<summary><b>Company job portal</b> — sign in at <a href="https://iitgtic.itsjeu.com/login"><code>/login</code></a></summary>
+<summary><b>Founder console</b> — <code>/founder</code>, sign in at <a href="https://iitgtic.itsjeu.com/login"><code>/login</code></a></summary>
 
-A company signs up, TIC verifies the account, then it can post and manage roles.
+Where a startup works: its incubation application, its job postings, its applicants, its
+team and its own history. Nothing written here reaches the public site until a TIC admin
+approves it.
 
-| Page              | Link                                                                                                                                      | What it is                                                                             |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Company sign-up   | [`/opportunities/job-posting-admin/signup`](https://iitgtic.itsjeu.com/opportunities/job-posting-admin/signup)                             | Creates a pending account; TIC verifies it before roles go live                        |
-| Dashboard 🔒       | [`/opportunities/job-posting-admin`](https://iitgtic.itsjeu.com/opportunities/job-posting-admin)                                           | Gated by account status — pending, verified or rejected                                |
-| Post / edit role 🔒 | `/opportunities/job-posting-admin/edit/[id]`                                                                                              | Create or edit a role — verified accounts only                                         |
-| Applicants 🔒      | [`/opportunities/job-posting-admin/applicants`](https://iitgtic.itsjeu.com/opportunities/job-posting-admin/applicants)                     | The company's own applicants, signed resume links, CSV export. Status stays TIC's to set |
-| Account settings 🔒 | [`/opportunities/job-posting-admin/admin-settings`](https://iitgtic.itsjeu.com/opportunities/job-posting-admin/admin-settings)            | Profile, password change, delete account                                               |
+| Page 🔒             | Link                                                                     | What it is                                                                     |
+| ------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Overview            | [`/founder`](https://iitgtic.itsjeu.com/founder)                         | What is live, what is queued, and what has come back                           |
+| Application         | [`/founder/application`](https://iitgtic.itsjeu.com/founder/application) | The eight-step incubation form, autosaving a draft as you go                   |
+| Job postings        | [`/founder/jobs`](https://iitgtic.itsjeu.com/founder/jobs)               | Write a role and send it for approval; an edit to a live role re-queues it     |
+| Post / edit a role  | `/founder/jobs/new` · `/founder/jobs/[id]`                               | The posting form, showing TIC's reason on anything sent back                   |
+| Applicants          | [`/founder/applicants`](https://iitgtic.itsjeu.com/founder/applicants)   | Who applied, signed resume links, CSV export. A status stays TIC's to set      |
+| Team                | [`/founder/users`](https://iitgtic.itsjeu.com/founder/users)             | Add people under the company; each one waits for TIC before it can do anything |
+| Company             | [`/founder/settings`](https://iitgtic.itsjeu.com/founder/settings)       | Details go to TIC as a change request; password and account closure do not     |
+| Activity            | [`/founder/activity`](https://iitgtic.itsjeu.com/founder/activity)       | What this company's people did, and what TIC did in review                     |
+| Support             | [`/founder/support`](https://iitgtic.itsjeu.com/founder/support)         | The IITG-TIC team's own contact details                                        |
 
 </details>
 
 <details>
-<summary><b>TIC admin console</b> — sign in at <a href="https://iitgtic.itsjeu.com/tic-admin/login"><code>/tic-admin/login</code></a></summary>
+<summary><b>TIC admin console</b> — <code>/tic-admin</code>, sign in at <a href="https://iitgtic.itsjeu.com/login"><code>/login</code></a></summary>
 
-Separate from the public account system. Every page below needs an admin session; the login
-page offers first-admin setup while no admin exists.
+Every page below needs an admin session, issued by the one sign-in at `/login`. The old
+`/tic-admin/login` survives only to create the very first admin on an empty console.
 
 | Page                    | Link                                                                                                           | What it is                                                                       |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| **Admin login**         | [`/tic-admin/login`](https://iitgtic.itsjeu.com/tic-admin/login)                                               | Per-admin sign-in, plus first-admin bootstrap                                    |
+| First-admin setup       | [`/tic-admin/login`](https://iitgtic.itsjeu.com/tic-admin/login)                                               | Creates the very first admin, then hands over to `/login` for good               |
 | Overview 🔒              | [`/tic-admin`](https://iitgtic.itsjeu.com/tic-admin)                                                           | Stat tiles and the queues that need attention                                    |
+| **Approvals** 🔒         | [`/tic-admin/approvals`](https://iitgtic.itsjeu.com/tic-admin/approvals)                                       | Job postings, team members and company detail changes waiting on a decision      |
 | Companies 🔒             | [`/tic-admin/companies`](https://iitgtic.itsjeu.com/tic-admin/companies)                                       | Verify, reject with a reason, revert or delete an account                        |
 | Incubation applications 🔒 | [`/tic-admin/applications`](https://iitgtic.itsjeu.com/tic-admin/applications) · `/[id]`                     | Review queue, full answers and signed document links                             |
 | Role applicants 🔒       | [`/tic-admin/job-applications`](https://iitgtic.itsjeu.com/tic-admin/job-applications) · `/[id]`               | Status tabs, per-role filter, signed resume link                                 |

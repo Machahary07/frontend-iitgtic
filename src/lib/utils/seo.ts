@@ -53,10 +53,10 @@ const SECTION_FOR: Record<string, string> = {
 // to a search engine.
 const PRIVATE_PREFIXES = [
 	'/tic-admin',
-	'/opportunities/job-posting-admin',
+	'/founder',
 	'/auth',
-	'/application',
 	'/login',
+	'/signup',
 	'/status',
 	// static/robots.txt already disallows this one; the two should not disagree.
 	'/apply'

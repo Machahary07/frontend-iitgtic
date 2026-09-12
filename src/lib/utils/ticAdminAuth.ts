@@ -1,57 +1,17 @@
-// TIC team admin auth.
+// TIC team admin auth — what is left of it.
 //
-// Admins are Supabase Auth users whose profile carries role 'admin'. Signing in
-// happens in two steps: supabase-js authenticates the credentials, then the
-// resulting access token is handed to /api/tic-admin-login, which verifies the
-// role server-side and issues a signed httpOnly session cookie. That cookie —
-// not a token in the browser — is what authorises the service-role admin routes,
-// and it is what lets page views and audit entries name the person responsible.
+// Signing in moved to the one door at /login (see $lib/utils/appAuth): admins are
+// Supabase Auth users whose profile carries role 'admin', and /api/session-login
+// is what verifies that server-side and issues the signed httpOnly cookie. That
+// cookie — not a token in the browser — authorises the service-role admin routes
+// and lets page views and audit entries name the person responsible.
+//
+// What stays here is the one thing the universal login cannot do: create the
+// very first admin, on a console that has none.
 
-import { supabase } from '$lib/supabaseClient';
-import { clearAdminSeenFlags } from '$lib/utils/adminSeen';
+import { signOut } from '$lib/utils/appAuth';
 
 export type AdminIdentity = { userId: string; email: string; name: string };
-
-export async function loginTicAdmin(
-	email: string,
-	password: string
-): Promise<{ ok: true; admin: AdminIdentity } | { ok: false; error: string }> {
-	const { data, error } = await supabase.auth.signInWithPassword({
-		email: email.trim().toLowerCase(),
-		password
-	});
-	if (error) {
-		const message = error.message.toLowerCase();
-		if (message.includes('invalid login credentials')) {
-			return { ok: false, error: 'Invalid email or password.' };
-		}
-		return { ok: false, error: error.message };
-	}
-
-	const token = data.session?.access_token;
-	if (!token) return { ok: false, error: 'Could not start a session.' };
-
-	let body: { ok?: boolean; admin?: AdminIdentity; error?: string };
-	try {
-		const res = await fetch('/api/tic-admin-login', {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ accessToken: token })
-		});
-		body = (await res.json()) as typeof body;
-	} catch {
-		return { ok: false, error: 'Could not reach the server. Please try again.' };
-	}
-
-	if (!body.ok || !body.admin) {
-		// The credentials were valid but this account is not an admin — do not
-		// leave a half-signed-in Supabase session behind.
-		await supabase.auth.signOut();
-		return { ok: false, error: body.error ?? 'This account does not have admin access.' };
-	}
-
-	return { ok: true, admin: body.admin };
-}
 
 // Only usable while the console has no admin at all.
 export async function bootstrapFirstAdmin(input: {
@@ -82,13 +42,7 @@ export async function bootstrapFirstAdmin(input: {
 }
 
 export async function logoutTicAdmin(): Promise<void> {
-	// The one-time notices are scoped to a login, so whoever signs in next — the
-	// same person or another admin — sees them once again.
-	clearAdminSeenFlags();
-	try {
-		await fetch('/api/tic-admin-login', { method: 'DELETE' });
-	} catch {
-		// Best-effort; the cookie expires on its own.
-	}
-	await supabase.auth.signOut();
+	// Both consoles share one sign-out, so an admin who also runs a startup is
+	// not left holding a live founder cookie.
+	await signOut();
 }

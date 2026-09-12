@@ -1,4 +1,6 @@
-// Company accounts for the job-posting portal, backed by Supabase Auth.
+// Registering a startup, and the two account chores a founder can do for
+// themselves. Signing in is not among them — that is /login for everyone now,
+// through $lib/utils/appAuth.
 //
 // A company signs up as a normal auth user carrying `role: 'company'` in its
 // metadata; the on_auth_user_created trigger then writes the matching row into
@@ -150,30 +152,6 @@ export async function signupCompany(input: {
 	};
 }
 
-export async function loginCompany(
-	email: string,
-	password: string
-): Promise<{ ok: true; account: CompanyAccount } | { ok: false; error: string }> {
-	const { error } = await supabase.auth.signInWithPassword({
-		email: email.trim().toLowerCase(),
-		password
-	});
-	if (error) {
-		return { ok: false, error: friendlyAuthError(error.message) };
-	}
-
-	const account = await getCurrentCompany();
-	if (!account) {
-		await supabase.auth.signOut();
-		return { ok: false, error: 'This login is not a company account.' };
-	}
-	return { ok: true, account };
-}
-
-export async function logoutCompany(): Promise<void> {
-	await supabase.auth.signOut();
-}
-
 export async function getCurrentCompany(): Promise<CompanyAccount | null> {
 	const { data: sessionData } = await supabase.auth.getSession();
 	const userId = sessionData.session?.user.id;
@@ -183,36 +161,6 @@ export async function getCurrentCompany(): Promise<CompanyAccount | null> {
 		.from('companies')
 		.select(COLUMNS)
 		.eq('id', userId)
-		.maybeSingle();
-
-	if (error || !data) return null;
-	return toAccount(data as CompanyRow);
-}
-
-export async function updateCurrentCompany(
-	patch: Partial<
-		Pick<CompanyAccount, 'companyName' | 'website' | 'contactName' | 'contactEmail' | 'phone'>
-	>
-): Promise<CompanyAccount | null> {
-	const { data: sessionData } = await supabase.auth.getSession();
-	const userId = sessionData.session?.user.id;
-	if (!userId) return null;
-
-	const update: Record<string, string> = {};
-	if (patch.companyName !== undefined) {
-		update.company_name = patch.companyName.trim();
-		update.company_slug = slugify(patch.companyName);
-	}
-	if (patch.website !== undefined) update.website = patch.website.trim();
-	if (patch.contactName !== undefined) update.contact_name = patch.contactName.trim();
-	if (patch.contactEmail !== undefined) update.contact_email = patch.contactEmail.trim().toLowerCase();
-	if (patch.phone !== undefined) update.phone = patch.phone.trim();
-
-	const { data, error } = await supabase
-		.from('companies')
-		.update(update)
-		.eq('id', userId)
-		.select(COLUMNS)
 		.maybeSingle();
 
 	if (error || !data) return null;

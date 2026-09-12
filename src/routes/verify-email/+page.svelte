@@ -20,8 +20,8 @@
 				application.
 			</p>
 			<div class="actions">
-				<a class="btn-primary" href={resolve('/application')}>Continue your application</a>
-				<a class="btn" href={resolve('/account')}>Go to your account</a>
+				<a class="btn-primary" href={resolve('/founder/application')}>Continue your application</a>
+				<a class="btn" href={resolve('/founder')}>Go to your console</a>
 			</div>
 		{:else}
 			<p class="eyebrow">Email confirmation</p>
@@ -31,7 +31,7 @@
 				confirmation email” to get a fresh one.
 			</p>
 			<div class="actions">
-				<a class="btn-primary" href={resolve('/application')}>Open your application</a>
+				<a class="btn-primary" href={resolve('/founder/application')}>Open your application</a>
 				<a class="btn" href={resolve('/login')}>Sign in</a>
 			</div>
 		{/if}
