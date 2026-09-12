@@ -5,6 +5,7 @@
 	// is driven by the data rather than by a hand-written form per section.
 	import Self from './ContentField.svelte';
 	import { resolveMedia } from '$lib/media';
+	import { LIST_TEMPLATES } from '$lib/content';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	interface Props {
@@ -15,9 +16,16 @@
 		/** Render an object's fields directly, without wrapping them in another
 		 *  titled box — a list item already has its own header. */
 		bare?: boolean;
+		/** This value's path within its section, list indexes written as `[]`.
+		 *  Only used to look up a shape for adding to an empty list. */
+		path?: string;
 	}
 
-	let { node, field, label, depth = 0, bare = false }: Props = $props();
+	let { node, field, label, depth = 0, bare = false, path = '' }: Props = $props();
+
+	// A child's path: `[]` for a list item, `.name` for an object field.
+	const childPath = (key: string | number) =>
+		typeof key === 'number' ? `${path}[]` : path ? `${path}.${key}` : String(key);
 
 	const value = $derived((node as Record<string | number, unknown>)[field]);
 
@@ -110,7 +118,13 @@
 
 	function addItem() {
 		const list = value as unknown[];
-		list.push(list.length > 0 ? blankLike(list[0]) : '');
+		if (list.length > 0) {
+			list.push(blankLike(list[0]));
+			return;
+		}
+		// Nothing to clone. A registered shape for this list beats a bare text box.
+		const template = LIST_TEMPLATES[path];
+		list.push(template ? template() : '');
 	}
 
 	async function removeItem(index: number) {
@@ -154,6 +168,7 @@
 				field={childKey}
 				label={humanise(childKey)}
 				{depth}
+				path={childPath(childKey)}
 			/>
 		{/each}
 	</div>
@@ -167,6 +182,7 @@
 					field={childKey}
 					label={humanise(childKey)}
 					depth={depth + 1}
+					path={childPath(childKey)}
 				/>
 			{/each}
 		</div>
@@ -212,6 +228,7 @@
 							field={index}
 							label={itemLabel(item, index)}
 							depth={depth + 1}
+							path={childPath(index)}
 							bare
 						/>
 					</div>
