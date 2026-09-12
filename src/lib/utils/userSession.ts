@@ -1,6 +1,9 @@
-// Founder accounts — the /apply sign-up and /login pages — backed by Supabase
-// Auth. Signing up creates an auth user with `role: 'founder'` metadata; the
-// on_auth_user_created trigger writes the matching public.profiles row.
+// Founder accounts — the /apply sign-up — backed by Supabase Auth. Signing up
+// creates an auth user with `role: 'founder'` metadata; the on_auth_user_created
+// trigger writes the matching public.profiles row.
+//
+// Signing in is not here: everyone uses the one door at /login, through
+// $lib/utils/appAuth.
 
 import { supabase } from '$lib/supabaseClient';
 import {
@@ -61,16 +64,6 @@ export async function signUpFounder(input: {
 			phone: input.phone.trim()
 		}
 	};
-}
-
-export async function signInFounder(email: string, password: string): Promise<AuthResult> {
-	const { error } = await supabase.auth.signInWithPassword({
-		email: email.trim().toLowerCase(),
-		password
-	});
-	if (error) return { ok: false, error: friendlyAuthError(error.message) };
-
-	return { ok: true, needsEmailConfirmation: false, session: await loadUserSession() };
 }
 
 export async function loadUserSession(): Promise<UserSession> {

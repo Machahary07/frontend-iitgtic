@@ -28,7 +28,7 @@
 
 	async function handleLogout() {
 		await logoutTicAdmin();
-		goto(resolve('/tic-admin/login'));
+		goto(resolve('/login'));
 	}
 
 	// Orientation note: shown on every visit to the content page so the reminder

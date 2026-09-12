@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { safeNext } from '$lib/utils/authRedirect';
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
 	import Turnstile from '$lib/components/Turnstile.svelte';
-	import { requestPasswordReset, signInFounder, sendFounderLoginNotice } from '$lib/utils/userSession';
+	import { requestPasswordReset, sendFounderLoginNotice } from '$lib/utils/userSession';
+	import { signIn } from '$lib/utils/appAuth';
 	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	let email = $state('');
@@ -58,15 +60,28 @@
 				error = 'Verification failed. Please try again.';
 				return;
 			}
-			const result = await signInFounder(email, password);
+			// One door for everyone. The server reads the account's role, issues the
+			// matching session cookie and says which console to open — a founder
+			// never lands in /tic-admin, and an admin never has to find a second
+			// sign-in page.
+			const result = await signIn(email, password);
 			if (!result.ok) {
 				error = result.error;
 				return;
 			}
 			error = '';
-			// Fire-and-forget sign-in notice (throttled server-side to once a day).
-			void sendFounderLoginNotice();
-			goto(resolve('/account'));
+			// Fire-and-forget sign-in notice, throttled server-side to once a day.
+			// Admins get their own alert from the login route, so this is founders only.
+			if (result.role === 'founder') void sendFounderLoginNotice();
+			// `next` lets a guard send someone here and get them back where they
+			// were; safeNext keeps it to a path on this site.
+			const next = page.url.searchParams.get('next');
+			// Both sides are already paths on this site — the server chose the
+			// redirect, and safeNext refuses anything that is not a local path — so
+			// a full page load is used rather than resolve(), which cannot express
+			// the query string a `next` may carry.
+			// eslint-disable-next-line svelte/no-navigation-without-resolve
+			await goto(safeNext(next, result.redirect));
 		} finally {
 			submitting = false;
 		}
@@ -81,7 +96,7 @@
 	<div class="login__inner">
 		<header class="login__header">
 			<h1>Login</h1>
-			<p class="login__sub">Access your IITG TIC account to continue your application.</p>
+			<p class="login__sub">Access your IITG TIC account to continue.</p>
 		</header>
 
 		<form class="form" onsubmit={handleSubmit} novalidate>
@@ -108,12 +123,34 @@
 						aria-pressed={showPassword}
 					>
 						{#if showPassword}
-							<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-								<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+							<svg
+								viewBox="0 0 24 24"
+								width="18"
+								height="18"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.6"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								aria-hidden="true"
+							>
+								<path
+									d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+								/>
 								<line x1="1" y1="1" x2="23" y2="23" />
 							</svg>
 						{:else}
-							<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+							<svg
+								viewBox="0 0 24 24"
+								width="18"
+								height="18"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="1.6"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								aria-hidden="true"
+							>
 								<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
 								<circle cx="12" cy="12" r="3" />
 							</svg>

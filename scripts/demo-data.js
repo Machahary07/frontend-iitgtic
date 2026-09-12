@@ -1,7 +1,7 @@
 // Demo data for the admin screens, so the dashboard has something to show while
 // you are building against it.
 //
-//   node scripts/demo-data.js seed    add two applications + one pending company
+//   node scripts/demo-data.js seed    two founders with a startup and an application each
 //   node scripts/demo-data.js clear   remove everything this script created
 //
 // It talks to Supabase with the service-role key from .env.local, so it bypasses
@@ -18,7 +18,10 @@ const env = Object.fromEntries(
 	readFileSync(new URL('../.env.local', import.meta.url), 'utf8')
 		.split('\n')
 		.filter((line) => line.includes('=') && !line.trim().startsWith('#'))
-		.map((line) => [line.slice(0, line.indexOf('=')).trim(), line.slice(line.indexOf('=') + 1).trim()])
+		.map((line) => [
+			line.slice(0, line.indexOf('=')).trim(),
+			line.slice(line.indexOf('=') + 1).trim()
+		])
 );
 
 const url = env.PUBLIC_SUPABASE_URL;
@@ -110,6 +113,26 @@ async function seed() {
 
 		const userId = data.user.id;
 		const slug = person.startup.toLowerCase().replace(/\W+/g, '-');
+
+		// A startup is a row a founder owns, not the account itself, so it is
+		// created here rather than by the signup trigger. The first one is left
+		// pending so the approvals queue has something in it.
+		const { data: company } = await admin
+			.from('companies')
+			.insert({
+				owner_id: userId,
+				email: person.email,
+				company_name: person.startup,
+				company_slug: slug,
+				website: 'https://example.co',
+				contact_name: person.name,
+				contact_email: person.email,
+				phone: '9876543210',
+				status: person === founders[0] ? 'pending' : 'verified'
+			})
+			.select('id')
+			.single();
+
 		const path = `${userId}/${Date.now()}-pitchDeck-${slug}.pdf`;
 		const pdf = new Blob([`%PDF-1.4 demo deck for ${person.startup}`], {
 			type: 'application/pdf'
@@ -120,31 +143,34 @@ async function seed() {
 
 		await admin.from('applications').insert({
 			user_id: userId,
+			company_id: company?.id ?? null,
 			full_name: person.name,
 			email: person.email,
 			startup_name: person.startup,
 			answers: answersFor(person),
 			documents: { pitchDeck: { path, name: `${person.startup} deck.pdf`, size: pdf.size } }
 		});
-		console.log(`seeded application · ${person.startup}`);
+		console.log(`seeded startup + application · ${person.startup}`);
 	}
 
-	const { error: companyError } = await admin.auth.admin.createUser({
-		email: `hiring${DEMO_DOMAIN}`,
-		password: DEMO_PASSWORD,
-		email_confirm: true,
-		user_metadata: {
-			role: 'company',
+	// A founder may run more than one, so the second startup on the first account
+	// is what makes the switcher worth looking at.
+	const { data: first } = await admin.auth.admin.listUsers({ perPage: 1000 });
+	const ada = first.users.find((u) => u.email === `ada${DEMO_DOMAIN}`);
+	if (ada) {
+		await admin.from('companies').insert({
+			owner_id: ada.id,
+			email: ada.email,
 			company_name: 'Northeast Robotics',
+			company_slug: 'northeast-robotics',
 			website: 'https://example.co',
-			contact_name: 'Priya Sen'
-		}
-	});
-	console.log(
-		companyError
-			? `skipped company: ${companyError.message}`
-			: 'seeded company · Northeast Robotics (pending verification)'
-	);
+			contact_name: 'Ada Barua',
+			contact_email: ada.email,
+			phone: '9876543210',
+			status: 'verified'
+		});
+		console.log('seeded second startup · Northeast Robotics (verified)');
+	}
 
 	console.log(`\nSign in as any of them with the password: ${DEMO_PASSWORD}`);
 }

@@ -15,11 +15,15 @@ import FilePen from '@lucide/svelte/icons/file-pen-line';
 import Mail from '@lucide/svelte/icons/mail';
 import HardDrive from '@lucide/svelte/icons/hard-drive';
 import LifeBuoy from '@lucide/svelte/icons/life-buoy';
+import ShieldCheck from '@lucide/svelte/icons/shield-check';
 
 import type { NavItem } from '$lib/utils/adminNavTypes';
 
 export const TIC_ADMIN_NAV: NavItem[] = [
 	{ label: 'Overview', href: '/tic-admin', icon: Home, tone: 'neutral' },
+	// Sits second because it is the queue that holds the public site up: a founder
+	// cannot publish anything until someone works through it.
+	{ label: 'Approvals', href: '/tic-admin/approvals', icon: ShieldCheck, tone: 'bad' },
 	{ label: 'Companies', href: '/tic-admin/companies', icon: Building2, tone: 'info' },
 	{ label: 'Applications', href: '/tic-admin/applications', icon: FileText, tone: 'good' },
 	{ label: 'Posted jobs', href: '/tic-admin/jobs', icon: Briefcase, tone: 'warn' },

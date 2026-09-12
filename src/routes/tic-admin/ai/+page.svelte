@@ -106,9 +106,7 @@
 
 	const empty = $derived(messages.length === 0);
 	const uploading = $derived(pending.some((item) => item.uploading));
-	const canSend = $derived(
-		!busy && !uploading && (draft.trim().length > 0 || pending.length > 0)
-	);
+	const canSend = $derived(!busy && !uploading && (draft.trim().length > 0 || pending.length > 0));
 
 	// Written against the console as it stands, so the suggestions read as things
 	// this admin could actually ask for rather than filler.
@@ -605,7 +603,10 @@
 				.catch(() => null);
 			proposal.status = 'approved';
 			if (result && typeof result.sent === 'number') {
-				const extra = result.blocked || result.failed ? ` (${result.blocked} blocked, ${result.failed} failed)` : '';
+				const extra =
+					result.blocked || result.failed
+						? ` (${result.blocked} blocked, ${result.failed} failed)`
+						: '';
 				proposal.note = `Sent to ${result.sent} of ${result.recipients} recipient${result.recipients === 1 ? '' : 's'}${extra}`;
 				showToast(`Email sent to ${result.sent} recipient${result.sent === 1 ? '' : 's'}.`);
 			} else {
@@ -640,7 +641,8 @@
 	// When a proposed value is itself an image URL, the card shows the picture
 	// rather than the link — the point of an image edit is what it looks like.
 	function imageUrl(value: unknown): string {
-		return typeof value === 'string' && /^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg)(\?\S*)?$/i.test(value)
+		return typeof value === 'string' &&
+			/^https?:\/\/\S+\.(png|jpe?g|gif|webp|svg)(\?\S*)?$/i.test(value)
 			? value
 			: '';
 	}
@@ -656,7 +658,7 @@
 
 	async function handleLogout() {
 		await logoutTicAdmin();
-		goto(resolve('/tic-admin/login'));
+		goto(resolve('/login'));
 	}
 </script>
 
@@ -692,7 +694,13 @@
 				<ShieldCheck size={13} strokeWidth={2} aria-hidden="true" /> Review
 			{/if}
 		</button>
-		<button type="button" class="gear" onclick={openHistory} title="Chat history" aria-label="Chat history">
+		<button
+			type="button"
+			class="gear"
+			onclick={openHistory}
+			title="Chat history"
+			aria-label="Chat history"
+		>
 			<History size={16} strokeWidth={1.9} />
 		</button>
 		<button

@@ -4,7 +4,7 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import type { CompanyStatus } from '$lib/utils/companyAuth';
+	import type { CompanyStatus } from '$lib/utils/companies';
 	import { adminDeleteCompany, adminSetCompanyStatus } from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
@@ -60,9 +60,9 @@
 
 	async function remove(id: string, name: string) {
 		const ok = await askConfirm({
-			title: `Permanently delete the account for "${name}"?`,
-			body: 'The company, its roles and its sign-in all go. This cannot be undone.',
-			confirmLabel: 'Delete account',
+			title: `Permanently delete "${name}"?`,
+			body: 'The startup and its roles go. The founder who created it keeps their account and any other startups they run. This cannot be undone.',
+			confirmLabel: 'Delete startup',
 			tone: 'danger'
 		});
 		if (!ok) return;
@@ -77,7 +77,7 @@
 
 	async function handleLogout() {
 		await logoutTicAdmin();
-		goto(resolve('/tic-admin/login'));
+		goto(resolve('/login'));
 	}
 
 	function fmtDate(iso: string) {
@@ -227,7 +227,7 @@
 		></button>
 		<div class="modal" role="dialog" aria-modal="true" tabindex="-1">
 			<h3>Reject company</h3>
-			<p class="modal__sub">Optionally add a reason — shown on the company's dashboard.</p>
+			<p class="modal__sub">Optionally add a reason — shown to the founder in their console.</p>
 			<label class="field">
 				<span>Reason (optional)</span>
 				<textarea bind:value={rejectReason} rows="3" placeholder="e.g. Not affiliated with TIC"
@@ -235,7 +235,7 @@
 			</label>
 			<div class="modal__actions">
 				<button class="btn" onclick={cancelReject}>Cancel</button>
-				<button class="btn btn--danger" onclick={confirmReject}>Reject account</button>
+				<button class="btn btn--danger" onclick={confirmReject}>Reject startup</button>
 			</div>
 		</div>
 	</div>

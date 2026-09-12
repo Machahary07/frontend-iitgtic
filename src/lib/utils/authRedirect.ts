@@ -16,8 +16,10 @@ import { env as publicEnv } from '$env/dynamic/public';
 export const AUTH_CALLBACK_PATH = '/auth/callback';
 
 // Where each flow lands once the callback has a live session.
-export const AFTER_COMPANY_SIGNUP = '/opportunities/job-posting-admin';
-export const AFTER_FOUNDER_SIGNUP = '/application';
+// Both signups now land in the same console; the founder layout decides what a
+// given account can actually do once it is there.
+export const AFTER_COMPANY_SIGNUP = '/founder';
+export const AFTER_FOUNDER_SIGNUP = '/founder/application';
 // A recovery link carries a session like any other, so it lands on the callback
 // too — and is then forwarded to the one page that can spend it.
 export const AFTER_PASSWORD_RESET = '/auth/reset-password';

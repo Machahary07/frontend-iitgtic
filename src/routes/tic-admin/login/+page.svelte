@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { PUBLIC_SUPABASE_URL } from '$env/static/public';
-	import { bootstrapFirstAdmin, loginTicAdmin } from '$lib/utils/ticAdminAuth';
+	import { bootstrapFirstAdmin } from '$lib/utils/ticAdminAuth';
 	import type { PageData } from './$types';
 	import Turnstile from '$lib/components/Turnstile.svelte';
 	import { verifyTurnstileToken } from '$lib/utils/turnstile';
@@ -17,8 +17,6 @@
 	const dbError = $derived(data.dbError);
 	const configuredHost = PUBLIC_SUPABASE_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
-	let email = $state('');
-	let password = $state('');
 	let error = $state('');
 	let submitting = $state(false);
 	let turnstileToken = $state('');
@@ -48,24 +46,6 @@
 		return true;
 	}
 
-	async function handleSignIn(e: Event) {
-		e.preventDefault();
-		if (submitting) return;
-		submitting = true;
-		try {
-			if (!(await passedCaptcha())) return;
-			const result = await loginTicAdmin(email, password);
-			if (!result.ok) {
-				error = result.error;
-				return;
-			}
-			error = '';
-			goto(resolve('/tic-admin'));
-		} finally {
-			submitting = false;
-		}
-	}
-
 	async function handleBootstrap(e: Event) {
 		e.preventDefault();
 		if (submitting) return;
@@ -89,7 +69,6 @@
 			error = '';
 			setupDone = true;
 			bootstrapped = true;
-			email = setupEmail;
 			await invalidateAll();
 			setupPassword = '';
 			setupPw = '';
@@ -181,37 +160,20 @@
 		{:else}
 			<div class="card__head">
 				<p class="eyebrow">IITG TIC</p>
-				<h1>Team admin</h1>
-				<p class="sub">Sign in with your own account to manage the console.</p>
+				<h1>Sign in at one place</h1>
+				<p class="sub">
+					The console no longer has a sign-in page of its own. Everyone — the TIC team, founders and
+					the people they add — signs in on the same form, and lands wherever their account belongs.
+				</p>
 			</div>
 
 			{#if setupDone}
 				<p class="notice" role="status">
-					Admin account created. Sign in below with the password you just chose.
+					Admin account created. Sign in with the password you just chose.
 				</p>
 			{/if}
 
-			<form onsubmit={handleSignIn} novalidate>
-				<label class="field">
-					<span>Email</span>
-					<input type="email" bind:value={email} autocomplete="email" required />
-				</label>
-
-				<label class="field">
-					<span>Password</span>
-					<input type="password" bind:value={password} autocomplete="current-password" required />
-				</label>
-
-				<Turnstile bind:token={turnstileToken} bind:this={captcha} />
-
-				{#if error}
-					<p class="error" role="alert">{error}</p>
-				{/if}
-
-				<button type="submit" disabled={submitting}>
-					{submitting ? 'Signing in…' : 'Sign in'}
-				</button>
-			</form>
+			<a class="go" href={resolve('/login')}>Go to sign in</a>
 
 			<p class="hint">For TIC team members only. Ask an existing admin to create your account.</p>
 		{/if}
@@ -391,5 +353,21 @@
 		font-size: 12px;
 		color: $admin-ink-3;
 		text-align: center;
+	}
+
+	// The only control left on this screen once an admin exists: the way to the
+	// one sign-in page.
+	.go {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 11px 18px;
+		font-size: 13px;
+		font-weight: $font-weight-semibold;
+		color: #fff;
+		background: $admin-ink;
+		border-radius: $admin-radius-md;
+		text-decoration: none;
+		@include admin-focus-ring;
 	}
 </style>

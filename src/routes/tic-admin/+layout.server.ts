@@ -11,8 +11,12 @@ import type { LayoutServerLoad } from './$types';
 export const load: LayoutServerLoad = async ({ cookies, url }) => {
 	const admin = readTicAdminSession(cookies);
 
-	// The login screen lives under /tic-admin too, so it opts out of the gate and
-	// instead needs to know whether the console still has no admin at all.
+	// There is one sign-in page for the whole site now. /tic-admin/login survives
+	// only as the first-admin setup screen: with an admin already on file it has
+	// nothing to offer, so it hands over to /login.
+	//
+	// It therefore opts out of the gate below, and instead needs to know whether
+	// the console still has no admin at all.
 	if (url.pathname === '/tic-admin/login') {
 		// A failed query and an empty table both come back with no rows, so the
 		// error has to be checked separately — treating "could not read" as "no
@@ -38,10 +42,19 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 
 		if (dbError) console.error('[tic-admin] admin lookup failed:', dbError);
 
-		return { admin, needsBootstrap: !dbError && (count ?? 0) === 0, dbError };
+		const needsBootstrap = !dbError && (count ?? 0) === 0;
+
+		// Already signed in, or there is a real admin to sign in as: the universal
+		// login page is the only door. The database being unreachable is the one
+		// case worth staying put for, so the error can be read on screen.
+		if (!dbError && !needsBootstrap) {
+			redirect(303, admin ? '/tic-admin' : '/login?next=/tic-admin');
+		}
+
+		return { admin, needsBootstrap, dbError };
 	}
 
-	if (!admin) redirect(303, '/tic-admin/login');
+	if (!admin) redirect(303, '/login?next=/tic-admin');
 
 	// Sliding session: renew the cookie on each visit so an active admin is never
 	// logged out on their own — only an explicit logout or ~30 days away ends it.

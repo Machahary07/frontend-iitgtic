@@ -302,7 +302,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		name: 'Admin sign-in alert',
 		description:
 			'A security heads-up to the operating inbox whenever someone signs in to the TIC admin console.',
-		trigger: 'Any admin signs in at /tic-admin/login',
+		trigger: 'Any admin signs in at /login',
 		group: 'Admin',
 		variables: [
 			{ name: 'adminName', description: 'Who signed in', sample: 'Ananya Sharma' },
@@ -344,7 +344,13 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 			{ type: 'callout', tone: 'info', label: 'Name', text: '{{fullName}}' },
 			{ type: 'callout', tone: 'info', label: 'Email', text: '{{email}}' },
 			{ type: 'callout', tone: 'info', label: 'Phone', text: '{{phone}}', showIf: 'phone' },
-			{ type: 'callout', tone: 'info', label: 'Signed up', text: '{{signupTime}}', showIf: 'signupTime' },
+			{
+				type: 'callout',
+				tone: 'info',
+				label: 'Signed up',
+				text: '{{signupTime}}',
+				showIf: 'signupTime'
+			},
 			{ type: 'button', label: 'Open the console', href: '{{siteUrl}}/tic-admin/users' }
 		])
 	},
@@ -354,7 +360,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		key: 'company-signup',
 		name: 'Company signup received',
 		description: 'Confirms a job-portal signup and sets the expectation that TIC verifies it.',
-		trigger: 'A company creates an account at /opportunities/job-posting-admin/signup',
+		trigger: 'A founder registers a startup in the console',
 		group: 'Companies',
 		variables: [
 			{ name: 'companyName', description: 'Company name', sample: 'Northeast Robotics' },
@@ -376,7 +382,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 			{
 				type: 'button',
 				label: 'Open your dashboard',
-				href: '{{siteUrl}}/opportunities/job-posting-admin'
+				href: '{{siteUrl}}/founder'
 			},
 			{
 				type: 'note',
@@ -406,7 +412,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				type: 'text',
 				text: 'Roles you post now appear on the public Opportunities board straight away, and applications come to you through the dashboard.'
 			},
-			{ type: 'button', label: 'Post a role', href: '{{siteUrl}}/opportunities/job-posting-admin' },
+			{ type: 'button', label: 'Post a role', href: '{{siteUrl}}/founder' },
 			{
 				type: 'note',
 				text: 'Keep the role description and the closing date current — stale posts are the main reason applicants drop off.'
@@ -449,7 +455,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		name: 'Application received',
 		description:
 			'Receipt to a founder the moment they submit an incubation application, linking them to their account to view it.',
-		trigger: 'A founder submits the application at /application',
+		trigger: 'A founder submits the application at /founder/application',
 		group: 'Incubation applications',
 		variables: [
 			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },

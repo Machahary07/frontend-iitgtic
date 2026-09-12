@@ -2,6 +2,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
+	import Select from '$lib/components/Select.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import {
@@ -37,7 +38,6 @@
 	const counts = $derived({
 		all: users.length,
 		admin: users.filter((u) => u.role === 'admin').length,
-		company: users.filter((u) => u.role === 'company').length,
 		founder: users.filter((u) => u.role === 'founder').length,
 		never: users.filter((u) => !u.lastSignInAt).length,
 		suspended: users.filter((u) => u.banned).length
@@ -135,7 +135,7 @@
 
 	async function handleLogout() {
 		await logoutTicAdmin();
-		goto(resolve('/tic-admin/login'));
+		goto(resolve('/login'));
 	}
 
 	function fmtDate(iso: string | null) {
@@ -212,13 +212,6 @@
 		</button>
 		<button
 			class="tab"
-			class:tab--active={filter === 'company'}
-			onclick={() => (filter = 'company')}
-		>
-			Companies <span class="tab__count">{counts.company}</span>
-		</button>
-		<button
-			class="tab"
 			class:tab--active={filter === 'founder'}
 			onclick={() => (filter = 'founder')}
 		>
@@ -256,31 +249,34 @@
 							<tr class:row--busy={busyId === user.id}>
 								<td>
 									<p class="cell__name">
-										{user.fullName || user.companyName || user.email}
+										{user.fullName || user.email}
 										{#if user.id === currentAdminId}
 											<span class="you">you</span>
 										{/if}
 									</p>
 									<p class="cell__sub">{user.email}</p>
-									{#if user.companyName && user.companyStatus}
+									{#each user.companies as company (company.name)}
 										<p class="cell__sub">
-											{user.companyName} ·
-											<span class="dot dot--{user.companyStatus}"></span>{user.companyStatus}
+											{company.name} ·
+											<span class="dot dot--{company.status}"></span>{company.status}
 										</p>
-									{/if}
+									{/each}
 								</td>
 								<td>
-									<select
-										class="role"
-										value={user.role}
-										disabled={user.id === currentAdminId || busyId === user.id}
-										onchange={(e) =>
-											changeRole(user, (e.currentTarget as HTMLSelectElement).value as UserRole)}
-									>
-										<option value="founder">founder</option>
-										<option value="company">company</option>
-										<option value="admin">admin</option>
-									</select>
+									<div class="role">
+										<Select
+											id="role-{user.id}"
+											value={user.role}
+											options={[
+												{ value: 'founder', label: 'Founder', hint: 'Runs startups' },
+												{ value: 'admin', label: 'Admin', hint: 'Runs this console' }
+											]}
+											size="sm"
+											disabled={user.id === currentAdminId || busyId === user.id}
+											ariaLabel="Role for {user.email}"
+											onchange={(value) => changeRole(user, value as UserRole)}
+										/>
+									</div>
 									<div class="flags">
 										{#if user.banned}<span class="badge badge--bad">suspended</span>{/if}
 										{#if !user.emailConfirmed}
@@ -413,21 +409,7 @@
 	}
 
 	.role {
-		padding: 5px 8px;
-		font: inherit;
-		font-family: $font-family-base;
-		font-size: 12px;
-		font-weight: $font-weight-semibold;
-		color: #111;
-		background: #fff;
-		border: 1px solid $admin-line;
-		border-radius: $admin-radius-sm;
-		cursor: pointer;
-
-		&:disabled {
-			opacity: 0.6;
-			cursor: not-allowed;
-		}
+		min-width: 150px;
 	}
 
 	.flags {

@@ -25,13 +25,13 @@ The public website, the company job portal, the incubation application, and the 
   <a href="#routes"><b>All page links</b></a> ·
   <a href="https://iitgtic.itsjeu.com/status">Project status</a> ·
   <a href="https://iitgtic.itsjeu.com/opportunities">Opportunities</a> ·
-  <a href="https://iitgtic.itsjeu.com/application">Apply for incubation</a>
+  <a href="https://iitgtic.itsjeu.com/founder/application">Apply for incubation</a>
 </p>
 
 <p>
-  <a href="https://iitgtic.itsjeu.com/login">Sign in</a> ·
-  <a href="https://iitgtic.itsjeu.com/opportunities/job-posting-admin">Company portal</a> ·
-  <a href="https://iitgtic.itsjeu.com/tic-admin/login"><b>TIC admin login</b></a>
+  <a href="https://iitgtic.itsjeu.com/login"><b>Sign in</b></a> — one door, for everyone ·
+  <a href="https://iitgtic.itsjeu.com/founder">Founder console</a> ·
+  <a href="https://iitgtic.itsjeu.com/tic-admin">TIC admin console</a>
 </p>
 
 </div>
@@ -58,12 +58,12 @@ The public website, the company job portal, the incubation application, and the 
 | **Public site**            | Editorial pages for the centre — about, team, mentors, governing body, FAQ, blog, incubation pillars, incubated startups, events, partners                        | `/`                                           |
 | **Opportunities board**    | Roles at incubated startups, filterable by type; merges seed posts with live company postings                                                                     | `/opportunities`                              |
 | **Role applications**      | Public apply form per role — resume upload, Turnstile-gated, no account needed                                                                                    | `/opportunities/[id]`                         |
-| **Job-posting portal**     | Company signs up → TIC verifies → company posts and edits roles                                                                                                   | `/opportunities/job-posting-admin`            |
-| **Incubation application** | Eight-step wizard, 38 questions, four document uploads; autosaves a draft so a refresh does not lose progress                                                     | `/application`                                |
+| **Founder console**        | A founder registers the startups they run, applies for incubation, posts roles and adds a team — each thing approved by TIC before it is public                    | `/founder`                                    |
+| **Incubation application** | Eight-step wizard, 38 questions, four document uploads; filled in per startup and autosaving a draft so a refresh does not lose progress                          | `/founder/application`                        |
 | **TIC admin console**      | Companies, incubation applications, role applicants, posted jobs, users, activity, content                                                                        | `/tic-admin`                                  |
 | **Content editing**        | Every public page's copy, edited from the console and versioned in the audit log                                                                                  | `/tic-admin/content`                          |
 | **Media & storage**        | Upload an image for any page field from the content editor; a storage console shows every bucket's usage and refuses to delete a file still in use                | `/tic-admin/storage`                          |
-| **Applicant inbox**        | A verified company reads the applicants for roles it posted — contact details, answers, signed resume links, CSV export                                           | `/opportunities/job-posting-admin/applicants` |
+| **Applicant inbox**        | A verified startup reads the applicants for roles it posted — contact details, answers, signed resume links, CSV export                                           | `/founder/applicants`                         |
 | **Transactional email**    | Resend-backed mail with editable templates, a delivery log you can preview, usage against the plan allowance, and bounce/complaint feedback from a signed webhook | `/tic-admin/email`                            |
 | **Analytics & audit**      | Page impressions with bot separation, plus a trigger-written audit trail                                                                                          | `/tic-admin/activity`                         |
 | **Build status**           | Self-hosted checklist of every route, component and backend piece                                                                                                 | `/status`                                     |
@@ -276,50 +276,61 @@ Links marked 🔒 need a session; opening one signed-out redirects to the matchi
 | Roles at TIC            | [`/opportunities/tic-jobs`](https://iitgtic.itsjeu.com/opportunities/tic-jobs)                            | The centre's own openings                                         |
 | Roles at startups       | [`/opportunities/startup-jobs`](https://iitgtic.itsjeu.com/opportunities/startup-jobs)                    | Openings at incubated startups                                    |
 | Role detail + apply     | `/opportunities/[id]`                                                                                    | One role, with the Turnstile-gated apply form — no account needed |
-| Incubation application  | [`/application`](https://iitgtic.itsjeu.com/application)                                                 | Eight-step wizard, 38 questions, four document uploads            |
+| Incubation application  | [`/founder/application`](https://iitgtic.itsjeu.com/founder/application)                                 | Eight-step wizard, 38 questions, four document uploads. Sign in first |
 
 </details>
 
 <details>
 <summary><b>Accounts and auth</b></summary>
 
-| Page                | Link                                                                                   | What it is                                                     |
-| ------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| Sign in             | [`/login`](https://iitgtic.itsjeu.com/login)                                           | Founder and company sign-in, Turnstile-gated                   |
-| Sign up             | [`/apply`](https://iitgtic.itsjeu.com/apply)                                           | Create a founder account, Turnstile-gated                      |
-| Your applications 🔒 | [`/account`](https://iitgtic.itsjeu.com/account) · `/account/[id]`                      | A founder's own incubation applications and one in full        |
-| Auth callback       | [`/auth/callback`](https://iitgtic.itsjeu.com/auth/callback)                            | Where every link in an auth email lands; forwards to `?next=`  |
-| Reset password      | [`/auth/reset-password`](https://iitgtic.itsjeu.com/auth/reset-password)                | The end of a recovery link — sets a new password               |
-| Confirm email       | [`/verify-email`](https://iitgtic.itsjeu.com/verify-email)                              | Lands from a confirmation mail                                 |
-| Unsubscribe         | [`/unsubscribe`](https://iitgtic.itsjeu.com/unsubscribe)                                | One-click newsletter opt-out from a signed link                |
+One sign-in for everyone, and two roles behind it: **admin** and **founder**. `/login`
+authenticates with supabase-js, hands the token to `/api/session-login`, and the server reads
+the account's role, issues the matching signed cookie and says which console to open.
+
+| Page           | Link                                                                     | What it is                                                    |
+| -------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| **Sign in**    | [`/login`](https://iitgtic.itsjeu.com/login)                             | The one door — TIC team, founders, and their team members     |
+| Sign up        | [`/apply`](https://iitgtic.itsjeu.com/apply)                             | Creates a founder account. Startups are registered inside it  |
+| Auth callback  | [`/auth/callback`](https://iitgtic.itsjeu.com/auth/callback)             | Where every link in an auth email lands; forwards to `?next=` |
+| Reset password | [`/auth/reset-password`](https://iitgtic.itsjeu.com/auth/reset-password) | The end of a recovery link — sets a new password              |
+| Confirm email  | [`/verify-email`](https://iitgtic.itsjeu.com/verify-email)               | Lands from a confirmation mail                                |
+| Unsubscribe    | [`/unsubscribe`](https://iitgtic.itsjeu.com/unsubscribe)                 | One-click newsletter opt-out from a signed link               |
 
 </details>
 
 <details>
-<summary><b>Company job portal</b> — sign in at <a href="https://iitgtic.itsjeu.com/login"><code>/login</code></a></summary>
+<summary><b>Founder console</b> — <code>/founder</code>, sign in at <a href="https://iitgtic.itsjeu.com/login"><code>/login</code></a></summary>
 
-A company signs up, TIC verifies the account, then it can post and manage roles.
+A founder registers the startups they run — one or several — and everything below the
+switcher at the top of each page is about the one currently in view. Nothing written here
+reaches the public site until a TIC admin approves it.
 
-| Page              | Link                                                                                                                                      | What it is                                                                             |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Company sign-up   | [`/opportunities/job-posting-admin/signup`](https://iitgtic.itsjeu.com/opportunities/job-posting-admin/signup)                             | Creates a pending account; TIC verifies it before roles go live                        |
-| Dashboard 🔒       | [`/opportunities/job-posting-admin`](https://iitgtic.itsjeu.com/opportunities/job-posting-admin)                                           | Gated by account status — pending, verified or rejected                                |
-| Post / edit role 🔒 | `/opportunities/job-posting-admin/edit/[id]`                                                                                              | Create or edit a role — verified accounts only                                         |
-| Applicants 🔒      | [`/opportunities/job-posting-admin/applicants`](https://iitgtic.itsjeu.com/opportunities/job-posting-admin/applicants)                     | The company's own applicants, signed resume links, CSV export. Status stays TIC's to set |
-| Account settings 🔒 | [`/opportunities/job-posting-admin/admin-settings`](https://iitgtic.itsjeu.com/opportunities/job-posting-admin/admin-settings)            | Profile, password change, delete account                                               |
+| Page 🔒            | Link                                                                     | What it is                                                                  |
+| ------------------ | ------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Overview           | [`/founder`](https://iitgtic.itsjeu.com/founder)                         | What is live, what is queued, and what has come back                        |
+| Startups           | [`/founder/companies`](https://iitgtic.itsjeu.com/founder/companies)     | Register a startup, switch between them, delete one                         |
+| Application        | [`/founder/application`](https://iitgtic.itsjeu.com/founder/application) | The eight-step form, filled in per startup, with a draft kept per startup   |
+| Job postings       | [`/founder/jobs`](https://iitgtic.itsjeu.com/founder/jobs)               | Write a role and send it for approval; an edit to a live role re-queues it  |
+| Post / edit a role | `/founder/jobs/new` · `/founder/jobs/[id]`                               | The posting form, showing TIC's reason on anything sent back                |
+| Applicants         | [`/founder/applicants`](https://iitgtic.itsjeu.com/founder/applicants)   | Who applied, signed resume links, CSV export. A status stays TIC's to set   |
+| Team               | [`/founder/users`](https://iitgtic.itsjeu.com/founder/users)             | Add people to this startup; each waits for TIC before it can do anything    |
+| Details            | [`/founder/settings`](https://iitgtic.itsjeu.com/founder/settings)       | Company details go to TIC as a change request; password and account do not  |
+| Activity           | [`/founder/activity`](https://iitgtic.itsjeu.com/founder/activity)       | What this startup's people did, and what TIC did in review                  |
+| Support            | [`/founder/support`](https://iitgtic.itsjeu.com/founder/support)         | The IITG-TIC team's own contact details                                     |
 
 </details>
 
 <details>
-<summary><b>TIC admin console</b> — sign in at <a href="https://iitgtic.itsjeu.com/tic-admin/login"><code>/tic-admin/login</code></a></summary>
+<summary><b>TIC admin console</b> — <code>/tic-admin</code>, sign in at <a href="https://iitgtic.itsjeu.com/login"><code>/login</code></a></summary>
 
-Separate from the public account system. Every page below needs an admin session; the login
-page offers first-admin setup while no admin exists.
+Every page below needs an admin session, issued by the one sign-in at `/login`. The old
+`/tic-admin/login` survives only to create the very first admin on an empty console.
 
 | Page                    | Link                                                                                                           | What it is                                                                       |
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| **Admin login**         | [`/tic-admin/login`](https://iitgtic.itsjeu.com/tic-admin/login)                                               | Per-admin sign-in, plus first-admin bootstrap                                    |
+| First-admin setup       | [`/tic-admin/login`](https://iitgtic.itsjeu.com/tic-admin/login)                                               | Creates the very first admin, then hands over to `/login` for good               |
 | Overview 🔒              | [`/tic-admin`](https://iitgtic.itsjeu.com/tic-admin)                                                           | Stat tiles and the queues that need attention                                    |
+| **Approvals** 🔒         | [`/tic-admin/approvals`](https://iitgtic.itsjeu.com/tic-admin/approvals)                                       | Four queues: new startups, job postings, team members, company detail changes    |
 | Companies 🔒             | [`/tic-admin/companies`](https://iitgtic.itsjeu.com/tic-admin/companies)                                       | Verify, reject with a reason, revert or delete an account                        |
 | Incubation applications 🔒 | [`/tic-admin/applications`](https://iitgtic.itsjeu.com/tic-admin/applications) · `/[id]`                     | Review queue, full answers and signed document links                             |
 | Role applicants 🔒       | [`/tic-admin/job-applications`](https://iitgtic.itsjeu.com/tic-admin/job-applications) · `/[id]`               | Status tabs, per-role filter, signed resume link                                 |
@@ -384,15 +395,16 @@ supabase link --project-ref <project-ref>
 supabase db push
 ```
 
-Fourteen tables, all with RLS enabled:
+Fifteen tables, all with RLS enabled:
 
 | Table                    | Holds                                                        | Who can read/write                                                                                                                      |
 | ------------------------ | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `profiles`               | One row per auth user (`founder`, `company` or `admin`)      | Own row; `role` is service-role only                                                                                                    |
-| `companies`              | Job-portal accounts + verification status                    | Own row; `status` is service-role only                                                                                                  |
-| `jobs`                   | Company job postings                                         | Public read once the company is verified; write only by a verified owner                                                                |
-| `applications`           | Submitted incubation applications                            | Own rows; `status` is service-role only                                                                                                 |
-| `job_applications`       | Applications to a role on the Opportunities board            | Service role for writes; a verified company reads its own applicants through one policy, with `review_note` held back by a column grant |
+| `profiles`               | One row per auth user (`founder` or `admin`)                 | Own row, plus the team of a company you work for; `role`, `company_id` and `member_status` are service-role only                        |
+| `companies`              | Startups, owned by a founder, with verification status       | The ones you own or were added to; `status` and the public-facing columns are service-role only                                          |
+| `company_profile_changes` | A founder's request to change a company's public details    | Read by that company; written and decided by the service role                                                                            |
+| `jobs`                   | Job postings, each with its own approval state               | Public read once the company is verified AND the posting approved; every write is service-role                                            |
+| `applications`           | Submitted incubation applications, one per startup           | Own rows and your company's; `status` is service-role only                                                                               |
+| `job_applications`       | Applications to a role on the Opportunities board            | Service role for writes; a verified startup reads its own applicants through one policy, with `review_note` held back by a column grant |
 | `email_templates`        | Subject + HTML body per message, overriding the bundled copy | Service role only — RLS on, zero policies                                                                                               |
 | `email_log`              | One row per send attempt, with the rendered body             | Service role only — RLS on, zero policies                                                                                               |
 | `audit_log`              | Every row change, with actor and before/after                | Service role only — RLS on, zero policies                                                                                               |
@@ -553,10 +565,10 @@ is orphaned.
 The applicant is emailed a "received" acknowledgement on submit, and again when TIC
 shortlists, sends the application to the company, or declines it — every one through the
 Resend layer, so a send never fails the request. Because `job_applications` records `job_id`
-and `company_id`, a verified company also reads its own applicants at
-**/opportunities/job-posting-admin/applicants** — an RLS policy opens the rows and a column
-grant holds TIC's review note back. The company inbox is pull-only: it is not yet notified
-when a new applicant arrives.
+and `company_id`, a verified startup also reads its own applicants at
+**/founder/applicants** — an RLS policy scoped by `my_company_ids()` opens the rows and a
+column grant holds TIC's review note back. The founder inbox is pull-only: it is not yet
+notified when a new applicant arrives.
 
 ### Demo data
 
@@ -625,7 +637,7 @@ particular backup can and cannot put back.
 | Storage objects in all three buckets                                                                                               | `pnpm restore` — re-uploaded with `upsert`            |
 | `profiles`, `companies`, `jobs`, `applications`                                                                                    | **`schema.sql` + `data.sql` through `psql` only**     |
 
-That last row is the one to understand. Those four tables are keyed by
+That last row is the one to understand. Those tables are keyed by or point at
 `auth.users.id`, and Supabase's Admin API will not create a user with a chosen
 id — so their rows cannot be reattached to the people they belong to from JSON.
 `restore.js` refuses to write them rather than silently orphaning records, and

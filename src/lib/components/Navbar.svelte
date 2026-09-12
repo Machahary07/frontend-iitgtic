@@ -302,7 +302,7 @@
 							><span class="profile-id__dot" aria-hidden="true"></span>Logged in</span
 						>
 					</div>
-					<LinkReveal href="/account" text="Your account" class="profile-item" role="menuitem" />
+					<LinkReveal href="/founder" text="Your console" class="profile-item" role="menuitem" />
 					<ButtonReveal text="Sign out" class="profile-item profile-signout" onclick={signOut} />
 				{:else}
 					<LinkReveal href="/login" text="Login" class="profile-item" role="menuitem" />
@@ -380,8 +380,8 @@
 			</div>
 			<div class="mobile-item">
 				<LinkReveal
-					href="/account"
-					text="Your account"
+					href="/founder"
+					text="Your console"
 					class="mobile-link"
 					onclick={closeMobileMenu}
 				/>

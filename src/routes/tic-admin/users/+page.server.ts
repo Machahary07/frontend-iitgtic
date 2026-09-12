@@ -9,28 +9,38 @@ export const load: PageServerLoad = async ({ parent }) => {
 	const [authResult, profileResult, companyResult] = await Promise.all([
 		supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
 		db.from('profiles').select('id, role, full_name, email, phone, created_at'),
-		db.from('companies').select('id, company_name, status')
+		db.from('companies').select('id, owner_id, company_name, status')
 	]);
 
 	const byId = new Map((profileResult.data ?? []).map((p) => [p.id as string, p]));
-	const companyById = new Map((companyResult.data ?? []).map((c) => [c.id as string, c]));
+
+	// A founder may run several startups, so this is a list per owner rather than
+	// a lookup by account id — the two stopped being the same thing when a
+	// company became something you create rather than something you log in as.
+	const ownedBy = new Map<string, { company_name: string; status: string }[]>();
+	for (const row of companyResult.data ?? []) {
+		const owner = row.owner_id as string;
+		if (!owner) continue;
+		const list = ownedBy.get(owner) ?? [];
+		list.push({ company_name: row.company_name as string, status: row.status as string });
+		ownedBy.set(owner, list);
+	}
 
 	const users = (authResult.data?.users ?? []).map((u) => {
 		const profile = byId.get(u.id);
-		const company = companyById.get(u.id);
+		const companies = ownedBy.get(u.id) ?? [];
 		const bannedUntil = (u as { banned_until?: string | null }).banned_until;
 		return {
 			id: u.id,
 			email: u.email ?? '',
-			role: (profile?.role as 'founder' | 'company' | 'admin') ?? 'founder',
+			role: (profile?.role as 'founder' | 'admin') ?? 'founder',
 			fullName: (profile?.full_name as string) ?? '',
 			phone: (profile?.phone as string) ?? '',
 			createdAt: u.created_at,
 			lastSignInAt: u.last_sign_in_at ?? null,
 			emailConfirmed: Boolean(u.email_confirmed_at),
 			banned: Boolean(bannedUntil && new Date(bannedUntil) > new Date()),
-			companyName: (company?.company_name as string) ?? null,
-			companyStatus: (company?.status as string) ?? null
+			companies: companies.map((c) => ({ name: c.company_name, status: c.status }))
 		};
 	});
 

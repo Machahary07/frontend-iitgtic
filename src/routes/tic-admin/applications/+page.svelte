@@ -37,7 +37,7 @@
 
 	async function handleLogout() {
 		await logoutTicAdmin();
-		goto(resolve('/tic-admin/login'));
+		goto(resolve('/login'));
 	}
 
 	function fmtDate(iso: string) {
@@ -106,8 +106,8 @@
 				<div class="empty-state">
 					<p class="empty-state__title">No applications yet</p>
 					<p class="empty-state__body">
-						Submissions from <a href={resolve('/application')}>the incubation form</a> land here the moment
-						a founder completes all eight steps.
+						Submissions from <a href={resolve('/founder/application')}>the incubation form</a> land here
+						the moment a founder completes all eight steps.
 					</p>
 				</div>
 			{:else}
