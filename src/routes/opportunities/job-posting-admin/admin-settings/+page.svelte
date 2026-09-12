@@ -19,11 +19,16 @@
 
 	let companyName = $state('');
 	let contactName = $state('');
+	let contactEmail = $state('');
+	let phone = $state('');
 	let website = $state('');
 
 	let currentPw = $state('');
 	let newPw = $state('');
 	let confirmPw = $state('');
+	let showCurrentPw = $state(false);
+	let showNewPw = $state(false);
+	let showConfirmPw = $state(false);
 
 	onMount(async () => {
 		account = await getCurrentCompany();
@@ -33,13 +38,21 @@
 		}
 		companyName = account.companyName;
 		contactName = account.contactName;
+		contactEmail = account.contactEmail;
+		phone = account.phone;
 		website = account.website;
 		mounted = true;
 	});
 
 	async function handleProfile(e: Event) {
 		e.preventDefault();
-		const updated = await updateCurrentCompany({ companyName, contactName, website });
+		const updated = await updateCurrentCompany({
+			companyName,
+			contactName,
+			contactEmail,
+			phone,
+			website
+		});
 		if (!updated) {
 			showToast('Could not update profile.', 'err');
 			return;
@@ -91,10 +104,23 @@
 	<title>Account settings · IITG TIC</title>
 </svelte:head>
 
+{#snippet eyeIcon(shown: boolean)}
+	{#if shown}
+		<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+			<line x1="1" y1="1" x2="23" y2="23" />
+		</svg>
+	{:else}
+		<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+			<circle cx="12" cy="12" r="3" />
+		</svg>
+	{/if}
+{/snippet}
+
 {#if mounted && account}
 	<AdminShell
 		brand="Company portal"
-		brandSub={account.companyName}
 		navItems={COMPANY_PORTAL_NAV}
 		title="Account settings"
 		eyebrow="Settings"
@@ -106,7 +132,7 @@
 				<header class="card__head">
 					<h2>Company profile</h2>
 					<p class="card__sub">
-						Email <strong>{account.email}</strong> · cannot be changed
+						Sign-in email <strong>{account.email}</strong> · cannot be changed
 					</p>
 				</header>
 
@@ -118,6 +144,16 @@
 				<label class="field">
 					<span>Contact person</span>
 					<input type="text" bind:value={contactName} />
+				</label>
+
+				<label class="field">
+					<span>Contact person email</span>
+					<input type="email" bind:value={contactEmail} autocomplete="email" />
+				</label>
+
+				<label class="field">
+					<span>Phone number</span>
+					<input type="tel" bind:value={phone} autocomplete="tel" />
 				</label>
 
 				<label class="field">
@@ -136,17 +172,68 @@
 
 				<label class="field">
 					<span>Current password</span>
-					<input type="password" bind:value={currentPw} autocomplete="current-password" required />
+					<div class="field__control">
+						<input
+							type={showCurrentPw ? 'text' : 'password'}
+							value={currentPw}
+							oninput={(e) => (currentPw = e.currentTarget.value)}
+							autocomplete="current-password"
+							required
+						/>
+						<button
+							type="button"
+							class="reveal-toggle"
+							onclick={() => (showCurrentPw = !showCurrentPw)}
+							aria-label={showCurrentPw ? 'Hide password' : 'Show password'}
+							aria-pressed={showCurrentPw}
+						>
+							{@render eyeIcon(showCurrentPw)}
+						</button>
+					</div>
 				</label>
 
 				<label class="field">
 					<span>New password</span>
-					<input type="password" bind:value={newPw} autocomplete="new-password" required />
+					<div class="field__control">
+						<input
+							type={showNewPw ? 'text' : 'password'}
+							value={newPw}
+							oninput={(e) => (newPw = e.currentTarget.value)}
+							autocomplete="new-password"
+							required
+						/>
+						<button
+							type="button"
+							class="reveal-toggle"
+							onclick={() => (showNewPw = !showNewPw)}
+							aria-label={showNewPw ? 'Hide password' : 'Show password'}
+							aria-pressed={showNewPw}
+						>
+							{@render eyeIcon(showNewPw)}
+						</button>
+					</div>
 				</label>
 
 				<label class="field">
 					<span>Confirm new password</span>
-					<input type="password" bind:value={confirmPw} autocomplete="new-password" required />
+					<div class="field__control">
+						<input
+							type={showConfirmPw ? 'text' : 'password'}
+							value={confirmPw}
+							oninput={(e) => (confirmPw = e.currentTarget.value)}
+							autocomplete="new-password"
+							required
+						/>
+						<button
+							type="button"
+							class="reveal-toggle"
+							onclick={() => (showConfirmPw = !showConfirmPw)}
+							aria-label={showConfirmPw ? 'Hide password' : 'Show password'}
+							aria-pressed={showConfirmPw}
+						>
+							{@render eyeIcon(showConfirmPw)}
+						</button>
+					</div>
 				</label>
 
 				<button type="submit" class="btn-primary">Update password</button>
@@ -218,6 +305,38 @@
 
 		input {
 			@include admin-input;
+		}
+	}
+
+	.field__control {
+		position: relative;
+		display: flex;
+		align-items: center;
+
+		input {
+			flex: 1;
+			padding-right: 40px;
+		}
+	}
+
+	.reveal-toggle {
+		position: absolute;
+		right: 4px;
+		top: 50%;
+		transform: translateY(-50%);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		padding: 0;
+		background: none;
+		border: 0;
+		color: $admin-ink-3;
+		cursor: pointer;
+
+		svg {
+			display: block;
 		}
 	}
 

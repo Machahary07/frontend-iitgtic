@@ -94,7 +94,6 @@
 {#if mounted && account}
 	<AdminShell
 		brand="Company portal"
-		brandSub={account.companyName}
 		navItems={COMPANY_PORTAL_NAV}
 		title={isNew ? 'Post a new role' : 'Edit role'}
 		eyebrow={isNew ? 'New role' : 'Editing'}

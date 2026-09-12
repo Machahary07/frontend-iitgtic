@@ -66,7 +66,7 @@
 			error = '';
 			// Fire-and-forget sign-in notice (throttled server-side to once a day).
 			void sendFounderLoginNotice();
-			goto(resolve('/application'));
+			goto(resolve('/account'));
 		} finally {
 			submitting = false;
 		}
