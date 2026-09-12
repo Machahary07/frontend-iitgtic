@@ -268,6 +268,26 @@
 		revalidate();
 	}
 
+	// Every step's required fields, checked in one pass. The stepper lets an
+	// applicant jump straight to step 8, so validating only the current step on
+	// submit would let a half-empty application through — this is what closes that.
+	function firstIncompleteStep(): number | null {
+		for (const s of STEPS) {
+			if (Object.keys(validateStep(s.n)).length > 0) return s.n;
+		}
+		return null;
+	}
+
+	// Keeps the progress dots honest after a jump or a submit attempt: a step is
+	// "done" when it actually validates, not merely because it was walked past.
+	function syncCompletedSteps() {
+		const done = new Set<number>();
+		for (const s of STEPS) {
+			if (Object.keys(validateStep(s.n)).length === 0) done.add(s.n);
+		}
+		completedSteps = done;
+	}
+
 	function next() {
 		attempted = true;
 		const e = validateStep(step);
@@ -277,6 +297,7 @@
 			step += 1;
 			attempted = false;
 			errors = {};
+			submitError = '';
 			window.scrollTo({ top: 0, behavior: 'smooth' });
 		}
 	}
@@ -286,6 +307,7 @@
 			step -= 1;
 			attempted = false;
 			errors = {};
+			submitError = '';
 			window.scrollTo({ top: 0, behavior: 'smooth' });
 		}
 	}
@@ -301,9 +323,24 @@
 
 	async function submit() {
 		attempted = true;
+
+		// The consent step first, so its own boxes report on the step the applicant
+		// is looking at rather than being masked by an earlier jump.
 		const e = validateStep(step);
 		errors = e;
 		if (Object.keys(e).length > 0) return;
+
+		// Then every other step. Anything still missing sends the applicant back to
+		// the first step that needs it, with that step's errors already showing.
+		const incomplete = firstIncompleteStep();
+		if (incomplete !== null) {
+			syncCompletedSteps();
+			step = incomplete;
+			errors = validateStep(incomplete);
+			submitError = `Step ${incomplete} — ${STEPS[incomplete - 1].title} still has required fields to fill in.`;
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+			return;
+		}
 
 		// The address must be confirmed before an application can be submitted. This
 		// is the friendly gate; the RLS insert policy is the real one, so bypassing
@@ -344,9 +381,11 @@
 
 	function jumpToStep(n: number) {
 		if (n === step) return;
+		syncCompletedSteps();
 		step = n;
 		attempted = false;
 		errors = {};
+		submitError = '';
 	}
 
 	function goSignUp() {

@@ -1,9 +1,10 @@
 // Job postings, backed by the public.jobs table.
 //
-// The public listing is the union of the eight seed posts in getContent().json and
-// every live posting. RLS does the gatekeeping: the anon-readable policy only
-// exposes jobs whose company is verified, and a signed-in company additionally
-// sees its own postings whatever its status.
+// Two boards sit on top of this. Startup Jobs is the union of the seed posts in
+// content.json and every live company posting — RLS does the gatekeeping there,
+// exposing only jobs whose company is verified, plus a signed-in company's own
+// postings whatever its status. TIC Jobs is the centre's own openings, which are
+// curated content rather than company submissions and never touch the table.
 
 import { getContent } from '$lib/content';
 import { supabase } from '$lib/supabaseClient';
@@ -68,8 +69,48 @@ function toJob(row: JobRow): PostedJob {
 	};
 }
 
-export function seedJobs(): AnyJob[] {
-	return getContent().pages.opportunities.posts.map((p) => ({
+// A content-authored post (seed startup roles, and every TIC role) in the same
+// shape the boards render.
+type ContentPost = {
+	slug: string;
+	role: string;
+	company: string;
+	companySlug: string;
+	location: string;
+	type: string;
+	sector: string;
+	posted: string;
+	description: string;
+	applyLink: string;
+};
+
+function fromContent(p: ContentPost): AnyJob {
+	return {
+		id: `seed_${p.slug}`,
+		slug: p.slug,
+		companyId: '',
+		role: p.role,
+		company: p.company,
+		companySlug: p.companySlug,
+		location: p.location,
+		type: p.type,
+		sector: p.sector,
+		posted: p.posted,
+		description: p.description,
+		applyLink: p.applyLink,
+		createdAt: p.posted,
+		updatedAt: p.posted,
+		source: 'seed' as const
+	};
+}
+
+// Roles at the incubation centre itself, edited in the admin console.
+export function ticJobs(): AnyJob[] {
+	return (getContent().pages.ticJobs.posts as ContentPost[]).map(fromContent).sort(byPostedDesc);
+}
+
+export function seedStartupJobs(): AnyJob[] {
+	return getContent().pages.startupJobs.posts.map((p) => ({
 		id: `seed_${p.slug}`,
 		slug: p.slug,
 		companyId: '',
@@ -92,24 +133,27 @@ function byPostedDesc(a: AnyJob, b: AnyJob) {
 	return a.posted < b.posted ? 1 : a.posted > b.posted ? -1 : 0;
 }
 
-export async function getAllJobs(): Promise<AnyJob[]> {
+export async function getStartupJobs(): Promise<AnyJob[]> {
 	const { data, error } = await supabase.from('jobs').select(COLUMNS).order('posted', {
 		ascending: false
 	});
 
 	// A failed fetch should not blank the page — fall back to the seed posts.
-	if (error) return seedJobs();
+	if (error) return seedStartupJobs();
 
 	const live: AnyJob[] = (data as JobRow[]).map((row) => ({
 		...toJob(row),
 		source: 'user' as const
 	}));
-	return [...live, ...seedJobs()].sort(byPostedDesc);
+	return [...live, ...seedStartupJobs()].sort(byPostedDesc);
 }
 
 export async function getJob(slug: string): Promise<AnyJob | null> {
-	const seed = seedJobs().find((j) => j.slug === slug);
-	if (seed) return seed;
+	// Both boards share /opportunities/[id] for the detail page, so a slug is
+	// looked up across the centre's roles and the seed startup roles before the
+	// table is queried.
+	const authored = [...ticJobs(), ...seedStartupJobs()].find((j) => j.slug === slug);
+	if (authored) return authored;
 
 	const { data, error } = await supabase
 		.from('jobs')

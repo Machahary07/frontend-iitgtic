@@ -31,9 +31,12 @@ type ResolvedJob = {
 };
 
 async function resolveJob(slug: string): Promise<ResolvedJob | null> {
-	// Seed posts win on slug, matching getJob() on the public side.
+	// Content-authored posts win on slug, matching getJob() on the public side.
+	// That is both boards: the centre's own roles and the seed startup roles.
 	const content = await getSiteContent();
-	const seed = content.pages.opportunities.posts.find((p) => p.slug === slug);
+	const seed = [...content.pages.ticJobs.posts, ...content.pages.startupJobs.posts].find(
+		(p) => p.slug === slug
+	);
 	if (seed) {
 		return {
 			jobId: null,

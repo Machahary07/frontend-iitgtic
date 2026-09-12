@@ -174,7 +174,11 @@
 				onmouseenter={() => link.dropdown && openMenu(link.label)}
 				onmouseleave={() => link.dropdown && scheduleClose()}
 			>
-				<LinkReveal href={link.href} text={link.dropdown ? link.label + ' ▾' : link.label} class="nav-link" />
+				<LinkReveal
+					href={link.href}
+					text={link.dropdown ? link.label + ' ▾' : link.label}
+					class="nav-link"
+				/>
 			</li>
 		{/each}
 	</ul>
@@ -184,8 +188,16 @@
 	<div class="nav-right">
 		<ul class="nav-group">
 			{#each rightLinks as link (link.label)}
-				<li class="nav-item">
-					<LinkReveal href={link.href} text={link.label} class="nav-link" />
+				<li
+					class="nav-item"
+					onmouseenter={() => link.dropdown && openMenu(link.label)}
+					onmouseleave={() => link.dropdown && scheduleClose()}
+				>
+					<LinkReveal
+						href={link.href}
+						text={link.dropdown ? link.label + ' ▾' : link.label}
+						class="nav-link"
+					/>
 				</li>
 			{/each}
 		</ul>
@@ -207,7 +219,12 @@
 						onmouseleave={scheduleClose}
 					>
 						{#each link.dropdown ?? [] as item (item.label)}
-							<LinkReveal href={item.href} text={item.label} class="dropdown-item" role="menuitem" />
+							<LinkReveal
+								href={item.href}
+								text={item.label}
+								class="dropdown-item"
+								role="menuitem"
+							/>
 						{/each}
 					</div>
 				{/if}
@@ -221,7 +238,25 @@
 		<ul class="nav-group">
 			{#each rightLinks as link (link.label)}
 				<li class="dropdown-slot">
-					<span class="dropdown-ghost">{link.label}</span>
+					<span class="dropdown-ghost">{link.dropdown ? link.label + ' ▾' : link.label}</span>
+					{#if link.dropdown && openDropdown === link.label}
+						<div
+							class="dropdown"
+							role="menu"
+							tabindex="-1"
+							onmouseenter={() => openMenu(link.label)}
+							onmouseleave={scheduleClose}
+						>
+							{#each link.dropdown ?? [] as item (item.label)}
+								<LinkReveal
+									href={item.href}
+									text={item.label}
+									class="dropdown-item"
+									role="menuitem"
+								/>
+							{/each}
+						</div>
+					{/if}
 				</li>
 			{/each}
 		</ul>
@@ -233,11 +268,7 @@
 	<LinkReveal href="/apply" text={content.nav.applyLabel} class="nav-apply" />
 	<!-- Hover is a mouse-only convenience; the button below is the accessible control. -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="nav-profile"
-		onmouseenter={openProfile}
-		onmouseleave={scheduleCloseProfile}
-	>
+	<div class="nav-profile" onmouseenter={openProfile} onmouseleave={scheduleCloseProfile}>
 		<button
 			type="button"
 			class="nav-profile-btn"
@@ -247,7 +278,17 @@
 			aria-label="Account menu"
 			onclick={toggleProfile}
 		>
-			<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<svg
+				viewBox="0 0 24 24"
+				width="18"
+				height="18"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="1.8"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				aria-hidden="true"
+			>
 				<circle cx="12" cy="8" r="4" />
 				<path d="M4 20c0-3.5 3.6-6 8-6s8 2.5 8 6" />
 			</svg>
@@ -257,7 +298,9 @@
 				{#if account}
 					<div class="profile-id">
 						<span class="profile-id__name">{account.name}</span>
-						<span class="profile-id__status"><span class="profile-id__dot" aria-hidden="true"></span>Logged in</span>
+						<span class="profile-id__status"
+							><span class="profile-id__dot" aria-hidden="true"></span>Logged in</span
+						>
 					</div>
 					<LinkReveal href="/account" text="Your account" class="profile-item" role="menuitem" />
 					<ButtonReveal text="Sign out" class="profile-item profile-signout" onclick={signOut} />
@@ -272,14 +315,7 @@
 
 <!-- Layer 3: logo -->
 <a href={resolve('/')} class="nav-logo" aria-label={content.nav.logoAlt}>
-	<img
-		src={images.logo}
-		alt=""
-		width="32"
-		height="32"
-		decoding="async"
-		fetchpriority="high"
-	/>
+	<img src={images.logo} alt="" width="32" height="32" decoding="async" fetchpriority="high" />
 </a>
 
 <!-- Hamburger button — mobile only -->
@@ -343,7 +379,12 @@
 				<span class="mobile-id__status">(logged in)</span>
 			</div>
 			<div class="mobile-item">
-				<LinkReveal href="/account" text="Your account" class="mobile-link" onclick={closeMobileMenu} />
+				<LinkReveal
+					href="/account"
+					text="Your account"
+					class="mobile-link"
+					onclick={closeMobileMenu}
+				/>
 			</div>
 			<div class="mobile-item">
 				<ButtonReveal text="Sign out" class="mobile-link mobile-signout" onclick={signOut} />
@@ -532,7 +573,9 @@
 		color: $color-black;
 		cursor: pointer;
 		padding: 0;
-		transition: background-color $transition-base, color $transition-base;
+		transition:
+			background-color $transition-base,
+			color $transition-base;
 
 		// Open-state fill, matching the hamburger's open treatment. No hover swap.
 		&.open {
@@ -549,7 +592,9 @@
 		background: $color-white;
 		border: 1px solid $color-border;
 		border-radius: 12px;
-		box-shadow: 0 8px 24px rgba($color-black, 0.1), 0 2px 6px rgba($color-black, 0.05);
+		box-shadow:
+			0 8px 24px rgba($color-black, 0.1),
+			0 2px 6px rgba($color-black, 0.05);
 		padding: $space-1;
 		display: flex;
 		flex-direction: column;
@@ -645,7 +690,9 @@
 		display: flex;
 		align-items: center;
 		z-index: $z-dropdown;
-		transition: top $transition-base, opacity $transition-fast;
+		transition:
+			top $transition-base,
+			opacity $transition-fast;
 
 		img {
 			display: block;
@@ -653,7 +700,6 @@
 			height: $nav-logo-size;
 			object-fit: contain;
 		}
-
 	}
 
 	// ── Hamburger ─────────────────────────────────────────────
@@ -686,7 +732,9 @@
 		height: 1.5px;
 		background: $color-black;
 		transform-origin: center;
-		transition: transform $transition-base, background-color $transition-base;
+		transition:
+			transform $transition-base,
+			background-color $transition-base;
 	}
 
 	.bar-1.open {
@@ -700,7 +748,9 @@
 
 	// ── Mobile menu panel ──────────────────────────────────────
 	$mobile-menu-origin-x: calc(100% - #{$space-4} - 11px);
-	$mobile-menu-origin-y: calc(var(--event-bar-offset, var(--event-bar-height, 40px)) + #{$nav-height} / 2);
+	$mobile-menu-origin-y: calc(
+		var(--event-bar-offset, var(--event-bar-height, 40px)) + #{$nav-height} / 2
+	);
 
 	.mobile-menu {
 		display: none;
@@ -727,7 +777,10 @@
 	.mobile-menu nav {
 		display: flex;
 		flex-direction: column;
-		padding: calc(var(--event-bar-offset, var(--event-bar-height, 40px)) + #{$nav-height} + #{$space-4}) $space-5 $space-6;
+		padding: calc(
+				var(--event-bar-offset, var(--event-bar-height, 40px)) + #{$nav-height} + #{$space-4}
+			)
+			$space-5 $space-6;
 	}
 
 	.mobile-item {

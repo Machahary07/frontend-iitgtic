@@ -24,6 +24,10 @@
 						"href": "/about/team"
 					},
 					{
+						"label": "TIC Coordinators",
+						"href": "/about/tic-coordinators"
+					},
+					{
 						"label": "FAQ",
 						"href": "/about/faq"
 					},
@@ -88,16 +92,36 @@
 		],
 		"rightLinks": [
 			{
-				"label": "Partners",
-				"href": "/partners"
-			},
-			{
-				"label": "Events & Workshops",
-				"href": "/events"
+				"label": "Schemes & Programs",
+				"href": "/programs",
+				"dropdown": [
+					{
+						"label": "Events & Workshops",
+						"href": "/events"
+					},
+					{
+						"label": "Schemes",
+						"href": "/schemes"
+					}
+				]
 			},
 			{
 				"label": "Opportunities",
-				"href": "/opportunities"
+				"href": "/opportunities",
+				"dropdown": [
+					{
+						"label": "TIC Jobs",
+						"href": "/opportunities/tic-jobs"
+					},
+					{
+						"label": "Startup Jobs",
+						"href": "/opportunities/startup-jobs"
+					}
+				]
+			},
+			{
+				"label": "Partners",
+				"href": "/partners"
 			}
 		]
 	},
@@ -185,6 +209,12 @@
 					"title": "TIC Team",
 					"tagline": "Know the members of the TIC team who keep the centre running.",
 					"href": "/about/team",
+					"icon": "users"
+				},
+				{
+					"title": "TIC Coordinators",
+					"tagline": "Know the coordinators who connect the centre to its departments and founders.",
+					"href": "/about/tic-coordinators",
 					"icon": "users"
 				},
 				{
@@ -934,109 +964,24 @@
 			"heading": "Opportunities",
 			"title": "Opportunities · IITG TIC",
 			"hero": {
-				"eyebrow": "Opportunities · Startup hiring",
-				"headlineLead": "Open roles",
-				"headlineEmphasis": "at incubated startups.",
-				"intro": "Open positions and internships at startups currently being incubated at IITG-TIC. Hiring is small and specific — most teams are under twenty people. If something fits, apply directly to the team."
+				"eyebrow": "Opportunities · IITG TIC",
+				"headlineLead": "Two ways to work",
+				"headlineEmphasis": "inside the ecosystem.",
+				"intro": "Roles at the incubation centre itself, and roles at the startups being incubated here. Both are small teams where the work is specific and the ownership is real."
 			},
-			"listEyebrow": "Open roles",
-			"emptyMessage": "No open roles right now. Check back in a couple of weeks — the cohort hires in bursts.",
-			"posts": [
+			"gridEyebrow": "Where to look",
+			"links": [
 				{
-					"slug": "job-no-8",
-					"role": "Mechanical Engineer · Field robots",
-					"company": "Northeast Robotics",
-					"companySlug": "northeast-robotics",
-					"location": "Guwahati · in-person",
-					"type": "Full-time",
-					"sector": "Agricultural automation",
-					"posted": "2026-05-14",
-					"description": "Designing and iterating on the mechanical platforms behind our tea-estate field robots — chassis, drivetrains and the moving parts that meet the weather. Comfortable on a bench and at a CAD station.",
-					"applyLink": "mailto:hiring@northeast-robotics.example"
+					"title": "TIC Jobs",
+					"tagline": "Positions, internships and project roles at the incubation centre itself.",
+					"href": "/opportunities/tic-jobs",
+					"icon": "landmark"
 				},
 				{
-					"slug": "job-no-7",
-					"role": "Embedded Firmware Engineer",
-					"company": "Sensora Labs",
-					"companySlug": "sensora-labs",
-					"location": "Guwahati · hybrid",
-					"type": "Full-time",
-					"sector": "Industrial sensing",
-					"posted": "2026-05-09",
-					"description": "Owning the firmware that runs on our wireless vibration sensors — low-power C on ARM Cortex-M, BLE/LoRa stacks, and the OTA path that keeps deployed units in the field updateable.",
-					"applyLink": "mailto:careers@sensoralabs.example"
-				},
-				{
-					"slug": "job-no-6",
-					"role": "Battery Management Intern",
-					"company": "Voltaic Cells",
-					"companySlug": "voltaic-cells",
-					"location": "Guwahati · in-person",
-					"type": "Internship · 6 months",
-					"sector": "Energy storage",
-					"posted": "2026-05-04",
-					"description": "Working alongside the BMS team on cell-level characterisation, thermal modelling and the test rigs that prove our packs hold up under field conditions. Open to final-year students and recent graduates.",
-					"applyLink": "mailto:interns@voltaiccells.example"
-				},
-				{
-					"slug": "job-no-5",
-					"role": "Supply Chain Lead",
-					"company": "Millet Labs",
-					"companySlug": "millet-labs",
-					"location": "Guwahati · in-person",
-					"type": "Full-time",
-					"sector": "Food technology",
-					"posted": "2026-04-28",
-					"description": "Building the procurement and distribution backbone — relationships with farmer collectives upstream, logistics into the two national chains we're talking to downstream. Strong fit if you've worked with FPOs or rural supply chains before.",
-					"applyLink": "mailto:careers@milletlabs.example"
-				},
-				{
-					"slug": "job-no-4",
-					"role": "ML Engineer · Medical Imaging",
-					"company": "PathLab AI",
-					"companySlug": "pathlab-ai",
-					"location": "Imphal · remote-friendly",
-					"type": "Full-time",
-					"sector": "Diagnostics",
-					"posted": "2026-04-22",
-					"description": "Working on the slide-review assistant that supports pathologists in tier-two hospitals. Experience with vision transformers, weakly-supervised learning or histopathology data is a strong plus.",
-					"applyLink": "mailto:hiring@pathlabai.example"
-				},
-				{
-					"slug": "job-no-3",
-					"role": "Data Engineer",
-					"company": "Aqua Monitor",
-					"companySlug": "aqua-monitor",
-					"location": "Shillong · hybrid",
-					"type": "Full-time",
-					"sector": "Water quality",
-					"posted": "2026-04-15",
-					"description": "Owning the pipeline that takes raw sensor data from our municipal deployments and turns it into the dashboards municipalities actually use. Comfortable with Python, time-series stores and the operational side of running a live system.",
-					"applyLink": "mailto:careers@aquamonitor.example"
-				},
-				{
-					"slug": "job-no-2",
-					"role": "Flight Controls Engineer",
-					"company": "EasternSky Aerospace",
-					"companySlug": "easternsky-aerospace",
-					"location": "Guwahati · in-person",
-					"type": "Full-time",
-					"sector": "Aerospace",
-					"posted": "2026-04-08",
-					"description": "Tuning the autopilot and control loops on our survey-grade UAVs. PX4/ArduPilot experience is useful but not required — what matters is that you understand the control theory and have shipped a flying platform before.",
-					"applyLink": "mailto:hiring@easternsky.example"
-				},
-				{
-					"slug": "job-no-1",
-					"role": "Design Engineer Intern",
-					"company": "Weave Tech",
-					"companySlug": "weave-tech",
-					"location": "Dimapur · in-person",
-					"type": "Internship · 4 months",
-					"sector": "Textile technology",
-					"posted": "2026-03-30",
-					"description": "Designing the small-batch loom-side jigs and software interfaces we ship to weaving cooperatives. Best fit if you can talk to weavers, sketch a fix, and prototype it the same week.",
-					"applyLink": "mailto:interns@weavetech.example"
+					"title": "Startup Jobs",
+					"tagline": "Open roles and internships at the startups currently being incubated here.",
+					"href": "/opportunities/startup-jobs",
+					"icon": "rocket"
 				}
 			]
 		},
@@ -3122,6 +3067,225 @@
 					}
 				}
 			]
+		},
+		"startupJobs": {
+			"heading": "Startup Jobs",
+			"title": "Startup Jobs · IITG TIC",
+			"hero": {
+				"eyebrow": "Opportunities · Startup hiring",
+				"headlineLead": "Open roles",
+				"headlineEmphasis": "at incubated startups.",
+				"intro": "Open positions and internships at startups currently being incubated at IITG-TIC. Hiring is small and specific — most teams are under twenty people. If something fits, apply directly to the team."
+			},
+			"listEyebrow": "Open roles",
+			"emptyMessage": "No open roles right now. Check back in a couple of weeks — the cohort hires in bursts.",
+			"posts": [
+				{
+					"slug": "job-no-8",
+					"role": "Mechanical Engineer · Field robots",
+					"company": "Northeast Robotics",
+					"companySlug": "northeast-robotics",
+					"location": "Guwahati · in-person",
+					"type": "Full-time",
+					"sector": "Agricultural automation",
+					"posted": "2026-05-14",
+					"description": "Designing and iterating on the mechanical platforms behind our tea-estate field robots — chassis, drivetrains and the moving parts that meet the weather. Comfortable on a bench and at a CAD station.",
+					"applyLink": "mailto:hiring@northeast-robotics.example"
+				},
+				{
+					"slug": "job-no-7",
+					"role": "Embedded Firmware Engineer",
+					"company": "Sensora Labs",
+					"companySlug": "sensora-labs",
+					"location": "Guwahati · hybrid",
+					"type": "Full-time",
+					"sector": "Industrial sensing",
+					"posted": "2026-05-09",
+					"description": "Owning the firmware that runs on our wireless vibration sensors — low-power C on ARM Cortex-M, BLE/LoRa stacks, and the OTA path that keeps deployed units in the field updateable.",
+					"applyLink": "mailto:careers@sensoralabs.example"
+				},
+				{
+					"slug": "job-no-6",
+					"role": "Battery Management Intern",
+					"company": "Voltaic Cells",
+					"companySlug": "voltaic-cells",
+					"location": "Guwahati · in-person",
+					"type": "Internship · 6 months",
+					"sector": "Energy storage",
+					"posted": "2026-05-04",
+					"description": "Working alongside the BMS team on cell-level characterisation, thermal modelling and the test rigs that prove our packs hold up under field conditions. Open to final-year students and recent graduates.",
+					"applyLink": "mailto:interns@voltaiccells.example"
+				},
+				{
+					"slug": "job-no-5",
+					"role": "Supply Chain Lead",
+					"company": "Millet Labs",
+					"companySlug": "millet-labs",
+					"location": "Guwahati · in-person",
+					"type": "Full-time",
+					"sector": "Food technology",
+					"posted": "2026-04-28",
+					"description": "Building the procurement and distribution backbone — relationships with farmer collectives upstream, logistics into the two national chains we're talking to downstream. Strong fit if you've worked with FPOs or rural supply chains before.",
+					"applyLink": "mailto:careers@milletlabs.example"
+				},
+				{
+					"slug": "job-no-4",
+					"role": "ML Engineer · Medical Imaging",
+					"company": "PathLab AI",
+					"companySlug": "pathlab-ai",
+					"location": "Imphal · remote-friendly",
+					"type": "Full-time",
+					"sector": "Diagnostics",
+					"posted": "2026-04-22",
+					"description": "Working on the slide-review assistant that supports pathologists in tier-two hospitals. Experience with vision transformers, weakly-supervised learning or histopathology data is a strong plus.",
+					"applyLink": "mailto:hiring@pathlabai.example"
+				},
+				{
+					"slug": "job-no-3",
+					"role": "Data Engineer",
+					"company": "Aqua Monitor",
+					"companySlug": "aqua-monitor",
+					"location": "Shillong · hybrid",
+					"type": "Full-time",
+					"sector": "Water quality",
+					"posted": "2026-04-15",
+					"description": "Owning the pipeline that takes raw sensor data from our municipal deployments and turns it into the dashboards municipalities actually use. Comfortable with Python, time-series stores and the operational side of running a live system.",
+					"applyLink": "mailto:careers@aquamonitor.example"
+				},
+				{
+					"slug": "job-no-2",
+					"role": "Flight Controls Engineer",
+					"company": "EasternSky Aerospace",
+					"companySlug": "easternsky-aerospace",
+					"location": "Guwahati · in-person",
+					"type": "Full-time",
+					"sector": "Aerospace",
+					"posted": "2026-04-08",
+					"description": "Tuning the autopilot and control loops on our survey-grade UAVs. PX4/ArduPilot experience is useful but not required — what matters is that you understand the control theory and have shipped a flying platform before.",
+					"applyLink": "mailto:hiring@easternsky.example"
+				},
+				{
+					"slug": "job-no-1",
+					"role": "Design Engineer Intern",
+					"company": "Weave Tech",
+					"companySlug": "weave-tech",
+					"location": "Dimapur · in-person",
+					"type": "Internship · 4 months",
+					"sector": "Textile technology",
+					"posted": "2026-03-30",
+					"description": "Designing the small-batch loom-side jigs and software interfaces we ship to weaving cooperatives. Best fit if you can talk to weavers, sketch a fix, and prototype it the same week.",
+					"applyLink": "mailto:interns@weavetech.example"
+				}
+			]
+		},
+		"ticJobs": {
+			"heading": "TIC Jobs",
+			"title": "TIC Jobs · IITG TIC",
+			"hero": {
+				"eyebrow": "Opportunities · Working at the centre",
+				"headlineLead": "Open roles",
+				"headlineEmphasis": "at IITG TIC.",
+				"intro": "Positions, internships and project roles at the Technology Incubation Centre itself — the small team that runs programmes, partnerships and the day-to-day work of incubation."
+			},
+			"listEyebrow": "Open roles",
+			"emptyMessage": "No openings at the centre right now. New roles are posted here first — check back, or write to tic@iitg.ac.in with what you would like to work on.",
+			"posts": []
+		},
+		"programs": {
+			"heading": "Schemes & Programs",
+			"title": "Schemes & Programs · IITG TIC",
+			"hero": {
+				"eyebrow": "Schemes & Programs · IITG TIC",
+				"headlineLead": "The programmes that run here,",
+				"headlineEmphasis": "and the schemes behind them.",
+				"intro": "Everything the centre puts on for founders — the events and workshops that happen through the year, and the funding and support schemes a startup incubated here can apply to."
+			},
+			"gridEyebrow": "What runs here",
+			"links": [
+				{
+					"title": "Events & Workshops",
+					"tagline": "Cohort sessions, demo days, clinics and workshops across the year.",
+					"href": "/events",
+					"icon": "calendar"
+				},
+				{
+					"title": "Schemes",
+					"tagline": "Funding and support schemes open to startups incubated at the centre.",
+					"href": "/schemes",
+					"icon": "banknote"
+				}
+			]
+		},
+		"schemes": {
+			"heading": "Schemes",
+			"title": "Schemes · IITG TIC",
+			"hero": {
+				"eyebrow": "Schemes & Programs · Schemes",
+				"headlineLead": "Funding and support",
+				"headlineEmphasis": "a founder here can apply to.",
+				"intro": "Startups incubated at IITG-TIC can apply to national and state schemes for grants, prototyping support and early capital. The centre helps with eligibility, the application itself and the reporting that follows."
+			},
+			"sectionEyebrow": "Open schemes",
+			"emptyMessage": "No schemes are listed right now. Write to tic@iitg.ac.in and the team will point you to what is currently open.",
+			"schemes": [
+				{
+					"name": "Startup India Seed Fund Scheme",
+					"shortName": "SISFS",
+					"provider": "DPIIT, Government of India",
+					"summary": "Seed funding for DPIIT-recognised startups, given through approved incubators as a grant for proof of concept and prototyping, and as debt or convertible instruments for market entry and scale-up.",
+					"support": ["Proof of concept", "Prototype development", "Market entry"],
+					"href": "https://seedfund.startupindia.gov.in/"
+				},
+				{
+					"name": "NIDHI-PRAYAS",
+					"shortName": "PRAYAS",
+					"provider": "DST, Government of India",
+					"summary": "Support for innovators taking an idea to a working prototype, covering the build itself — materials, fabrication and testing — before a company or external funding is in place.",
+					"support": ["Prototype grant", "Fabrication support", "Mentoring"],
+					"href": "https://www.nidhiprayas.org/"
+				},
+				{
+					"name": "NIDHI Entrepreneur in Residence",
+					"shortName": "NIDHI-EIR",
+					"provider": "DST, Government of India",
+					"summary": "A subsistence grant for aspiring entrepreneurs working full time on a venture inside a host incubator, so the cost of leaving a job is not what stops the idea.",
+					"support": ["Monthly subsistence", "Incubator residency", "Mentoring"],
+					"href": "https://nidhi-eir.in/"
+				},
+				{
+					"name": "BIRAC BIG",
+					"shortName": "BIG",
+					"provider": "BIRAC, Department of Biotechnology",
+					"summary": "Early-stage funding for biotechnology ideas with commercial promise, covering the work from proof of concept through to an early technology demonstration.",
+					"support": ["Proof of concept", "Technology validation", "Mentoring"],
+					"href": "https://birac.nic.in/big.php"
+				}
+			]
+		},
+		"ticCoordinators": {
+			"heading": "TIC Coordinators",
+			"title": "TIC Coordinators · IITG TIC",
+			"hero": {
+				"eyebrow": "About · TIC Coordinators",
+				"headlineLead": "The people who keep",
+				"headlineEmphasis": "the centre connected.",
+				"lede": "Coordinators are the first point of contact between the centre and the departments, programmes and founders it works with — the ones to write to when you are not sure where a question belongs."
+			},
+			"sectionEyebrow": "Coordinators",
+			"emptyMessage": "Coordinator details are being updated. In the meantime, write to tic@iitg.ac.in and the team will route your question.",
+			"members": [
+				{
+					"name": "Praneet Dutta",
+					"avatar": {
+						"src": "",
+						"alt": ""
+					},
+					"role": "Project Coordinator",
+					"bio": "",
+					"email": "coordinator@iitgtic.com",
+					"phone": ""
+				}
+			]
 		}
 	},
 	"cta": {
@@ -3180,6 +3344,10 @@
 						"href": "/events"
 					},
 					{
+						"label": "Schemes",
+						"href": "/schemes"
+					},
+					{
 						"label": "Opportunities",
 						"href": "/opportunities"
 					},
@@ -3211,6 +3379,10 @@
 					{
 						"label": "TIC Team",
 						"href": "/about/team"
+					},
+					{
+						"label": "TIC Coordinators",
+						"href": "/about/tic-coordinators"
 					},
 					{
 						"label": "FAQ",

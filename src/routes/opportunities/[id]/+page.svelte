@@ -22,7 +22,9 @@
 	const slug = $derived(page.params.id ?? '');
 
 	function seedBySlug(s: string): AnyJob | null {
-		const p = content.pages.opportunities.posts.find((x) => x.slug === s);
+		const p = [...content.pages.ticJobs.posts, ...content.pages.startupJobs.posts].find(
+			(x) => x.slug === s
+		);
 		if (!p) return null;
 		return {
 			id: `seed_${p.slug}`,

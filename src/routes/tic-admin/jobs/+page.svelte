@@ -4,7 +4,7 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import { seedJobs, type AnyJob } from '$lib/utils/jobPostings';
+	import { seedStartupJobs, ticJobs, type AnyJob } from '$lib/utils/jobPostings';
 	import type { CompanyAccount } from '$lib/utils/companyAuth';
 	import { adminDeleteJob } from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
@@ -17,8 +17,9 @@
 	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
 	const companies = $derived(data.companies as CompanyAccount[]);
 
-	// Seed posts live in content.json rather than the database, so the admin list
-	// is the union — the same thing the public Opportunities page shows.
+	// Seed startup posts and every TIC role live in content.json rather than the
+	// database, so the admin list is the union of all three sources — the same
+	// thing the two public job boards show between them.
 	const jobs = $derived<AnyJob[]>(
 		[
 			...data.jobs.map((row) => ({
@@ -38,7 +39,8 @@
 				updatedAt: row.updated_at,
 				source: 'user' as const
 			})),
-			...seedJobs()
+			...ticJobs(),
+			...seedStartupJobs()
 		].sort((a, b) => (a.posted < b.posted ? 1 : a.posted > b.posted ? -1 : 0))
 	);
 
@@ -108,8 +110,13 @@
 	</div>
 
 	<p class="note">
-		Seed roles come from <code>content.json</code> and can only be changed in the codebase. Company-posted
-		roles can be removed here, or by the company from its own dashboard.
+		Company-posted roles can be removed here, or by the company from its own dashboard. Seed roles
+		are content: edit them under Content → <a
+			href={resolve('/tic-admin/content/[...key]', { key: 'pages.ticJobs' })}>TIC jobs</a
+		>
+		and
+		<a href={resolve('/tic-admin/content/[...key]', { key: 'pages.startupJobs' })}>Startup jobs</a>,
+		where they can also be added and taken down.
 	</p>
 
 	<div class="panel">
@@ -354,11 +361,10 @@
 		}
 	}
 
-	.note code {
-		font-size: 11px;
-		background: $admin-line-soft;
-		padding: 1px 5px;
-		border-radius: 3px;
+	.note a {
+		color: inherit;
+		text-decoration: underline;
+		text-underline-offset: 2px;
 	}
 
 	.actions-col {

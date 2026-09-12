@@ -54,16 +54,47 @@ export type EmailConfig = {
 	usingTestSender: boolean;
 };
 
+// A value copied from a .env line into a hosting dashboard usually arrives with
+// the quotes still attached — `"IIT Guwahati TIC <hello@itsjeu.com>"`. dotenv
+// strips those when the file is read locally, so it works in development and
+// only breaks once deployed; Resend then rejects the whole string as a malformed
+// `from` without saying which part of it is wrong. Stripping a matching pair
+// here costs nothing and removes a failure that looks nothing like its cause.
+//
+// A quoted display name — `"IIT Guwahati TIC" <hello@itsjeu.com>` — is valid and
+// left alone, because only its first character is a quote.
+export function unwrapQuotes(value: string | undefined): string {
+	const trimmed = value?.trim() ?? '';
+	if (trimmed.length < 2) return trimmed;
+	const first = trimmed[0];
+	const last = trimmed[trimmed.length - 1];
+	const paired = (first === '"' && last === '"') || (first === "'" && last === "'");
+	return paired ? trimmed.slice(1, -1).trim() : trimmed;
+}
+
+const BARE_ADDRESS = /^[^\s@<>,]+@[^\s@<>,]+\.[^\s@<>,]+$/;
+
+/**
+ * Whether Resend will accept this as a `from` — either a bare address or
+ * `Display Name <address>`. Checked before the API call so a misconfigured
+ * sender is reported against the setting that caused it.
+ */
+export function fromLooksValid(from: string): boolean {
+	const angled = /<([^>]*)>\s*$/.exec(from.trim());
+	const address = (angled ? angled[1] : from).trim();
+	return BARE_ADDRESS.test(address);
+}
+
 export function emailConfig(): EmailConfig {
 	const plan = resolvePlan(env.RESEND_PLAN);
-	const from = env.RESEND_FROM?.trim() || DEFAULT_FROM;
+	const from = unwrapQuotes(env.RESEND_FROM) || DEFAULT_FROM;
 	const monthlyOverride = Number(env.RESEND_MONTHLY_LIMIT);
 	const dailyOverride = Number(env.RESEND_DAILY_LIMIT);
 
 	return {
 		configured: Boolean(env.RESEND_API_KEY?.trim()),
 		from,
-		replyTo: env.RESEND_REPLY_TO?.trim() || '',
+		replyTo: unwrapQuotes(env.RESEND_REPLY_TO),
 		// PUBLIC_-prefixed, so it comes from the public env module — links inside an
 		// email have no request to infer an origin from.
 		siteUrl: (publicEnv.PUBLIC_SITE_URL?.trim() || 'https://iitgtic.itsjeu.com').replace(/\/$/, ''),
@@ -81,7 +112,7 @@ export function emailConfig(): EmailConfig {
 // answers on, then the address it sends from (parsed out of "Name <email>").
 export function adminAlertRecipient(): string {
 	const config = emailConfig();
-	const explicit = env.ADMIN_ALERT_EMAIL?.trim();
+	const explicit = unwrapQuotes(env.ADMIN_ALERT_EMAIL);
 	if (explicit) return explicit;
 	if (config.replyTo) return config.replyTo;
 	const match = config.from.match(/<([^>]+)>/);
@@ -466,6 +497,18 @@ export async function sendTemplateEmail(options: SendOptions): Promise<SendResul
 
 	if (!config.configured) {
 		return blocked('RESEND_API_KEY is not set, so nothing was sent.', subject, html);
+	}
+
+	// Caught here rather than at Resend, which answers a malformed sender with a
+	// generic "Invalid `from` field" that names neither the value nor the setting
+	// it came from — and logs it against the message instead of the config.
+	if (!fromLooksValid(config.from)) {
+		return blocked(
+			`RESEND_FROM is not a valid sender: ${JSON.stringify(config.from)}. ` +
+				'Expected an address, or `Name <address>`.',
+			subject,
+			html
+		);
 	}
 
 	// Mailing an address that hard-bounced or filed a spam complaint is what gets
