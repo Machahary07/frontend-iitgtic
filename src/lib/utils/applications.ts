@@ -3,6 +3,7 @@
 // storage bucket, one folder per user, and the row records their paths.
 
 import { supabase } from '$lib/supabaseClient';
+import { missingRequiredAnswers } from '$lib/utils/applicationSchema';
 
 export type ApplicationDocuments = Record<string, { path: string; name: string; size: number }>;
 
@@ -25,6 +26,19 @@ export async function submitApplication(
 	const userId = sessionData.session?.user.id;
 	if (!userId) {
 		return { ok: false, error: 'Please sign in before submitting your application.' };
+	}
+
+	// Second gate behind the form's own step validation. Checked before anything is
+	// uploaded, so an incomplete application never leaves files behind in storage.
+	const missing = missingRequiredAnswers(answers);
+	if (missing.length > 0) {
+		return {
+			ok: false,
+			error: `Please complete every required field before submitting: ${missing.join(', ')}.`
+		};
+	}
+	if (!files.pitchDeck) {
+		return { ok: false, error: 'A pitch deck PDF is required before submitting.' };
 	}
 
 	const documents: ApplicationDocuments = {};

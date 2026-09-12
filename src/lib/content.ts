@@ -8,9 +8,20 @@
 
 import fallback from '$lib/data/content.json';
 
-export type SiteContent = typeof fallback;
+type ContentDoc = typeof fallback;
 
-let current: SiteContent = fallback;
+// TIC Jobs ships with an empty `posts` array, which JSON alone types as never[].
+// It holds the same shape as the startup board's posts, so say so — otherwise
+// nothing can be added to it from the admin console without a cast.
+export type SiteContent = Omit<ContentDoc, 'pages'> & {
+	pages: Omit<ContentDoc['pages'], 'ticJobs'> & {
+		ticJobs: Omit<ContentDoc['pages']['ticJobs'], 'posts'> & {
+			posts: ContentDoc['pages']['startupJobs']['posts'];
+		};
+	};
+};
+
+let current: SiteContent = fallback as SiteContent;
 
 export function setContent(next: Partial<SiteContent> | null | undefined): void {
 	if (!next) return;
@@ -37,13 +48,18 @@ export const CONTENT_SECTIONS: { key: string; label: string; group: string }[] =
 	{ key: 'pages.committeeOfManagement', label: 'Committee of management', group: 'Pages' },
 	{ key: 'pages.team', label: 'TIC team', group: 'Pages' },
 	{ key: 'pages.mentors', label: 'Mentors', group: 'Pages' },
+	{ key: 'pages.ticCoordinators', label: 'TIC coordinators', group: 'Pages' },
 	{ key: 'pages.faq', label: 'FAQ', group: 'Pages' },
 	{ key: 'pages.blog', label: 'Blog', group: 'Pages' },
 	{ key: 'pages.incubation', label: 'Incubation', group: 'Pages' },
 	{ key: 'pages.incubatedStartups', label: 'Incubated startups', group: 'Pages' },
+	{ key: 'pages.programs', label: 'Schemes & programs', group: 'Pages' },
 	{ key: 'pages.events', label: 'Events', group: 'Pages' },
+	{ key: 'pages.schemes', label: 'Schemes', group: 'Pages' },
 	{ key: 'pages.partners', label: 'Partners', group: 'Pages' },
 	{ key: 'pages.opportunities', label: 'Opportunities', group: 'Pages' },
+	{ key: 'pages.ticJobs', label: 'TIC jobs', group: 'Pages' },
+	{ key: 'pages.startupJobs', label: 'Startup jobs', group: 'Pages' },
 	{ key: 'pages.apply', label: 'Apply', group: 'Pages' },
 	{ key: 'pages.contact', label: 'Contact', group: 'Pages' },
 	{ key: 'pages.privacy', label: 'Privacy policy', group: 'Pages' },

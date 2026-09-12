@@ -1,7 +1,12 @@
 // Copies content.json into the site_content table, one row per section.
 //
-//   node scripts/seed-content.js          insert sections that are not there yet
-//   node scripts/seed-content.js --force  overwrite every section from content.json
+//   node scripts/seed-content.js                 insert sections that are not there yet
+//   node scripts/seed-content.js --force         overwrite every section from content.json
+//   node scripts/seed-content.js --only nav,...  overwrite just the listed sections
+//
+// --only is the one to reach for after a structural change to a section that is
+// already stored — a new menu, a page that moved. --force would take console
+// edits with it; --only touches nothing else.
 //
 // Run it once after the first deploy. Anything missing from the table is read
 // from content.json anyway, so seeding is about making a section editable in the
@@ -20,13 +25,19 @@ const env = Object.fromEntries(
 	readFileSync(new URL('.env.local', root), 'utf8')
 		.split('\n')
 		.filter((line) => line.includes('=') && !line.trim().startsWith('#'))
-		.map((line) => [line.slice(0, line.indexOf('=')).trim(), line.slice(line.indexOf('=') + 1).trim()])
+		.map((line) => [
+			line.slice(0, line.indexOf('=')).trim(),
+			line.slice(line.indexOf('=') + 1).trim()
+		])
 );
 
 const content = JSON.parse(readFileSync(new URL('src/lib/data/content.json', root), 'utf8'));
 
 const titleCase = (key) =>
-	key.replace(/([A-Z])/g, ' $1').replace(/^./, (c) => c.toUpperCase()).trim();
+	key
+		.replace(/([A-Z])/g, ' $1')
+		.replace(/^./, (c) => c.toUpperCase())
+		.trim();
 
 const sections = [
 	...Object.keys(content)
@@ -44,12 +55,37 @@ const admin = createClient(env.PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KE
 });
 
 const force = process.argv.includes('--force');
+
+const onlyArg = process.argv.find((a) => a.startsWith('--only'));
+const only = onlyArg
+	? new Set(
+			(onlyArg.includes('=')
+				? onlyArg.slice(onlyArg.indexOf('=') + 1)
+				: (process.argv[process.argv.indexOf(onlyArg) + 1] ?? '')
+			)
+				.split(',')
+				.map((k) => k.trim())
+				.filter(Boolean)
+		)
+	: null;
+
+if (only) {
+	const unknown = [...only].filter((k) => !sections.some((s) => s.key === k));
+	if (only.size === 0 || unknown.length > 0) {
+		console.error(
+			`--only needs section keys from content.json${unknown.length ? `; unknown: ${unknown.join(', ')}` : ''}`
+		);
+		process.exit(1);
+	}
+}
+
 const { data: existing } = await admin.from('site_content').select('key');
 const present = new Set((existing ?? []).map((row) => row.key));
 
 let written = 0;
 for (const section of sections) {
-	if (present.has(section.key) && !force) {
+	if (only && !only.has(section.key)) continue;
+	if (present.has(section.key) && !force && !only) {
 		console.log(`skipped  ${section.key} (already stored)`);
 		continue;
 	}

@@ -13,10 +13,15 @@ const STATIC_ROUTES = [
 	'/about/faq',
 	'/about/blog',
 	'/about/mentors',
+	'/about/tic-coordinators',
+	'/programs',
 	'/events',
+	'/schemes',
 	'/incubated-startups',
 	'/incubation',
 	'/opportunities',
+	'/opportunities/tic-jobs',
+	'/opportunities/startup-jobs',
 	'/partners',
 	'/contact',
 	'/privacy',
@@ -35,7 +40,8 @@ function buildUrls(content: SiteContent): string[] {
 		for (const s of cat.startups) urls.push(`/incubated-startups/${cat.slug}/${s.slug}`);
 	}
 
-	for (const p of content.pages.opportunities.posts) urls.push(`/opportunities/${p.slug}`);
+	for (const p of content.pages.ticJobs.posts) urls.push(`/opportunities/${p.slug}`);
+	for (const p of content.pages.startupJobs.posts) urls.push(`/opportunities/${p.slug}`);
 
 	return urls;
 }

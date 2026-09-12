@@ -5,7 +5,7 @@
 
 	const content = getContent();
 
-	const page = content.pages.opportunities;
+	const page = content.pages.programs;
 	const ctaContent = content.cta.apply;
 </script>
 

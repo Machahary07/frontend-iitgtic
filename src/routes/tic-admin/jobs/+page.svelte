@@ -4,7 +4,7 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import { seedJobs, type AnyJob } from '$lib/utils/jobPostings';
+	import { seedStartupJobs, ticJobs, type AnyJob } from '$lib/utils/jobPostings';
 	import type { CompanyAccount } from '$lib/utils/companyAuth';
 	import { adminDeleteJob } from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
@@ -17,8 +17,9 @@
 	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
 	const companies = $derived(data.companies as CompanyAccount[]);
 
-	// Seed posts live in content.json rather than the database, so the admin list
-	// is the union — the same thing the public Opportunities page shows.
+	// Seed startup posts and every TIC role live in content.json rather than the
+	// database, so the admin list is the union of all three sources — the same
+	// thing the two public job boards show between them.
 	const jobs = $derived<AnyJob[]>(
 		[
 			...data.jobs.map((row) => ({
@@ -38,7 +39,8 @@
 				updatedAt: row.updated_at,
 				source: 'user' as const
 			})),
-			...seedJobs()
+			...ticJobs(),
+			...seedStartupJobs()
 		].sort((a, b) => (a.posted < b.posted ? 1 : a.posted > b.posted ? -1 : 0))
 	);
 
