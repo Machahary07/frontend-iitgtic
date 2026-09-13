@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>IITG-TIC Admin Console — Operations Manual</title>
+<style>
+@font-face{font-family:'Montserrat Variable';font-style:normal;font-weight:300 900;font-display:block;
+  src:url('../node_modules/@fontsource-variable/montserrat/files/montserrat-latin-wght-normal.woff2') format('woff2');}
+@font-face{font-family:'Source Serif 4 Variable';font-style:normal;font-weight:200 900;font-display:block;
+  src:url('../node_modules/@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-normal.woff2') format('woff2');}
+@font-face{font-family:'Source Serif 4 Variable';font-style:italic;font-weight:200 900;font-display:block;
+  src:url('../node_modules/@fontsource-variable/source-serif-4/files/source-serif-4-latin-wght-italic.woff2') format('woff2');}
+
+:root{
+  --ink:#0b0b0c; --ink-2:#33353a; --ink-3:#6b6f76; --ink-4:#9aa0a8;
+  --green:#0EB05B; --blue:#004EBB; --amber:#B8730B; --red:#C02B2B;
+  --line:#e3e5e8; --line-soft:#eef0f2; --sunken:#f7f8f9;
+  --sans:'Montserrat Variable',-apple-system,Helvetica,Arial,sans-serif;
+  --serif:'Source Serif 4 Variable',Georgia,'Times New Roman',serif;
+}
+
+@page{ size:A4; margin:19mm 17mm 18mm 17mm; }
+@page cover{ margin:0; }
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--serif); font-size:10.4pt; line-height:1.58; color:var(--ink);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+
+/* ---------- cover ---------- */
+.cover{
+  page:cover; height:297mm; width:210mm; position:relative; overflow:hidden;
+  padding:0; display:flex; flex-direction:column; page-break-after:always;
+}
+.cover__band{height:14mm;background:var(--green);}
+.cover__body{flex:1;padding:38mm 22mm 0;}
+.cover__eyebrow{
+  font-family:var(--sans);font-size:8.5pt;font-weight:700;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--green);margin:0 0 14mm;
+}
+.cover__title{
+  font-family:var(--sans);font-weight:700;font-size:34pt;line-height:1.08;
+  letter-spacing:-0.02em;margin:0 0 6mm;color:var(--ink);max-width:150mm;
+}
+.cover__sub{
+  font-size:14pt;line-height:1.45;color:var(--ink-3);margin:0 0 20mm;max-width:130mm;
+}
+.cover__rule{width:28mm;height:3px;background:var(--ink);margin:0 0 8mm;}
+.cover__meta{font-family:var(--sans);font-size:9pt;line-height:2;color:var(--ink-2);}
+.cover__meta b{font-weight:600;color:var(--ink);display:inline-block;min-width:34mm;}
+.cover__mask{position:absolute;left:0;right:0;bottom:0;height:14mm;background:#fff;z-index:2;}
+.cover__foot{
+  padding:0 22mm 18mm;font-family:var(--sans);font-size:8pt;color:var(--ink-4);
+  letter-spacing:.06em;text-transform:uppercase;
+}
+
+/* ---------- structure ---------- */
+.sheet{page-break-before:always;}
+h1.part{
+  font-family:var(--sans);font-size:20pt;font-weight:700;letter-spacing:-0.015em;
+  line-height:1.15;margin:0 0 2mm;color:var(--ink);
+}
+h1.part .num{color:var(--green);font-variant-numeric:tabular-nums;}
+.part-lede{font-size:11pt;color:var(--ink-3);margin:0 0 9mm;max-width:135mm;line-height:1.5;}
+.part-rule{border:0;border-top:2px solid var(--ink);margin:0 0 7mm;}
+
+h2{
+  font-family:var(--sans);font-size:12pt;font-weight:700;letter-spacing:-0.01em;
+  margin:9mm 0 2.5mm;color:var(--ink);page-break-after:avoid;
+}
+h2 .num{color:var(--ink-4);font-weight:600;font-variant-numeric:tabular-nums;margin-right:2mm;}
+h3{
+  font-family:var(--sans);font-size:9.5pt;font-weight:700;letter-spacing:.02em;
+  margin:6mm 0 2mm;color:var(--ink-2);page-break-after:avoid;
+}
+p{margin:0 0 3.2mm;}
+p.lede{font-size:11pt;color:var(--ink-2);line-height:1.5;}
+a{color:var(--blue);text-decoration:none;}
+strong{font-weight:600;}
+em{font-style:italic;}
+code,.path{
+  font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:8.6pt;
+  background:var(--sunken);border:1px solid var(--line-soft);border-radius:3px;
+  padding:0.5mm 1.4mm;color:var(--ink-2);white-space:nowrap;
+}
+
+ul,ol{margin:0 0 3.5mm;padding-left:5.5mm;}
+li{margin:0 0 1.4mm;}
+ol.steps{counter-reset:s;list-style:none;padding-left:0;}
+ol.steps>li{
+  counter-increment:s;position:relative;padding-left:8mm;margin-bottom:2.2mm;
+}
+ol.steps>li::before{
+  content:counter(s);position:absolute;left:0;top:0.4mm;
+  font-family:var(--sans);font-size:7.5pt;font-weight:700;color:#fff;background:var(--ink);
+  width:4.6mm;height:4.6mm;border-radius:50%;display:flex;align-items:center;justify-content:center;
+}
+
+table{width:100%;border-collapse:collapse;margin:0 0 4.5mm;font-size:9pt;page-break-inside:avoid;}
+thead th{
+  font-family:var(--sans);font-size:7.6pt;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);text-align:left;padding:0 2.5mm 1.6mm 0;border-bottom:1.5px solid var(--ink);
+}
+tbody td{padding:2mm 2.5mm 2mm 0;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.45;}
+tbody tr:last-child td{border-bottom:1px solid var(--line);}
+td.k{font-family:var(--sans);font-size:8.6pt;font-weight:600;color:var(--ink);white-space:nowrap;}
+table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
+
+.chip{
+  font-family:var(--sans);font-size:7pt;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:0.8mm 2mm;border-radius:999px;display:inline-block;white-space:nowrap;line-height:1.3;
+}
+.chip--done{background:rgba(14,176,91,.12);color:#0a7a40;}
+.chip--wip{background:rgba(184,115,11,.13);color:#8a5608;}
+.chip--no{background:#eceef0;color:var(--ink-3);}
+
+.note,.warn{
+  border-left:3px solid var(--blue);background:#f5f8fd;padding:3mm 4mm;margin:0 0 4.5mm;
+  font-size:9.4pt;line-height:1.5;page-break-inside:avoid;
+}
+.warn{border-left-color:var(--amber);background:#fdf8f1;}
+.note__t,.warn__t{
+  font-family:var(--sans);font-size:7.6pt;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--blue);display:block;margin-bottom:1.2mm;
+}
+.warn__t{color:var(--amber);}
+.note p:last-child,.warn p:last-child{margin-bottom:0;}
+
+.card{
+  border:1px solid var(--line);border-radius:2mm;padding:4mm 4.5mm;margin:0 0 4.5mm;
+  page-break-inside:avoid;
+}
+.card--sunk{background:var(--sunken);border-color:var(--line-soft);}
+.card__t{
+  font-family:var(--sans);font-size:9pt;font-weight:700;margin:0 0 2mm;color:var(--ink);
+}
+
+.screen{
+  border:1px solid var(--line);border-radius:2mm;overflow:hidden;margin:0 0 4.5mm;page-break-inside:avoid;
+}
+.screen__bar{
+  background:var(--ink);color:#fff;font-family:var(--sans);font-size:7.8pt;font-weight:600;
+  letter-spacing:.05em;padding:1.8mm 3.5mm;display:flex;justify-content:space-between;
+}
+.screen__bar span:last-child{color:#9aa0a8;font-weight:500;}
+.screen__body{padding:3.5mm 4mm;font-size:9.2pt;}
+.screen__body p:last-child{margin-bottom:0;}
+
+.kv{display:grid;grid-template-columns:32mm 1fr;gap:1.2mm 4mm;font-size:9.2pt;margin:0 0 3.5mm;}
+.kv dt{font-family:var(--sans);font-size:8.4pt;font-weight:600;color:var(--ink-3);}
+.kv dd{margin:0;}
+
+.toc{margin-top:4mm;}
+.toc__row{
+  display:flex;align-items:baseline;gap:2mm;font-family:var(--sans);font-size:9.4pt;
+  padding:1.8mm 0;border-bottom:1px solid var(--line-soft);
+}
+.toc__n{font-weight:700;color:var(--green);width:9mm;font-variant-numeric:tabular-nums;}
+.toc__t{font-weight:600;color:var(--ink);}
+.toc__d{flex:1;font-family:var(--serif);font-size:9pt;color:var(--ink-3);text-align:right;}
+
+.legend{display:flex;gap:6mm;flex-wrap:wrap;font-size:9pt;margin:0 0 5mm;}
+.legend div{display:flex;align-items:center;gap:2mm;}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 7mm;}
+.avoid{page-break-inside:avoid;}
+.end{
+  margin-top:8mm;padding-top:4mm;border-top:2px solid var(--ink);
+  font-family:var(--sans);font-size:8pt;color:var(--ink-4);letter-spacing:.06em;text-transform:uppercase;
+}
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="cover">
+  <div class="cover__band"></div>
+  <div class="cover__body">
+    <p class="cover__eyebrow">IIT Guwahati · Technology Incubation Centre</p>
+    <h1 class="cover__title">The Admin Console</h1>
+    <p class="cover__sub">An operations manual for the TIC team — what every screen does, how to work each queue, and what is finished, what is still moving, and what was deliberately left out.</p>
+    <div class="cover__rule"></div>
+    <div class="cover__meta">
+      <p><b>Audience</b> TIC admin operators</p>
+      <p><b>Console</b> iitgtic.itsjeu.com/tic-admin</p>
+      <p><b>Edition</b> September 2026 · build tic-admin v17</p>
+      <p><b>Status</b> Console complete · email domain cutover pending</p>
+    </div>
+  </div>
+  <div class="cover__foot">Internal document · Not for public distribution</div>
+  <div class="cover__mask"></div>
+</section>
+
+<!-- ============ HOW TO USE THIS BOOK ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">00</span> &nbsp;How to read this book</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Part One is orientation — signing in, the shape of the console, and the order to work in on a normal day. Part Two is the reference: one chapter per screen, each with what it is for, what every button does, and the mistakes worth avoiding. Part Three is the ledger of what has been built and tested. Part Four is for whoever keeps the lights on.</p>
+
+  <h3>The status marks</h3>
+  <p>Every feature in this book carries one of three marks. They mean exactly this and nothing softer:</p>
+  <div class="legend">
+    <div><span class="chip chip--done">Done</span> Built, working on the live site, and exercised end to end.</div>
+    <div><span class="chip chip--wip">In progress</span> Working, but something outside the code is still missing.</div>
+    <div><span class="chip chip--no">Not doing</span> Considered and rejected on purpose, with the reason given.</div>
+  </div>
+  <p>A “Not doing” is not a gap. It is a decision, and the reason is recorded so nobody re-opens it by accident.</p>
+
+  <div class="toc">
+    <div class="toc__row"><span class="toc__n">01</span><span class="toc__t">Getting in</span><span class="toc__d">Accounts, sign-in, sessions, the first admin</span></div>
+    <div class="toc__row"><span class="toc__n">02</span><span class="toc__t">The console at a glance</span><span class="toc__d">Sidebar, shared conventions, the daily round</span></div>
+    <div class="toc__row"><span class="toc__n">03</span><span class="toc__t">Overview</span><span class="toc__d">The tiles and what they are telling you</span></div>
+    <div class="toc__row"><span class="toc__n">04</span><span class="toc__t">Approvals</span><span class="toc__d">The four queues that hold the public site up</span></div>
+    <div class="toc__row"><span class="toc__n">05</span><span class="toc__t">Companies</span><span class="toc__d">Verify, refuse, revert, remove an account</span></div>
+    <div class="toc__row"><span class="toc__n">06</span><span class="toc__t">Incubation applications</span><span class="toc__d">Reading 38 answers and four documents</span></div>
+    <div class="toc__row"><span class="toc__n">07</span><span class="toc__t">Posted jobs</span><span class="toc__d">The live board, and taking a role down</span></div>
+    <div class="toc__row"><span class="toc__n">08</span><span class="toc__t">Role applicants</span><span class="toc__d">Shortlist, send on, decline, export</span></div>
+    <div class="toc__row"><span class="toc__n">09</span><span class="toc__t">Users</span><span class="toc__d">Roles, suspension, deletion, new admins</span></div>
+    <div class="toc__row"><span class="toc__n">10</span><span class="toc__t">Activity</span><span class="toc__d">The audit trail and site traffic</span></div>
+    <div class="toc__row"><span class="toc__n">11</span><span class="toc__t">Content</span><span class="toc__d">Editing every word and image on the public site</span></div>
+    <div class="toc__row"><span class="toc__n">12</span><span class="toc__t">Email</span><span class="toc__d">Usage, the delivery log, suppressions, newsletter</span></div>
+    <div class="toc__row"><span class="toc__n">13</span><span class="toc__t">Email templates</span><span class="toc__d">Writing a message out of blocks</span></div>
+    <div class="toc__row"><span class="toc__n">14</span><span class="toc__t">Storage</span><span class="toc__d">Buckets, what is in use, safe deletion</span></div>
+    <div class="toc__row"><span class="toc__n">15</span><span class="toc__t">The assistant</span><span class="toc__d">Asking questions, approving its edits</span></div>
+    <div class="toc__row"><span class="toc__n">16</span><span class="toc__t">Mail the system sends</span><span class="toc__d">Every automatic message and its trigger</span></div>
+    <div class="toc__row"><span class="toc__n">17</span><span class="toc__t">What an admin can and cannot do</span><span class="toc__d">The security model in plain terms</span></div>
+    <div class="toc__row"><span class="toc__n">18</span><span class="toc__t">Feature ledger</span><span class="toc__d">Tested and complete · in progress · not doing</span></div>
+    <div class="toc__row"><span class="toc__n">19</span><span class="toc__t">When something goes wrong</span><span class="toc__d">Symptoms, causes, what to do</span></div>
+    <div class="toc__row"><span class="toc__n">20</span><span class="toc__t">For the technical caretaker</span><span class="toc__d">Backups, the restore drill, deploys, contacts</span></div>
+  </div>
+</section>
+
+<!-- ============ 01 GETTING IN ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">01</span> &nbsp;Getting in</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">There is one sign-in door for the whole site. What you see after it depends on what your account is, not on which address you typed.</p>
+
+  <h2><span class="num">1.1</span>The one door</h2>
+  <p>Everyone — TIC staff, founders, and the people founders add to their startups — signs in at <code>/login</code>. The server reads your account’s role and opens the matching console: admins land in <code>/tic-admin</code>, founders in <code>/founder</code>. You never need to remember a second address.</p>
+  <ol class="steps">
+    <li>Go to <code>iitgtic.itsjeu.com/login</code>.</li>
+    <li>Enter your email and password. Complete the bot check if it appears — it is Cloudflare Turnstile and usually passes without a click.</li>
+    <li>You arrive on the Overview screen. The sidebar on the left is the whole console.</li>
+  </ol>
+
+  <h2><span class="num">1.2</span>Your session</h2>
+  <p>Signing in issues a signed, <code>httpOnly</code> session cookie that lasts <strong>eight hours</strong>. It cannot be read by anything running in the page, and it is tied to you personally — every change you make in the console is recorded against your name, not against “the system”.</p>
+  <p>Sign out from the menu in the top-right of any console screen. Closing the tab does not sign you out; the eight hours do.</p>
+
+  <h2><span class="num">1.3</span>The very first admin</h2>
+  <p>On a brand-new installation there are no accounts at all, so there is nobody to sign in as. <code>/tic-admin/login</code> exists for exactly that one moment: it offers a setup form, takes the bootstrap password from the server’s environment, and creates the first admin. After that it stops granting access forever, and every further admin is created from <strong>Users → + New admin</strong> (§9).</p>
+  <div class="warn">
+    <span class="warn__t">If the setup form appears and admins already exist</span>
+    <p>The environment is wrong, not the database. That screen is chosen by counting admin accounts, so anything that stops the count — a key from the wrong Supabase project, a typo in the project URL, an unreachable host — used to look identical to a fresh install. The console now names the actual failure and refuses to bootstrap while it cannot read the table. Do not try to “set it up again”. Call the maintainers (§20).</p>
+  </div>
+
+  <h2><span class="num">1.4</span>Who is who</h2>
+  <table>
+    <thead><tr><th style="width:26mm">Role</th><th>What it is</th><th style="width:44mm">Created by</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Admin</td><td>TIC team. Sees everything, decides everything, every action audited.</td><td>Another admin, in Users</td></tr>
+      <tr><td class="k">Founder</td><td>Runs one or more startups. Registers them, applies for incubation, posts roles, adds team members — nothing of which is public until an admin approves it.</td><td>Self, at <code>/apply</code></td></tr>
+      <tr><td class="k">Team member</td><td>Someone a founder added to their startup. Waits in the Approvals queue before it can do anything.</td><td>A founder, approved by an admin</td></tr>
+      <tr><td class="k">Visitor</td><td>No account. Reads the public site and can apply to one advertised role without signing up.</td><td>—</td></tr>
+    </tbody>
+  </table>
+  <p>Founders and their team members sign themselves up. <strong>Only admin accounts are created inside the console.</strong></p>
+</section>
+
+<!-- ============ 02 AT A GLANCE ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">02</span> &nbsp;The console at a glance</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Thirteen screens, grouped into four bands in the sidebar. The grouping is the argument: the first band is the work that comes to you, the second is the people doing it, the third is the site itself, the fourth is help.</p>
+
+  <h2><span class="num">2.1</span>The sidebar</h2>
+  <table class="tight">
+    <thead><tr><th style="width:34mm">Section</th><th>What it is for</th><th style="width:20mm">Chapter</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Overview</td><td>Counts and the queues that need attention right now</td><td>§3</td></tr>
+      <tr><td class="k">Approvals</td><td>Everything founders have sent for a decision — four queues in one screen</td><td>§4</td></tr>
+      <tr><td class="k">Companies</td><td>The register of startups and their verification state</td><td>§5</td></tr>
+      <tr><td class="k">Applications</td><td>Incubation applications, from submitted to accepted</td><td>§6</td></tr>
+      <tr><td class="k">Posted jobs</td><td>Every role on the public board, TIC’s own and the startups’</td><td>§7</td></tr>
+      <tr><td class="k">Role applicants</td><td>People who applied to an advertised role</td><td>§8</td></tr>
+      <tr><td class="k">Users</td><td>All accounts — roles, suspension, deletion, new admins</td><td>§9</td></tr>
+      <tr><td class="k">Activity</td><td>The audit trail, and how much traffic each page gets</td><td>§10</td></tr>
+      <tr><td class="k">Content</td><td>The copy and images on every public page</td><td>§11</td></tr>
+      <tr><td class="k">Email</td><td>Usage against the plan, the delivery log, suppressions</td><td>§12–13</td></tr>
+      <tr><td class="k">Storage</td><td>Files in every bucket, with a guarded delete</td><td>§14</td></tr>
+      <tr><td class="k">Support</td><td>Who to call when something is wrong</td><td>§20</td></tr>
+    </tbody>
+  </table>
+  <p>The <strong>spark button</strong> in the header, beside your name, opens the assistant (§15) from any screen.</p>
+
+  <h2><span class="num">2.2</span>Conventions you will meet everywhere</h2>
+  <div class="card card--sunk">
+    <p class="card__t">The screen never blanks</p>
+    <p>Every section is rendered by the server before it is sent, so moving between sections keeps the current screen on show until the next one is ready. If a screen looks stuck, it is loading, not broken.</p>
+  </div>
+  <div class="card card--sunk">
+    <p class="card__t">Toasts confirm, they do not ask</p>
+    <p>A short message slides in at the corner after every action — green for done, red for refused. If no toast appears, the action did not run.</p>
+  </div>
+  <div class="card card--sunk">
+    <p class="card__t">Anything destructive asks first</p>
+    <p>Deletes and take-downs open a proper dialog that traps focus and closes on <code>Esc</code>. There are no browser <code>confirm()</code> pop-ups anywhere in the console. Read the sentence in the dialog — it names exactly what is about to go.</p>
+  </div>
+  <div class="card card--sunk">
+    <p class="card__t">A refusal needs a reason</p>
+    <p>Anywhere you send something back to a founder, the reason box is not optional. The founder reads that sentence in their own console, and a refusal they cannot read is a dead end for both of you.</p>
+  </div>
+  <div class="card card--sunk">
+    <p class="card__t">Private documents are never public links</p>
+    <p>Resumes, pitch decks, CVs and financials live in private buckets. The console hands out a link that <strong>expires after ten minutes</strong>. Reload the page for a fresh one; never paste one into an email.</p>
+  </div>
+
+  <h2><span class="num">2.3</span>A suggested daily round</h2>
+  <ol class="steps">
+    <li><strong>Overview.</strong> Read the tiles. Anything with a number on it is work waiting.</li>
+    <li><strong>Approvals.</strong> Clear it. Nothing a founder writes is public until you do, so this queue is the one that holds the site up.</li>
+    <li><strong>Role applicants</strong> → the <em>new</em> tab. Shortlist, send on, or decline. Each decision emails the applicant.</li>
+    <li><strong>Applications</strong> → the <em>New</em> tab. Open, read, move to under review or decide.</li>
+    <li><strong>Email.</strong> Glance at the usage meter and the failed tab. A run of failures means something is wrong upstream.</li>
+    <li><strong>Activity</strong>, weekly. Skim what changed and who changed it.</li>
+  </ol>
+</section>
+
+<!-- ============ 03 OVERVIEW ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">03</span> &nbsp;Overview</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">The landing screen. It is a set of counts, and the ones that are clickable are the ones that mean somebody is waiting.</p>
+
+  <div class="screen">
+    <div class="screen__bar"><span>TIC Admin · Overview</span><span>/tic-admin</span></div>
+    <div class="screen__body">
+      <table class="tight">
+        <thead><tr><th style="width:44mm">Tile</th><th>Reads</th><th style="width:30mm">Goes to</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Pending companies</td><td>Startups registered but not yet verified</td><td>Companies</td></tr>
+          <tr><td class="k">Verified companies</td><td>Startups cleared to appear and to post roles</td><td>—</td></tr>
+          <tr><td class="k">Rejected</td><td>Startups refused, with the reason on the record</td><td>—</td></tr>
+          <tr><td class="k">User-posted jobs</td><td>Roles written by startups, as opposed to TIC’s own seed posts</td><td>Posted jobs</td></tr>
+          <tr><td class="k">New applications</td><td>Incubation applications nobody has opened yet</td><td>Applications</td></tr>
+          <tr><td class="k">New role applicants</td><td>People who applied to a role and have not been triaged</td><td>Role applicants</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="note">
+    <span class="note__t">Read the tiles as a queue, not as a dashboard</span>
+    <p>These numbers are not performance metrics. Each one is a count of people waiting for a decision from the TIC team. A number that stays high for a week is a founder or an applicant hearing nothing.</p>
+  </div>
+  <p><span class="chip chip--done">Done</span> &nbsp;Built, live and exercised.</p>
+</section>
+
+<!-- ============ 04 APPROVALS ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">04</span> &nbsp;Approvals</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Nothing a founder writes reaches the public site until it is approved here. Four queues share one screen, and the screen is empty when there is nothing to decide.</p>
+
+  <h2><span class="num">4.1</span>The four queues</h2>
+  <table>
+    <thead><tr><th style="width:34mm">Queue</th><th>What is waiting</th><th style="width:38mm">Your two buttons</th></tr></thead>
+    <tbody>
+      <tr><td class="k">New startups</td><td>A founder registered a company. Shows the contact person, email, phone, website and the date it was registered.</td><td><strong>Verify</strong> · <strong>Refuse</strong></td></tr>
+      <tr><td class="k">Job postings</td><td>A role written by a startup. <strong>Read</strong> expands the sector, the full description and the apply link before you decide.</td><td><strong>Approve</strong> · <strong>Send back</strong></td></tr>
+      <tr><td class="k">Team members</td><td>Somebody a founder added to their startup. Until approved, that person can sign in but can do nothing.</td><td><strong>Approve</strong> · <strong>Send back</strong></td></tr>
+      <tr><td class="k">Company detail changes</td><td>An edit to a verified startup’s own details — name, website, contact person, contact email, phone — shown as a before-and-after per field.</td><td><strong>Approve</strong> · <strong>Send back</strong></td></tr>
+    </tbody>
+  </table>
+
+  <h2><span class="num">4.2</span>Working the queue</h2>
+  <ol class="steps">
+    <li>Read the entry. On a job posting, press <strong>Read</strong> first — approving a description you have not read is how a bad role reaches the board.</li>
+    <li>To accept, press the primary button. The change is live on the public site immediately and the founder is told.</li>
+    <li>To refuse, <strong>type the reason in the box first</strong>, then press the red button. The console will stop you and say so if the box is empty.</li>
+  </ol>
+
+  <div class="warn">
+    <span class="warn__t">The unverified-company flag</span>
+    <p>A job posting from a startup that is not yet verified carries a line saying so. Approving that role does <em>not</em> put it on the board — the startup itself has to be verified first. Deal with the startup in the <strong>New startups</strong> queue, or in Companies (§5), and the role appears.</p>
+  </div>
+
+  <div class="note">
+    <span class="note__t">Why a reason is compulsory</span>
+    <p>The founder reads your sentence in their own console, beside the thing that came back. “Send back” with no reason produces a founder who resubmits the same thing. One line — <em>“the description names a salary we cannot advertise”</em> — closes the loop.</p>
+  </div>
+  <p><span class="chip chip--done">Done</span> &nbsp;All four queues live, decisions audited, refusal reasons reaching the founder console.</p>
+</section>
+
+<!-- ============ 05 COMPANIES ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">05</span> &nbsp;Companies</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">The register of every startup account. Approvals (§4) is the inbox; this is the permanent record, and the place to change a decision you have already made.</p>
+
+  <h2><span class="num">5.1</span>The table</h2>
+  <p>Columns: <strong>Company</strong>, <strong>Contact</strong>, <strong>Website</strong>, <strong>Status</strong>, <strong>Signed up</strong>, <strong>Actions</strong>. A refused company keeps the reason on the row so nobody has to go hunting for why.</p>
+
+  <h3>Statuses</h3>
+  <table class="tight">
+    <thead><tr><th style="width:26mm">Status</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td class="k">pending</td><td>Registered, waiting on TIC. Invisible on the public site; cannot post roles.</td></tr>
+      <tr><td class="k">verified</td><td>Cleared. Its approved roles appear on the Opportunities board and it can read its own applicants.</td></tr>
+      <tr><td class="k">rejected</td><td>Refused, with the reason recorded and sent to the founder.</td></tr>
+    </tbody>
+  </table>
+
+  <h2><span class="num">5.2</span>The actions</h2>
+  <table>
+    <thead><tr><th style="width:26mm">Button</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Approve</td><td>Moves the startup to <em>verified</em>. Its approved roles go live. A “company verified” email goes out.</td></tr>
+      <tr><td class="k">Reject</td><td>Opens a reason box, then moves it to <em>rejected</em>. A “not verified” email goes out carrying your reason.</td></tr>
+      <tr><td class="k">Revert</td><td>Puts a decided company back to <em>pending</em>. Use this when you decided too early. It sends nothing — returning a record to its opening state is an internal correction, not news for the founder.</td></tr>
+      <tr><td class="k">Delete</td><td>Removes the account for good. Asks first. This is not a way to hide a company from the board — refuse it instead.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="warn">
+    <span class="warn__t">Delete is not the same as reject</span>
+    <p><strong>Reject</strong> keeps the record, the reason, and the audit trail, and the founder is told. <strong>Delete</strong> removes the account. Reach for reject in almost every case; keep delete for duplicates, tests and accounts created in error.</p>
+  </div>
+  <p><span class="chip chip--done">Done</span> &nbsp;Verify, refuse, revert and delete all live, each one audited and each one emailing the right message.</p>
+</section>
+
+<!-- ============ 06 APPLICATIONS ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">06</span> &nbsp;Incubation applications</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">The eight-step, 38-question application a founder fills in per startup, with four document uploads. This is where it is read and decided.</p>
+
+  <h2><span class="num">6.1</span>The queue</h2>
+  <p>Five tabs, each carrying its own count: <strong>New</strong> · <strong>Under review</strong> · <strong>Accepted</strong> · <strong>Rejected</strong> · <strong>All</strong>. The table shows the startup, the founder, when it was submitted, its status, and — on anything decided — the note that went with the decision.</p>
+  <p>From the row you can <strong>Review</strong> (open it in full), <strong>Accept</strong>, or <strong>Reject</strong>. Accepting or rejecting from the row is for the obvious cases; anything you have not read should be opened.</p>
+
+  <h2><span class="num">6.2</span>Reading one in full</h2>
+  <p><strong>Review</strong> opens the whole application: every answer, grouped as the founder filled it in, and the four documents — pitch deck, founder CV, financials, incorporation certificate.</p>
+  <div class="note">
+    <span class="note__t">The document links expire</span>
+    <p>Each document has an <strong>Open</strong> button that signs a fresh link good for ten minutes. If a link has gone stale, reload the page. A document that was never uploaded reads <em>File missing</em> rather than a dead button.</p>
+  </div>
+
+  <h2><span class="num">6.3</span>Deciding</h2>
+  <p>The review panel has two text boxes and three buttons.</p>
+  <dl class="kv">
+    <dt>Message to applicant</dt><dd>Goes into the email the founder receives. Write it as if they will read only this sentence, because they will.</dd>
+    <dt>Internal note</dt><dd>Stays in the console. For the team, never sent.</dd>
+    <dt>Accept</dt><dd>Moves to <em>accepted</em> and sends the acceptance email.</dd>
+    <dt>Mark under review</dt><dd>Signals the team has it in hand. Sends the “under review” email.</dd>
+    <dt>Reject</dt><dd>Moves to <em>rejected</em> and sends the decline, carrying your message.</dd>
+    <dt>Delete application</dt><dd>Removes the record and its uploaded documents. Asks first.</dd>
+  </dl>
+  <div class="warn">
+    <span class="warn__t">Deleting takes the documents with it</span>
+    <p>These are somebody’s financials and identity documents. Deleting the application removes the files from storage first, on purpose — but it is irreversible, and the record of the application goes with it. Reject rather than delete unless the entry is a duplicate or a test.</p>
+  </div>
+  <p><span class="chip chip--done">Done</span> &nbsp;Queue, full review, signed document links, three-way decision and delete, all audited and each state emailing the founder.</p>
+</section>
+
+<!-- ============ 07 POSTED JOBS ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">07</span> &nbsp;Posted jobs</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Every role currently on the Opportunities board, from both sources, in one table.</p>
+
+  <h2><span class="num">7.1</span>Two kinds of role</h2>
+  <table>
+    <thead><tr><th style="width:34mm">Tab</th><th>Where it comes from</th><th style="width:34mm">Can you take it down?</th></tr></thead>
+    <tbody>
+      <tr><td class="k">TIC jobs</td><td>The centre’s own openings, seeded in the site’s content</td><td>Edit them in Content (§11)</td></tr>
+      <tr><td class="k">Startup jobs</td><td>Written by a verified startup in its own console and approved by TIC</td><td>Yes — take down from here</td></tr>
+    </tbody>
+  </table>
+  <p>Columns: <strong>Role</strong>, <strong>Company</strong>, <strong>Type</strong>, <strong>Sector</strong>, <strong>Source</strong>, <strong>Posted</strong>, <strong>Approval</strong>.</p>
+
+  <h2><span class="num">7.2</span>Taking a role down</h2>
+  <p>Deleting a company-posted role removes it from the public board. It does not delete the people who already applied to it — their applications keep a snapshot of the role and company name, so the Role applicants screen still reads correctly after the posting is gone.</p>
+  <div class="note">
+    <span class="note__t">An edit re-queues a live role</span>
+    <p>When a startup edits a role that is already public, it goes back into Approvals (§4) and comes off the board until it is approved again. That is intended: an approved description is what was approved, not whatever it was later changed into.</p>
+  </div>
+  <p><span class="chip chip--done">Done</span></p>
+</section>
+
+<!-- ============ 08 ROLE APPLICANTS ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">08</span> &nbsp;Role applicants</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">People who applied to an advertised role. Applying needs no account, so this is the one queue where the person on the other end has no console to check — every decision here is communicated by email, and only by email.</p>
+
+  <h2><span class="num">8.1</span>The pipeline</h2>
+  <table>
+    <thead><tr><th style="width:26mm">Status</th><th>Means</th><th style="width:48mm">Email sent</th></tr></thead>
+    <tbody>
+      <tr><td class="k">new</td><td>Just arrived. Nobody has looked.</td><td>“Application received”, on submit</td></tr>
+      <tr><td class="k">shortlisted</td><td>Worth taking further.</td><td>“Shortlisted”</td></tr>
+      <tr><td class="k">forwarded</td><td>Sent on to the company that posted the role.</td><td>“Sent to the company”</td></tr>
+      <tr><td class="k">rejected</td><td>Not taken forward.</td><td>“Not taken forward”</td></tr>
+    </tbody>
+  </table>
+  <p>The tabs mirror those states. A per-role dropdown — <strong>Every role</strong> by default — narrows the table to one posting.</p>
+
+  <h2><span class="num">8.2</span>What you can do</h2>
+  <dl class="kv">
+    <dt>Open application</dt><dd>The full record: contact details, every answer, and a signed link to the resume good for ten minutes.</dd>
+    <dt>Shortlist</dt><dd>Moves to <em>shortlisted</em> and emails the applicant.</dd>
+    <dt>Sent on</dt><dd>Moves to <em>forwarded</em> and emails the applicant. Use it when the company has actually been given the application.</dd>
+    <dt>Decline</dt><dd>Moves to <em>rejected</em> and emails the applicant.</dd>
+    <dt>Export CSV</dt><dd>Downloads what is currently in view — every role, or the one selected in the dropdown. The file is date-stamped.</dd>
+  </dl>
+
+  <div class="warn">
+    <span class="warn__t">Each button sends a real email to a real person</span>
+    <p>There is no draft state here. Pressing <strong>Decline</strong> tells somebody they did not get the job. Check you are on the right row — the table is sorted by date, and rows move as you filter.</p>
+  </div>
+
+  <h2><span class="num">8.3</span>Resumes and retention</h2>
+  <p>Resumes sit in a private bucket, one folder per role. Nothing about them is public. Deleting an applicant removes the file first and the row second, so no resume is left orphaned in storage. A console action can also clear a whole role at once, resumes first, for when a posting is finished with.</p>
+  <div class="note">
+    <span class="note__t">There is deliberately no automatic purge</span>
+    <p>A scheduled deletion of people’s documents is only ever noticed after it has already run. Clearing is a decision somebody makes, on a role, on purpose.</p>
+  </div>
+
+  <h2><span class="num">8.4</span>What the startup sees</h2>
+  <p>A verified startup reads the applicants for its own roles at <code>/founder/applicants</code> — contact details, answers, signed resume links and its own CSV export. It <strong>cannot</strong> see your review notes, and it has no way to change a status. Triage stays with TIC.</p>
+  <p><span class="chip chip--done">Done</span> &nbsp;Queue, tabs, filter, export, three-way triage, signed resume links, safe deletion, applicant emails at every step.</p>
+</section>
+
+<!-- ============ 09 USERS ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">09</span> &nbsp;Users</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Every account on the system, whatever kind. This is the only screen that can create an admin.</p>
+
+  <h2><span class="num">9.1</span>The tabs</h2>
+  <p><strong>All</strong> · <strong>Admins</strong> · <strong>Founders</strong> · <strong>Never signed in</strong> · <strong>Suspended</strong>. “Never signed in” is the useful one: an account created but never used is usually a typo in an email address.</p>
+  <p>Columns: <strong>Account</strong>, <strong>Role</strong>, <strong>Last signed in</strong>, <strong>Joined</strong>, <strong>Actions</strong>. Two badges may appear beside the role — <em>suspended</em> and <em>unconfirmed</em> (the person never clicked the link in their confirmation email).</p>
+
+  <h2><span class="num">9.2</span>What you can do</h2>
+  <dl class="kv">
+    <dt>Change role</dt><dd>The dropdown on the row. Promoting somebody to admin gives them everything in this book.</dd>
+    <dt>Suspend</dt><dd>Blocks sign-in without deleting anything. Reversible with <strong>Restore</strong>. This is the right first move for a compromised or disputed account.</dd>
+    <dt>Delete</dt><dd>Removes the account. Asks first. Irreversible.</dd>
+    <dt>+ New admin</dt><dd>Name, email, and a temporary password you choose. They sign in with it at <code>/login</code> and change it themselves afterwards.</dd>
+  </dl>
+
+  <div class="note">
+    <span class="note__t">You cannot act on yourself</span>
+    <p>Your own row has no buttons and its role dropdown is disabled. It is not possible to suspend, delete or demote yourself out of the console by accident.</p>
+  </div>
+  <div class="warn">
+    <span class="warn__t">Hand the temporary password over out of band</span>
+    <p>It is shown once, in plain text, on the screen that creates the account. Send it by a channel the person already controls — not in the same email as their address, and not in a shared inbox.</p>
+  </div>
+  <p><span class="chip chip--done">Done</span> &nbsp;Roles, suspend/restore, delete, admin creation, self-protection.</p>
+</section>
+
+<!-- ============ 10 ACTIVITY ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">10</span> &nbsp;Activity</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Two things on one screen: what changed in the data, and what people looked at on the site.</p>
+
+  <h2><span class="num">10.1</span>The audit log</h2>
+  <p>One entry per change to a company, a job, an application or a profile, showing <strong>who</strong>, <strong>what</strong>, <strong>when</strong>, and — expanded — a <strong>Field / Before / After</strong> table for every value that moved.</p>
+  <div class="note">
+    <span class="note__t">The log is written by the database, not by the console</span>
+    <p>It is written by Postgres triggers, so a row changed through any route — the console, a script, the SQL editor — is recorded the same way. It is not possible to make a change that the console then declines to log. This is why the log is worth trusting in a dispute.</p>
+  </div>
+  <p>An admin action names the person who took it, not “the system”. The <strong>How this log works</strong> panel on the screen restates this in one paragraph for anyone reading over your shoulder.</p>
+
+  <h2><span class="num">10.2</span>Page impressions</h2>
+  <p>A card per public page over <strong>All</strong>, <strong>30 days</strong> or <strong>7 days</strong>, with three numbers: total impressions, unique human visitors, and bot hits. Crawlers are separated out by user agent rather than being quietly counted as people, so the human figure is the one to quote.</p>
+  <p><strong>Recent visits</strong> beneath it is the raw tail — the last page views as they arrived.</p>
+  <div class="note">
+    <span class="note__t">Admin traffic is flagged, not hidden</span>
+    <p>Views of console pages are recorded and attributed to the signed-in admin. They are marked as such, so your own clicking around does not inflate a public page’s numbers.</p>
+  </div>
+  <p><span class="chip chip--done">Done</span> &nbsp;Trigger-written audit with before/after diffs; impressions with bot separation over three ranges.</p>
+</section>
+
+<!-- ============ 11 CONTENT ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">11</span> &nbsp;Content</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Every word and every image on the public site is edited here. No developer, no deploy, no waiting.</p>
+
+  <h2><span class="num">11.1</span>How it works</h2>
+  <p>The site is built from a set of named <strong>sections</strong> — one per page or per block of a page. The index screen lists them; opening one gives you an editor built from the shape of that section’s own data. Text fields are inputs, long copy is a textarea, lists can be reordered and added to, and nested groups open into their own sub-forms.</p>
+  <p>The consequence worth knowing: <strong>a new field becomes editable the moment it exists</strong>. Nobody has to build an admin screen for it.</p>
+
+  <h2><span class="num">11.2</span>Editing a section</h2>
+  <ol class="steps">
+    <li>Open the section from the Content index.</li>
+    <li>Edit the fields. Nothing is written while you type — the editor works on a copy.</li>
+    <li>Press <strong>Save changes</strong>. The button reads <em>Saved</em> when there is nothing outstanding, so an unsaved edit is visible at a glance.</li>
+    <li>The public site is showing it immediately. Open the page in another tab to check.</li>
+  </ol>
+  <p><strong>Reset to default copy</strong> throws your edits away and restores the text the site shipped with. It asks first.</p>
+
+  <h2><span class="num">11.3</span>Images</h2>
+  <p>Any field that is an image — a photo, a logo, an avatar, an icon — renders as a preview with an <strong>Upload image</strong> button and a box to paste a URL into instead. Uploads go to the public site-assets bucket and the URL is saved into the section.</p>
+  <table class="tight">
+    <thead><tr><th style="width:34mm">Constraint</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Maximum size</td><td>5&nbsp;MB per image</td></tr>
+      <tr><td class="k">Accepted</td><td>Images only — the bucket refuses anything else</td></tr>
+      <tr><td class="k">Who can upload</td><td>Admins only. There is no other write path into that bucket.</td></tr>
+    </tbody>
+  </table>
+  <p>People cards — team, governing body, mentors — each carry an avatar. A card shows the photograph when one is set and keeps a plain circle when it is not, so the pages read correctly before the photography arrives.</p>
+
+  <h2><span class="num">11.4</span>Two things editing content also changes</h2>
+  <ul>
+    <li><strong>Search snippets.</strong> A page’s meta description is read from its own opening copy, so rewriting the introduction rewrites what Google shows.</li>
+    <li><strong>The audit trail.</strong> Every save records a before and an after in Activity (§10), so a change can be read back — and undone by hand — later.</li>
+  </ul>
+  <div class="note">
+    <span class="note__t">The site cannot be taken down by a bad save</span>
+    <p>A section that has never been saved, or a database that cannot be reached, falls back to the copy bundled with the site. The worst a bad edit does is show the wrong words on one section until it is fixed or reset.</p>
+  </div>
+  <p><span class="chip chip--done">Done</span> &nbsp;Schema-driven editor, image upload per field, audited saves, per-section reset. <span class="chip chip--wip">In progress</span> &nbsp;The real photography, logos and startup marks — placeholders in several places today.</p>
+</section>
+
+<!-- ============ 12 EMAIL ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">12</span> &nbsp;Email</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Everything the system has ever tried to send, whether it arrived, how much of the monthly allowance is left, and who can no longer be written to.</p>
+
+  <h2><span class="num">12.1</span>The meters</h2>
+  <p>Across the top: the <strong>plan</strong> in use, this month’s and today’s sends against their caps, <strong>delivered all time</strong>, and a <strong>last 30 days</strong> trend. The allowance is counted from the log itself, and the same check runs before every send — a message that would exceed the cap is recorded as <em>blocked</em> rather than being thrown at the provider to fail.</p>
+
+  <h2><span class="num">12.2</span>The delivery log</h2>
+  <p>One row per attempt, with the recipient, template, subject and time. Tabs: <strong>All</strong> · <strong>Sent</strong> · <strong>Failed</strong> · <strong>Blocked</strong>, and a switch to <strong>include test sends</strong>, which are hidden by default.</p>
+  <table>
+    <thead><tr><th style="width:24mm">Status</th><th>Means</th><th style="width:52mm">What to do</th></tr></thead>
+    <tbody>
+      <tr><td class="k">sent</td><td>Accepted by the provider, with a message id.</td><td>Nothing. Delivery feedback arrives separately.</td></tr>
+      <tr><td class="k">failed</td><td>Rejected, or the request never completed.</td><td>One is noise. A run of them is a real fault — call §20.</td></tr>
+      <tr><td class="k">blocked</td><td>Never attempted: no API key, the template is switched off, the allowance is spent, or the address is suppressed.</td><td>Read which. The reason is the fix.</td></tr>
+    </tbody>
+  </table>
+  <p>Opening a row shows <strong>the exact message that person received</strong> — rendered subject and body, not a template. This is the answer to “what did we actually send them?”.</p>
+
+  <h2><span class="num">12.3</span>Suppressed addresses</h2>
+  <p>When a message hard-bounces or somebody marks one as spam, the provider tells the system and the address is taken out of circulation. Nothing is sent to it again until the suppression is lifted, which you can do from this panel. Temporary failures — a full mailbox, a server having a bad afternoon — do not suppress.</p>
+  <div class="warn">
+    <span class="warn__t">Lift a suppression only when you know why it happened</span>
+    <p>A complaint suppression means a real person marked TIC mail as spam. Sending to them again is how a sending domain’s reputation is lost — which costs everybody’s delivery, not just theirs.</p>
+  </div>
+
+  <h2><span class="num">12.4</span>Newsletter list</h2>
+  <p>The footer sign-ups, with export, and removal on request. A repeat sign-up is answered as an ordinary success, so the form cannot be used to find out who is already on the list.</p>
+
+  <div class="warn">
+    <span class="warn__t">The sandbox-sender banner</span>
+    <p>If the console shows a banner about sending from a sandbox address, mail is only reaching one inbox — the one that owns the provider account — and every other recipient is getting nothing. That is a configuration problem, not an operator one. Report it.</p>
+  </div>
+  <p><span class="chip chip--done">Done</span> &nbsp;Meter, log with previews, bounce and complaint feedback, suppressions, newsletter. <span class="chip chip--wip">In progress</span> &nbsp;The production sending domain — see §18.</p>
+</section>
+
+<!-- ============ 13 TEMPLATES ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">13</span> &nbsp;Email templates</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">The wording of every automatic message, editable without touching a line of HTML.</p>
+
+  <h2><span class="num">13.1</span>Blocks, not markup</h2>
+  <p>Nobody should have to edit inline-styled table markup to change a sentence, so a message is composed from <strong>blocks</strong>. Each bundled template arrives as a block list you can reorder, duplicate, delete, or clear out and rebuild. A <strong>+</strong> between any two blocks opens the palette.</p>
+  <table class="tight">
+    <thead><tr><th style="width:24mm">Group</th><th>Blocks</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Text</td><td>Heading · Subheading · Paragraph · Bullet list · Numbered list · Quote · Small print · Signature</td></tr>
+      <tr><td class="k">Emphasis</td><td>Highlight (neutral / positive / negative) · Button · Link</td></tr>
+      <tr><td class="k">Media</td><td>Image · File</td></tr>
+      <tr><td class="k">Spacing</td><td>Divider · Spacer</td></tr>
+    </tbody>
+  </table>
+  <p>Inside a text field the only markup is <code>*bold*</code> and <code>[label](https://…)</code>. Everything else is written exactly as it will be read.</p>
+
+  <h2><span class="num">13.2</span>Only show</h2>
+  <p>Every block carries one visibility rule — <em>always</em>, <em>when the reason is filled in</em>, or <em>when the reason is empty</em>. That is what makes an optional rejection reason disappear cleanly instead of leaving an empty panel in somebody’s inbox.</p>
+
+  <h2><span class="num">13.3</span>Variables</h2>
+  <p>A template can drop in values from the record it is about — a name, a role, a reason. The editor lists the ones available to that template; the block editor writes the conditional logic for you.</p>
+
+  <h2><span class="num">13.4</span>The controls</h2>
+  <dl class="kv">
+    <dt>Subject line</dt><dd>Edited above the body. It takes variables too.</dd>
+    <dt>Preview</dt><dd>The message as it will arrive, rendered into the shared layout.</dd>
+    <dt>Send a test</dt><dd>Sends the current draft to an address you type. Test sends are marked in the log and hidden from it by default.</dd>
+    <dt>On / off</dt><dd>Switching a template off stops that message being sent, while still recording each attempt as <em>blocked</em>. Useful while a message is being rewritten.</dd>
+    <dt>Reset</dt><dd>Discards your version and puts the bundled copy back.</dd>
+    <dt>Images and files</dt><dd>Upload into a public bucket, because an email client fetches an image with no session. A file block can also tick <strong>attach it to the email as well</strong>, which sends it as a real attachment alongside the download link.</dd>
+  </dl>
+
+  <div class="note">
+    <span class="note__t">One layout, one place</span>
+    <p>Every message renders inside a shared layout template — the branding, the header, the footer. Change the layout once and every message changes with it. It is the one template still written as HTML, because it is scaffolding rather than copy.</p>
+  </div>
+  <div class="warn">
+    <span class="warn__t">The HTML tab is a one-way door</span>
+    <p>Saving from the HTML tab stores raw markup and the template stays hand-edited — the block editor no longer applies to it — until it is <strong>Reset</strong>. Use blocks unless you have a reason not to.</p>
+  </div>
+  <p><span class="chip chip--done">Done</span> &nbsp;Block editor, visibility rules, variables, preview, test send, on/off, reset, image and file blocks with attachments.</p>
+</section>
+
+<!-- ============ 14 STORAGE ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">14</span> &nbsp;Storage</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Every file the system holds, how much room is left, and which files are safe to remove.</p>
+
+  <h2><span class="num">14.1</span>The four buckets</h2>
+  <table>
+    <thead><tr><th style="width:42mm">Bucket</th><th style="width:18mm">Public</th><th>Holds</th></tr></thead>
+    <tbody>
+      <tr><td class="k">application-documents</td><td>No</td><td>Pitch decks, founder CVs, financials, incorporation certificates</td></tr>
+      <tr><td class="k">job-applications</td><td>No</td><td>Resumes attached to a role application</td></tr>
+      <tr><td class="k">site-assets</td><td><strong>Yes</strong></td><td>Images uploaded for public pages from the content editor</td></tr>
+      <tr><td class="k">email-assets</td><td><strong>Yes</strong></td><td>Pictures and documents used inside an email</td></tr>
+    </tbody>
+  </table>
+  <p>The two public buckets are a deliberate exception: a page’s <code>&lt;img&gt;</code> and an email client both fetch without any session, so anything shown that way has to be reachable without credentials. Only admins can put files into them.</p>
+
+  <h2><span class="num">14.2</span>The screen</h2>
+  <p>Total used, files stored, and remaining across the top; a bar per bucket marked <em>Public</em> or <em>Private</em> with its file count and size; then the object list, filterable by bucket.</p>
+  <p>Each object is marked <strong>in use</strong> or <strong>unused</strong>. “In use” means its path was found in a content section, an email template, an application record or a resume record — so a real person’s document is never mislabelled as safe to delete.</p>
+
+  <h2><span class="num">14.3</span>Open and delete</h2>
+  <dl class="kv">
+    <dt>Open</dt><dd>Signs a ten-minute link and opens the file in a new tab. Works for private buckets too.</dd>
+    <dt>Delete</dt><dd>Asks once. If the file is still referenced, the delete is <strong>refused</strong> and a second, blunter dialog appears saying what it would break. <strong>Delete anyway</strong> overrides it.</dd>
+  </dl>
+  <div class="warn">
+    <span class="warn__t">“Delete anyway” means what it says</span>
+    <p>The first refusal exists because something on the live site points at that file. Overriding it leaves a broken image on a public page or inside an already-delivered email. Only override when you have already removed the reference, or when you know what will break and accept it.</p>
+  </div>
+  <div class="note">
+    <span class="note__t">Why this screen exists</span>
+    <p>Files live outside the database. A database backup does not contain them, and a database record does not know whether its file is still there. This screen is the only place that reconciles the two.</p>
+  </div>
+  <p><span class="chip chip--done">Done</span> &nbsp;Usage per bucket, in-use detection across four sources, signed opens, guarded delete with an explicit override.</p>
+</section>
+
+<!-- ============ 15 ASSISTANT ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">15</span> &nbsp;The assistant</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">A chat window over the console’s own data. It answers from the database, not from anything it was told in advance — and it can edit the website’s copy, with your approval.</p>
+
+  <h2><span class="num">15.1</span>What it can reach</h2>
+  <p>Console-wide counts, companies, incubation applications (including one in full), posted jobs, role applicants, users, the audit trail, site traffic, the email templates and delivery log, newsletter sign-ups, and the live copy of any section of the public site.</p>
+  <p>Useful questions: <em>“How many startups are waiting on verification and how long has each been waiting?”</em> · <em>“Which role has the most applicants this month?”</em> · <em>“Show me what changed on the mentors page last week and who changed it.”</em></p>
+
+  <h2><span class="num">15.2</span>What it can change — and what it cannot</h2>
+  <table>
+    <thead><tr><th style="width:44mm">It can</th><th>It cannot</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Edit or reset a section of the website’s copy; edit or reset an email template; send a newsletter or an email to chosen recipients.</td>
+        <td>Verify a company, move an application, decide an applicant, create or delete a user, delete anything at all. Those stay where they are, on their own screens, where they are attributed and audited.</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>The list of things it is allowed to do is the security boundary, and it is fixed in the code. No instruction typed into the chat widens it.</p>
+
+  <h2><span class="num">15.3</span>Approving an edit</h2>
+  <p>A toggle in the header sets the mode.</p>
+  <dl class="kv">
+    <dt>Review</dt><dd><strong>The default.</strong> The assistant does not make the change. It shows a before-and-after card with <strong>Approve</strong> and <strong>Reject</strong>. Approving runs exactly the same operation it would have run itself, so the audit entry is identical either way.</dd>
+    <dt>Auto</dt><dd>Content and template edits happen without asking. Off by default, because these edits reach the live public site.</dd>
+  </dl>
+  <div class="warn">
+    <span class="warn__t">Auto never covers a send</span>
+    <p>Sending a newsletter or an email is always gated behind an explicit approval, in both modes. There is no setting that lets the assistant mail people on its own.</p>
+  </div>
+
+  <h2><span class="num">15.4</span>Practicalities</h2>
+  <dl class="kv">
+    <dt>Model</dt><dd>Two, chosen in the settings dialog. The default reasons before it answers — the working-out streams into a collapsed block above the reply. The second can <em>look</em> at an attached image.</dd>
+    <dt>Attachments</dt><dd>Attach an image and it uploads into the site-assets bucket, so you can say “put this photo on the governing body page” and approve the edit. Attach a PDF and it can ride an email. 5&nbsp;MB per upload.</dd>
+    <dt>The key</dt><dd>Unless the team has a shared one configured, each admin pastes their own API key into the settings dialog. It is held in that browser only, never written to the database and never logged. Rotate it rather than treating it as permanent.</dd>
+    <dt>Chat history</dt><dd>Conversations are saved per admin. The history panel reopens or deletes your own; <strong>New chat</strong> starts a fresh one. Nobody else reads your chats.</dd>
+  </dl>
+  <div class="note">
+    <span class="note__t">Check what it tells you before acting on it</span>
+    <p>The reply is written from what the tools returned, and it is rendered as untrusted text on purpose. It is very good for “find me the thing” and “summarise the week”. For a decision that sends an email or changes a status, go to the screen and look.</p>
+  </div>
+  <p><span class="chip chip--done">Done</span> &nbsp;Read tools, content and template writes behind approval, gated sends, image attachments, saved conversations.</p>
+</section>
+
+<!-- ============ 16 MAIL ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">16</span> &nbsp;Mail the system sends</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Every automatic message and what triggers it. Nothing here is sent by hand; every one is the consequence of an action on one of the screens above.</p>
+
+  <table>
+    <thead><tr><th style="width:64mm">Message</th><th>Sent when</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Company signup received</td><td>A founder creates an account</td></tr>
+      <tr><td class="k">Company verified</td><td>An admin verifies a startup (§5)</td></tr>
+      <tr><td class="k">Company not verified</td><td>An admin refuses a startup, carrying the reason</td></tr>
+      <tr><td class="k">Application under review</td><td>An admin marks an incubation application under review (§6)</td></tr>
+      <tr><td class="k">Application accepted</td><td>An admin accepts it</td></tr>
+      <tr><td class="k">Application declined</td><td>An admin rejects it, carrying the message to the applicant</td></tr>
+      <tr><td class="k">Role application received</td><td>Somebody submits the apply form on a role</td></tr>
+      <tr><td class="k">Applicant shortlisted</td><td>An admin shortlists them (§8)</td></tr>
+      <tr><td class="k">Application sent to the company</td><td>An admin marks it sent on</td></tr>
+      <tr><td class="k">Not taken forward</td><td>An admin declines them</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="note__t">Moving a record backwards sends nothing</span>
+    <p>Putting a company back to <em>pending</em>, an application back to <em>submitted</em>, or an applicant back to <em>new</em> is an internal correction — not news for the recipient. No mail goes out. This is what makes it safe to fix a mis-click.</p>
+  </div>
+  <div class="note">
+    <span class="note__t">Mail never fails your action</span>
+    <p>If the mail system is down, verifying a company or accepting an application still completes. What went wrong is recorded in the delivery log (§12). You will never be blocked from doing the work because an email could not go out.</p>
+  </div>
+
+  <h3>Sign-in and password mail is separate</h3>
+  <p>Confirmation emails and password-reset links are sent by the authentication provider, not through the templates above. They will not appear in the delivery log, and their wording is not editable from the console. A reset link lands on a real page that sets a new password; a link that is expired, already used, or opened in a different browser says exactly which.</p>
+</section>
+
+<!-- ============ 17 PERMISSIONS ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">17</span> &nbsp;What an admin can and cannot do</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Worth reading once, so that you know which of your worries the system already handles and which it does not.</p>
+
+  <h2><span class="num">17.1</span>Who can see what</h2>
+  <table>
+    <thead><tr><th style="width:30mm">Actor</th><th>Reads</th><th>Writes</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Visitor</td><td>Public pages; roles from verified startups</td><td>One role application, bot-checked and rate-limited</td></tr>
+      <tr><td class="k">Founder</td><td>Their own startups, applications and applicants</td><td>Their own records — none of it public until approved</td></tr>
+      <tr><td class="k">Team member</td><td>Nothing, until an admin approves them</td><td>Nothing, until an admin approves them</td></tr>
+      <tr><td class="k">Admin</td><td>Everything</td><td>Everything, and every change is audited</td></tr>
+    </tbody>
+  </table>
+  <p>These limits are enforced by the database itself, not by hiding buttons. A founder cannot read another startup’s applicants by guessing a web address.</p>
+
+  <h2><span class="num">17.2</span>Things the system guarantees</h2>
+  <ul>
+    <li>Every table refuses access by default; each one has explicit rules about who may read and write it.</li>
+    <li>The key that bypasses those rules exists only on the server. It is structurally impossible for it to reach a browser — the build fails if it is ever pulled into one.</li>
+    <li>Every admin write carries your identity, so the audit log names a person.</li>
+    <li>Private documents are only ever reachable through ten-minute signed links.</li>
+    <li>Public forms are bot-checked <em>on the server</em>, so posting straight to the endpoint does not skip the check, and rate-limited per address.</li>
+    <li>A second application from the same email to the same role is refused rather than duplicated.</li>
+    <li>Delivery feedback from the mail provider is signature-verified before it is read, and a captured request cannot be replayed.</li>
+  </ul>
+
+  <h2><span class="num">17.3</span>Things it does not do for you</h2>
+  <ul>
+    <li><strong>It cannot undo a send.</strong> Once an email is out, it is out.</li>
+    <li><strong>It cannot recover a deleted account, application or file.</strong> The dialogs ask because the answer is final.</li>
+    <li><strong>It does not review what you publish.</strong> Approving a job description puts that description, as written, on a public page.</li>
+    <li><strong>It does not stop an admin being reckless.</strong> Every admin has every power. Be careful who you promote in §9.</li>
+  </ul>
+
+  <div class="warn">
+    <span class="warn__t">Personal data is real data</span>
+    <p>Resumes, CVs, financials and identity documents pass through this console. Do not download them to a shared machine, do not forward a signed link, and do not export a CSV to a personal drive. The export exists for handing a shortlist to the team that needs it, and for nothing else.</p>
+  </div>
+</section>
+
+<!-- ============ 18 LEDGER ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">18</span> &nbsp;Feature ledger</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">What has been built and exercised, what is still moving, and what was decided against. The live version of this list is on the site itself at <code>/status</code>.</p>
+
+  <h2><span class="num">18.1</span>Tested and complete</h2>
+  <table class="tight">
+    <thead><tr><th style="width:52mm">Feature</th><th>What “done” means here</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Sign-in and sessions</td><td>One door for every role; bot-checked; signed eight-hour cookie; first-admin bootstrap that refuses to run when it cannot read the account table.</td></tr>
+      <tr><td class="k">Approvals — four queues</td><td>Startups, job postings, team members and detail changes, each decided with a reason that reaches the founder’s console.</td></tr>
+      <tr><td class="k">Companies</td><td>Verify, refuse with a reason, revert, delete — each audited, each sending the right message and nothing on a revert.</td></tr>
+      <tr><td class="k">Incubation applications</td><td>Eight-step form of 38 questions with four uploads; queue, full review, ten-minute signed document links, three-way decision, delete that takes the files first.</td></tr>
+      <tr><td class="k">Role applications</td><td>Public apply form needing no account; server-side bot check; role resolved server-side; duplicate application refused; resume in a private bucket.</td></tr>
+      <tr><td class="k">Role applicant console</td><td>Status tabs, per-role filter, CSV export, signed resume links, whole-role clear with the files removed first.</td></tr>
+      <tr><td class="k">Founder applicant inbox</td><td>A verified startup reads its own applicants; TIC’s notes withheld; no write path, so triage stays TIC’s.</td></tr>
+      <tr><td class="k">Users</td><td>Roles, suspend/restore, delete, admin creation, and a self-row that cannot be acted on.</td></tr>
+      <tr><td class="k">Audit trail</td><td>Written by database triggers, so a change made outside the console is logged identically. Before/after per field, attributed to a person.</td></tr>
+      <tr><td class="k">Traffic</td><td>One record per page view, crawlers separated by user agent, console views flagged and attributed.</td></tr>
+      <tr><td class="k">Content editing</td><td>Every public page editable from the console, schema-driven so new fields appear by themselves, audited, per-section reset, falls back to bundled copy if the database is unreachable.</td></tr>
+      <tr><td class="k">Editable media</td><td>Upload an image for any image field; 5&nbsp;MB cap; image-only; admin-only write path; uploaded and bundled images coexist so content migrates gradually.</td></tr>
+      <tr><td class="k">Storage console</td><td>Walks every bucket through the storage API, marks each file in use or unused against four sources, refuses a delete that would break something, override behind a second dialog.</td></tr>
+      <tr><td class="k">Transactional email — console</td><td>Usage meter, 30-day trend, delivery log with the exact rendered message, test sends hidden by default.</td></tr>
+      <tr><td class="k">Email templates</td><td>Block editor with visibility rules, variables, preview, test send, on/off, reset; images and files including real attachments.</td></tr>
+      <tr><td class="k">Delivery feedback</td><td>Verified end to end: a forged, stale or tampered payload is rejected; a valid bounce or complaint suppresses the address; a replay is deduplicated; a suppressed address is refused before the next send.</td></tr>
+      <tr><td class="k">Rate limiting</td><td>Verified live: the sixteenth write in an hour from one address is refused, on the role application, the signup receipt, the bot check and the admin sign-in.</td></tr>
+      <tr><td class="k">Newsletter</td><td>Footer sign-up that stores what it collects; a repeat address answers as a plain success so the list cannot be probed; signed one-click unsubscribe.</td></tr>
+      <tr><td class="k">Admin assistant</td><td>Reads everything an admin can see; writes only site copy and email templates; every write previewed as a before/after and approved; sends always gated; conversations saved per admin.</td></tr>
+      <tr><td class="k">Search and social</td><td>Per-page description, canonical and social card, read from each page’s own copy; consoles and auth pages kept out of search.</td></tr>
+      <tr><td class="k">Application drafts</td><td>The eight-step form autosaves per account, so a refresh does not lose progress. Uploads and consent boxes deliberately excluded.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="sheet">
+  <h2 style="margin-top:0"><span class="num">18.2</span>In progress</h2>
+  <table>
+    <thead><tr><th style="width:44mm">Item</th><th>Where it stands</th><th style="width:34mm">What is blocking it</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="k">Production sending domain</td>
+        <td>Mail works and reaches real recipients today, from a verified development domain. The webhook, the suppressions and the meter are all live and tested.</td>
+        <td>Not code. DNS access to the official domain, so the provider’s records can be published against it.</td>
+      </tr>
+      <tr>
+        <td class="k">Restore drill</td>
+        <td>The backup is complete — schema, data, every table, and every stored file, which a database backup alone never covers. The rehearsal passes: the backup verifies against its own manifest and the target is confirmed reachable.</td>
+        <td>A throwaway project to restore into for real, once.</td>
+      </tr>
+      <tr>
+        <td class="k">Real photography and logos</td>
+        <td>Every surface that takes a photograph or a logo is built and editable. Several still show placeholders.</td>
+        <td>The assets themselves.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2><span class="num">18.3</span>Decided against, on purpose</h2>
+  <table>
+    <thead><tr><th style="width:44mm">Item</th><th>Why not</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Pre-building public pages at deploy time</td><td>It would freeze each page’s text at build time, so the content editor would silently stop working on it — and those pages would be served without recording a visit, so the traffic figures would go dark exactly where traffic matters.</td></tr>
+      <tr><td class="k">Scheduled deletion of resumes</td><td>Deleting people’s documents on a timer is only ever noticed once it has already run. Clearing a role is a decision somebody makes, deliberately.</td></tr>
+      <tr><td class="k">Letting the assistant decide records</td><td>Verifying a company, moving an application and deciding an applicant stay on their own screens, where a person is named in the audit trail.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="note__t">One known asymmetry</span>
+    <p>The founder applicant inbox is pull-only: a startup is not yet notified when a new applicant arrives for one of its roles. Until that changes, telling the company is what <strong>Sent on</strong> in §8 is for.</p>
+  </div>
+</section>
+
+<!-- ============ 19 TROUBLESHOOTING ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">19</span> &nbsp;When something goes wrong</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Symptoms an operator actually meets, what each usually means, and whether it is yours to fix.</p>
+
+  <table>
+    <thead><tr><th style="width:50mm">What you see</th><th>What it usually is</th><th style="width:30mm">Yours?</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Sign-in bounces you back</td><td>Your session ran out its eight hours, or the account was suspended. Try once more; if it still refuses, ask another admin to check your row in Users.</td><td>Yes</td></tr>
+      <tr><td class="k">A first-admin setup form appears</td><td>The server cannot read the account table. Environment, not data. Do not complete it.</td><td>No — call §20</td></tr>
+      <tr><td class="k">“Write a reason first”</td><td>You pressed a refuse button with an empty reason box. Type one sentence and press again.</td><td>Yes</td></tr>
+      <tr><td class="k">An approved role is not on the board</td><td>The startup that posted it is not verified yet. Verify it in §5 and the role appears.</td><td>Yes</td></tr>
+      <tr><td class="k">A document link does nothing</td><td>It expired — they last ten minutes. Reload the page for a fresh one.</td><td>Yes</td></tr>
+      <tr><td class="k">A whole column of <em>blocked</em> in the mail log</td><td>Read the reason: the template is switched off, the monthly allowance is spent, or the address is suppressed. All three are visible on the Email screen.</td><td>Yes</td></tr>
+      <tr><td class="k">A run of <em>failed</em> in the mail log</td><td>Something upstream is wrong. Your work still completes — mail never blocks an action — but nobody is being told anything.</td><td>No — call §20</td></tr>
+      <tr><td class="k">A banner about a sandbox sender</td><td>Mail is only reaching one inbox. Everything else is going nowhere.</td><td>No — call §20</td></tr>
+      <tr><td class="k">A content save does not show on the site</td><td>Check the button read <em>Saved</em>, then hard-reload the public page. If it still shows the old words, it may be a section you have not actually edited — sections are per block, not per page.</td><td>Yes</td></tr>
+      <tr><td class="k">A delete is refused with “still in use”</td><td>Working as designed. Something on the site points at that file (§14).</td><td>Yes</td></tr>
+      <tr><td class="k">The assistant will not answer</td><td>Usually a missing or expired API key in its settings dialog, or the second model’s key not being allow-listed yet.</td><td>Yes</td></tr>
+      <tr><td class="k">A broken image on a public page</td><td>Somebody overrode an in-use delete in Storage. Re-upload the image from Content (§11).</td><td>Yes</td></tr>
+      <tr><td class="k">A change you cannot explain in Activity</td><td>Read the before/after and the name on it. The log records changes made outside the console too, so it is worth trusting.</td><td>Ask §20</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="note__t">When you report something</span>
+    <p>Say <strong>which screen you were on</strong>, <strong>what you pressed</strong>, and <strong>what you expected to happen</strong>. A screenshot of the toast message is worth more than a paragraph of description.</p>
+  </div>
+</section>
+
+<!-- ============ 20 CARETAKER ============ -->
+<section class="sheet">
+  <h1 class="part"><span class="num">20</span> &nbsp;For the technical caretaker</h1>
+  <hr class="part-rule" />
+  <p class="part-lede">Not needed to operate the console. Needed by whoever keeps it running.</p>
+
+  <h2><span class="num">20.1</span>Commands</h2>
+  <table class="tight">
+    <thead><tr><th style="width:54mm">Command</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td class="k">pnpm doctor</td><td>Checks every required setting, catches a key pasted into the wrong slot, connects to the project, and reports how many admins and content sections it can see. The first thing to run when anything looks wrong.</td></tr>
+      <tr><td class="k">pnpm backup</td><td>Schema, data, every table as NDJSON, <em>and every stored file</em> — the half a database backup never covers.</td></tr>
+      <tr><td class="k">pnpm restore &lt;dir&gt; --dry-run</td><td>The drill. Verifies the backup against its manifest, confirms the target is reachable, reports exactly what would be written where, and writes nothing.</td></tr>
+      <tr><td class="k">pnpm check · pnpm lint</td><td>Type-check and lint before a deploy.</td></tr>
+    </tbody>
+  </table>
+  <div class="warn">
+    <span class="warn__t">What a restore cannot put back from JSON</span>
+    <p>Profiles, companies, jobs and applications are keyed to authentication accounts, and an account cannot be recreated with a chosen identifier. Those tables restore only through the SQL dump. The restore script refuses to write them from JSON rather than silently orphaning records — and says so when it does. Backups contain real personal data; they are kept out of version control.</p>
+  </div>
+
+  <h2><span class="num">20.2</span>Deploys</h2>
+  <p>Hosted on Vercel. A push to the main branch deploys automatically. After a deploy that changes public copy, re-scrape the social preview caches and, if routes changed, resubmit the sitemap.</p>
+
+  <h2><span class="num">20.3</span>Secrets, in one sentence each</h2>
+  <ul>
+    <li>The key that bypasses the database rules lives only on the server, and the build fails if it is ever pulled into a browser bundle.</li>
+    <li>Rotating the session secret signs every admin out immediately — which is the fast answer to a compromised session.</li>
+    <li>The bootstrap password stops working the moment the first admin exists.</li>
+    <li>The assistant’s API key is per-browser unless a shared one is configured; rotate rather than treating one as long-lived.</li>
+  </ul>
+
+  <h2><span class="num">20.4</span>Who to call</h2>
+  <p>The <strong>Support</strong> screen in the console carries the same two names, so nobody has to find this document in a hurry.</p>
+  <table>
+    <thead><tr><th style="width:44mm">Name</th><th style="width:44mm">Covers</th><th>Reach</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Jeu Machahary</td><td>Site &amp; admin console</td><td>hello@itsjeu.com · +91 7896175454</td></tr>
+      <tr><td class="k">Veeshal D Bodosa</td><td>Site &amp; admin console</td><td>work@veeshal.me · +91 6000013904</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note">
+    <span class="note__t">Before handover</span>
+    <p>System alerts — “an admin signed in”, “a new applicant signed up” — should go to a real TIC team inbox, not to a developer’s address. That is one setting, and it is worth changing on the day the console becomes the team’s rather than the builder’s.</p>
+  </div>
+
+  <p class="end">IITG-TIC Admin Console · Operations manual · September 2026 · Internal</p>
+</section>
+
+</body>
+</html>
