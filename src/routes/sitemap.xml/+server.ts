@@ -17,6 +17,7 @@ const STATIC_ROUTES = [
 	'/programs',
 	'/events',
 	'/schemes',
+	'/schemes/funding',
 	'/incubated-startups',
 	'/incubation',
 	'/opportunities',

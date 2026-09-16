@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 	import CallToAction from '$lib/components/CallToAction.svelte';
+	import SchemeTabs from '$lib/components/SchemeTabs.svelte';
 	import { getContent } from '$lib/content';
 
 	const content = getContent();
@@ -32,6 +33,8 @@
 
 <section class="body">
 	<div class="body__inner">
+		<SchemeTabs />
+
 		<div class="body__head">
 			<p class="body__eyebrow">{page.sectionEyebrow}</p>
 			<span class="body__count">{page.schemes.length}</span>

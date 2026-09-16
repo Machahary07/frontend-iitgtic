@@ -3262,6 +3262,218 @@
 				}
 			]
 		},
+		"schemesFunding": {
+			"heading": "Funding",
+			"title": "Funding Schemes · IITG TIC",
+			"hero": {
+				"eyebrow": "Schemes · Funding",
+				"headlineLead": "Grants, investment and",
+				"headlineEmphasis": "programmes a founder here can use.",
+				"intro": "IITG-TIC is an implementing partner and DPIIT-recognised incubator for central, state and CSR-backed schemes. The centre helps North East founders work out which of them fit, put the application together and meet the milestones that release the money."
+			},
+			"scrollspyEyebrow": "Schemes on this page",
+			"sectionEyebrow": "Funding schemes",
+			"descriptionHeading": "What it is",
+			"eligibilityHeading": "Who it's for",
+			"helpHeading": "How IITG-TIC helps",
+			"emptyMessage": "No funding schemes are listed right now. Write to tic@iitg.ac.in and the team will point you to what is currently open.",
+			"schemes": [
+				{
+					"id": "genesis-eir",
+					"label": "GENESIS · EiR",
+					"name": "MeitY GENESIS — Entrepreneur-in-Residence (EiR) Support",
+					"tagline": "Idea-stage funding for first-time, first-generation entrepreneurs from Tier-II and Tier-III India.",
+					"description": "GENESIS (Gen-Next Support for Innovative Startups) is a Government of India scheme run by MeitY Startup Hub to discover and fund technology startups outside metro cities. Its EiR vertical is built specifically for individuals at the ideation or validation stage who haven't yet raised significant funding. IITG-TIC is an implementing partner for this scheme in the North East.",
+					"amountLabel": "Funding available",
+					"amount": "Up to ₹10 Lakh in equity-free support, released in milestone-based tranches.",
+					"eligibility": [
+						"First-generation entrepreneurs, 18 years or older",
+						"Founders working full-time on their startup idea",
+						"Startups with total prior external funding (including government grants) under ₹10 Lakh",
+						"Applicants from Tier-II/Tier-III cities — Guwahati and the wider North East qualify",
+						"Focus areas: Electronics Design & Manufacturing, ICT, and Deep-Tech Software & Products"
+					],
+					"help": []
+				},
+				{
+					"id": "genesis-pilot",
+					"label": "GENESIS · Pilot",
+					"name": "MeitY GENESIS — Pilot (Proof-of-Concept) Support",
+					"tagline": "Funding to prove your product works with a real industry or PSU partner.",
+					"description": "The Pilot vertical of GENESIS helps startups validate their solution through a structured pilot project with a corporate, PSU, or large enterprise partner — turning a working prototype into a market-tested product with a credible reference customer.",
+					"amountLabel": "Funding available",
+					"amount": "Average ₹40 Lakh, up to a maximum of ₹50 Lakh per startup.",
+					"eligibility": [
+						"Startups with a working prototype ready for real-world pilot testing",
+						"Teams targeting corporate, PSU, or enterprise customers",
+						"Sectors: IT & AI, Electronics Design & Manufacturing, Deep-Tech, and related ICT domains"
+					],
+					"help": [
+						"Helps identify and approach suitable pilot partners",
+						"Supports the pilot funding application and documentation",
+						"Provides technical validation support from IIT Guwahati labs during the pilot"
+					]
+				},
+				{
+					"id": "genesis-matching",
+					"label": "GENESIS · Matching",
+					"name": "MeitY GENESIS — Matching Investment Support",
+					"tagline": "Co-investment support once you have a private investor on board.",
+					"description": "For startups that have secured commitment from a private investor, GENESIS matches that investment 1:1, effectively doubling the capital available for commercialisation and scale-up — without diluting founders further than the original round.",
+					"amountLabel": "Funding available",
+					"amount": "Average ₹40 Lakh, up to ₹50 Lakh, matched 1:1 against private investment.",
+					"eligibility": [
+						"Startups with a confirmed private investor commitment",
+						"Deep-tech, ICT, or electronics-focused ventures",
+						"Companies ready to deploy capital toward market entry and scaling"
+					],
+					"help": []
+				},
+				{
+					"id": "sisfs",
+					"label": "SISFS",
+					"name": "Startup India Seed Fund Scheme (SISFS)",
+					"tagline": "DPIIT's national seed fund for proof of concept through to commercialisation.",
+					"description": "SISFS is the Government of India's flagship seed funding scheme, disbursed through DPIIT-recognised incubators such as IITG-TIC. It covers two distinct needs: validating your product and taking it to market.",
+					"amountLabel": "Funding available",
+					"amount": "Up to ₹20 Lakh as a grant for proof of concept, prototyping, or product trials, plus up to ₹50 Lakh as investment (via convertible debentures or debt-linked instruments) for market entry and scaling.",
+					"eligibility": [
+						"Startups recognised by DPIIT, incorporated within the last 2 years",
+						"Technology-driven businesses solving a clear problem with scalable potential",
+						"Priority sectors: social impact, waste management, financial inclusion, education, agriculture, healthcare, and more"
+					],
+					"help": []
+				},
+				{
+					"id": "assam-state-grants",
+					"label": "Assam & state grants",
+					"name": "Assam Startup & State Government Grants",
+					"tagline": "State-level support layered on top of central government schemes.",
+					"description": "Through our partnership with the Assam Startup Mission (AISF) and other state bodies, IITG-TIC helps North East-based founders access state grants, subsidies, and policy benefits designed specifically for startups registered or operating in Assam — often stackable with central schemes like GENESIS or SISFS.",
+					"amountLabel": "Funding available",
+					"amount": "Varies by scheme; confirm current grant slabs with the IITG-TIC funding desk.",
+					"eligibility": [
+						"Startups registered or headquartered in Assam",
+						"Founders looking to combine state and central government funding",
+						"Ventures in state-prioritised sectors (agritech, handloom-tech, tourism-tech, and more)"
+					],
+					"help": []
+				},
+				{
+					"id": "soft-loan",
+					"label": "Soft loan",
+					"name": "IITG-TIC Soft Loan Support",
+					"tagline": "Bridge financing when grant disbursement timelines don't match your working-capital needs.",
+					"description": "Where funds are available under relevant grants and schemes, IITG-TIC facilitates soft loans to incubated startups — low-interest bridge financing to cover working capital gaps between milestone-based grant disbursements.",
+					"amountLabel": "Funding available",
+					"amount": "Subject to availability of funds, grants, and schemes designated for this purpose at the time of application.",
+					"eligibility": [
+						"Actively incubated IITG-TIC startups facing a short-term capital gap",
+						"Startups with an approved grant pending milestone-based disbursement"
+					],
+					"help": []
+				},
+				{
+					"id": "idex-dio",
+					"label": "iDEX-DIO",
+					"name": "iDEX-DIO — Defence Innovation Support",
+					"tagline": "Innovation and funding support for startups developing technology solutions for the Indian defence sector.",
+					"description": "iDEX (Innovations for Defence Excellence) is a Government of India initiative implemented through the Defence Innovation Organisation (DIO) to promote innovation and technology development in the defence sector. IITG-TIC supports startups and innovators in accessing iDEX opportunities, challenges, mentorship, and funding.",
+					"amountLabel": "Funding available",
+					"amount": "Funding varies by challenge. iDEX opportunities may provide grants of up to ₹1.5 Crore under DISC and significantly higher support under selected ADITI challenges.",
+					"eligibility": [
+						"Startups, innovators, and technology developers working on defence solutions",
+						"Startups developing indigenous and innovative technologies",
+						"Solutions addressing specific defence requirements and challenge statements",
+						"Applicants from technology areas including drones, AI, robotics, defence electronics, advanced materials, cybersecurity, and other deep-tech domains"
+					],
+					"help": []
+				},
+				{
+					"id": "oil-sneh",
+					"label": "OIL SNEH",
+					"name": "OIL SNEH — CSR-Supported Entrepreneurship Program",
+					"tagline": "CSR-supported innovation and entrepreneurship development for aspiring entrepreneurs and startups in the North East.",
+					"description": "OIL SNEH is a CSR initiative supported by Oil India Limited (OIL) aimed at promoting entrepreneurship, innovation, and livelihood opportunities. The program provides structured support to aspiring entrepreneurs and innovators through capacity building, mentoring, and ecosystem support.",
+					"amountLabel": "Support available",
+					"amount": "Training, mentoring, entrepreneurship development, innovation support, and ecosystem engagement, depending on the program component.",
+					"eligibility": [
+						"Aspiring entrepreneurs and innovators",
+						"Early-stage entrepreneurs and startups",
+						"Participants from the North Eastern region",
+						"Individuals seeking support to develop and validate innovative business ideas"
+					],
+					"help": []
+				},
+				{
+					"id": "nrl-ideathon",
+					"label": "NRL Ideathon",
+					"name": "NRL Ideathon — Innovation & Entrepreneurship Program",
+					"tagline": "Ideation platform for discovering innovative solutions to real-world industry and societal challenges.",
+					"description": "The NRL Ideathon is an innovation-focused initiative supported by Numaligarh Refinery Limited (NRL) to identify promising ideas and encourage entrepreneurship among students, innovators, and aspiring founders. The program provides a platform for participants to develop and present technology-driven solutions.",
+					"amountLabel": "Support available",
+					"amount": "Idea evaluation, mentoring, innovation guidance, industry exposure, and opportunities for further development of promising solutions.",
+					"eligibility": [
+						"Students and young innovators",
+						"Aspiring entrepreneurs and startup founders",
+						"Technology and engineering teams",
+						"Participants developing solutions for industrial, energy, sustainability, and societal challenges"
+					],
+					"help": []
+				},
+				{
+					"id": "ficci-csr",
+					"label": "FICCI CSR",
+					"name": "FICCI India — CSR Entrepreneurship Program",
+					"tagline": "CSR-supported entrepreneurship and innovation development for emerging innovators and startups in the North East.",
+					"description": "The FICCI India CSR Program supports entrepreneurship and innovation through structured capacity building, mentoring, and incubation support. The program helps promising innovators strengthen their ideas, develop entrepreneurial capabilities, and connect with the startup ecosystem.",
+					"amountLabel": "Support available",
+					"amount": "Entrepreneurship training, mentoring, business development support, ecosystem exposure, and incubation opportunities.",
+					"eligibility": [
+						"Aspiring entrepreneurs and innovators",
+						"Early-stage startups and idea-stage founders",
+						"Entrepreneurs from the North Eastern region",
+						"Individuals developing innovative and technology-enabled solutions"
+					],
+					"help": []
+				},
+				{
+					"id": "genesis-investment",
+					"label": "GENESIS · Investment",
+					"name": "MeitY GENESIS — Investment Component",
+					"tagline": "Equity investment support for promising technology startups through a 1:1 matching investment model.",
+					"description": "GENESIS (Gen-Next Support for Innovative Startups) is a Government of India initiative implemented by MeitY Startup Hub to strengthen the startup ecosystem beyond major metropolitan cities. Under the Investment Component, selected startups can receive matching equity investment through their incubator, helping them raise follow-on capital and accelerate growth. IITG-TIC is an implementing partner for GENESIS in the North East.",
+					"amountLabel": "Funding available",
+					"amount": "Up to ₹40 Lakh in matching investment support, subject to the applicable GENESIS guidelines and investor contribution.",
+					"eligibility": [
+						"Technology-driven startups with a scalable business model",
+						"Startups seeking early-stage equity investment",
+						"Startups with potential for growth, market adoption, and follow-on funding",
+						"Startups meeting the eligibility criteria under the GENESIS Investment Component",
+						"Startups from Tier-II/Tier-III cities and emerging startup ecosystems, including the North East",
+						"Focus areas include Deep-Tech, AI/ML, Electronics, ICT, and other technology-driven products and solutions"
+					],
+					"help": []
+				},
+				{
+					"id": "genesis-deep-tech",
+					"label": "GENESIS · Deep-Tech",
+					"name": "MeitY GENESIS — Deep-Tech Funding Support",
+					"tagline": "Funding support for selected startups developing high-impact, technology-driven solutions.",
+					"description": "MeitY GENESIS provides funding and ecosystem support to selected startups working on innovative and high-impact technology solutions. The program aims to help promising startups validate their technology, strengthen product development, and accelerate commercialization.",
+					"amountLabel": "Funding available",
+					"amount": "Funding support is provided to a select number of eligible startups, based on the applicable GENESIS component, evaluation, and milestone requirements.",
+					"eligibility": [
+						"Technology-driven startups developing high-impact solutions",
+						"Early-stage startups with innovative and scalable technologies",
+						"Startups working on deep-tech and emerging technology areas",
+						"Founders developing solutions with strong market and societal impact",
+						"Startups meeting the eligibility and selection criteria under the MeitY GENESIS program"
+					],
+					"help": []
+				}
+			]
+		},
 		"ticCoordinators": {
 			"heading": "TIC Coordinators",
 			"title": "TIC Coordinators · IITG TIC",

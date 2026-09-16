@@ -56,6 +56,7 @@ export const CONTENT_SECTIONS: { key: string; label: string; group: string }[] =
 	{ key: 'pages.programs', label: 'Schemes & programs', group: 'Pages' },
 	{ key: 'pages.events', label: 'Events', group: 'Pages' },
 	{ key: 'pages.schemes', label: 'Schemes', group: 'Pages' },
+	{ key: 'pages.schemesFunding', label: 'Schemes · Funding', group: 'Pages' },
 	{ key: 'pages.partners', label: 'Partners', group: 'Pages' },
 	{ key: 'pages.opportunities', label: 'Opportunities', group: 'Pages' },
 	{ key: 'pages.ticJobs', label: 'TIC jobs', group: 'Pages' },
@@ -115,6 +116,17 @@ export const LIST_TEMPLATES: Record<string, () => unknown> = {
 		summary: '',
 		support: [],
 		href: ''
+	}),
+	'pages.schemesFunding.schemes': () => ({
+		id: '',
+		label: '',
+		name: '',
+		tagline: '',
+		description: '',
+		amountLabel: 'Funding available',
+		amount: '',
+		eligibility: [],
+		help: []
 	})
 };
 
