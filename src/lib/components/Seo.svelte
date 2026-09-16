@@ -59,6 +59,7 @@
 	<meta property="og:description" content={description} />
 	<meta property="og:url" content={canonical} />
 	<meta property="og:image" content={socialImage} />
+	<meta property="og:image:alt" content={`${title} — IIT Guwahati Technology Incubation Centre`} />
 	{#if !image}
 		<!-- Only the default banner has known dimensions; a page-supplied one does not. -->
 		<meta property="og:image:width" content="1200" />
@@ -69,4 +70,5 @@
 	<meta name="twitter:title" content={title} />
 	<meta name="twitter:description" content={description} />
 	<meta name="twitter:image" content={socialImage} />
+	<meta name="twitter:image:alt" content={`${title} — IIT Guwahati Technology Incubation Centre`} />
 </svelte:head>

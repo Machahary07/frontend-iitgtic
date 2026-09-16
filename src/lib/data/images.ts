@@ -1,6 +1,9 @@
-import logo from '$lib/assets/TIC.webp';
-import favicon from '$lib/assets/TIC.webp';
-import ticTextLogo from '$lib/assets/TIC-Text-Logo.webp';
+// Official TIC IITG brand assets from the logo package.
+const logo = '/brand/tic-symbol-color.svg';
+const favicon = '/brand/tic-symbol-color.svg';
+const ticTextLogo = '/brand/tic-iitg-horizontal-color.svg';
+const ticHorizontalLogo = '/brand/tic-iitg-horizontal-color.svg';
+const ticVerticalLogo = '/brand/tic-iitg-vertical-color.svg';
 
 // Hero Slider Images
 import hero1 from '$lib/assets/home-hero-slider/img1.webp';
@@ -20,6 +23,8 @@ export const images = {
 	logo,
 	favicon,
 	ticTextLogo,
+	ticHorizontalLogo,
+	ticVerticalLogo,
 	hero: [hero1, hero2, hero3, hero4, hero5],
 	associationLogos: {
 		iitGuwahati: iitGuwahatiLogo,

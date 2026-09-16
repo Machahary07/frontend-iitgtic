@@ -91,7 +91,11 @@
 								<path d="M7 17 17 7" />
 							</svg>
 						</div>
-						<div class="card__image" aria-hidden="true"></div>
+						<div class="card__image" aria-hidden="true">
+							{#if post.coverImage?.src}
+								<img src={post.coverImage.src} alt="" loading="lazy" decoding="async" />
+							{/if}
+						</div>
 						<div class="card__bottom">
 							<span class="card__badge">Upcoming</span>
 							<div class="card__title">
@@ -147,7 +151,11 @@
 								<path d="M7 17 17 7" />
 							</svg>
 						</div>
-						<div class="card__image" aria-hidden="true"></div>
+						<div class="card__image" aria-hidden="true">
+							{#if post.coverImage?.src}
+								<img src={post.coverImage.src} alt="" loading="lazy" decoding="async" />
+							{/if}
+						</div>
 						<div class="card__title">
 							<span class="reveal-mask">
 								<span class="reveal-wrapper" bind:this={pastTitleRefs[i]}>
@@ -302,10 +310,18 @@
 		width: 100%;
 		height: 170px;
 		background: $color-black;
+		overflow: hidden;
 
 		@include breakpoint-down($bp-sm) {
 			height: auto;
 			aspect-ratio: 4 / 3;
+		}
+
+		img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: block;
 		}
 	}
 

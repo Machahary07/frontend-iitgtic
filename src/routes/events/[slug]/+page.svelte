@@ -38,7 +38,17 @@
 
 	{#if post.coverImage}
 		<figure class="post__cover" aria-label={post.coverImage.alt}>
-			<div class="post__cover-placeholder" aria-hidden="true"></div>
+			{#if post.coverImage.src}
+				<img
+					class="post__cover-img"
+					src={post.coverImage.src}
+					alt={post.coverImage.alt}
+					loading="eager"
+					decoding="async"
+				/>
+			{:else}
+				<div class="post__cover-placeholder" aria-hidden="true"></div>
+			{/if}
 		</figure>
 	{/if}
 
@@ -50,7 +60,17 @@
 				<h2>{block.text}</h2>
 			{:else if block.type === 'image'}
 				<figure class="post__figure" aria-label={block.alt}>
-					<div class="post__figure-placeholder" aria-hidden="true"></div>
+					{#if block.src}
+						<img
+							class="post__figure-img"
+							src={block.src}
+							alt={block.alt}
+							loading="lazy"
+							decoding="async"
+						/>
+					{:else}
+						<div class="post__figure-placeholder" aria-hidden="true"></div>
+					{/if}
 					{#if block.caption}
 						<figcaption>{block.caption}</figcaption>
 					{/if}
@@ -139,6 +159,14 @@
 		background: $color-black;
 	}
 
+	.post__cover-img {
+		width: 100%;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+		display: block;
+		background: $color-black;
+	}
+
 	.post__body {
 		width: min(100%, $container-sm);
 		display: flex;
@@ -175,6 +203,14 @@
 	.post__figure-placeholder {
 		width: 100%;
 		aspect-ratio: 16 / 9;
+		background: $color-black;
+	}
+
+	.post__figure-img {
+		width: 100%;
+		aspect-ratio: 16 / 9;
+		object-fit: cover;
+		display: block;
 		background: $color-black;
 	}
 

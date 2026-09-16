@@ -103,8 +103,8 @@
 	}
 
 	.logo-item {
-		width: clamp(96px, 12vw, 140px);
-		height: 72px;
+		width: clamp(112px, 14vw, 168px);
+		height: 88px;
 		display: grid;
 		place-items: center;
 		flex: 0 0 auto;
@@ -112,13 +112,12 @@
 
 	img {
 		max-width: 100%;
-		max-height: 58px;
+		max-height: 72px;
 		width: auto;
 		height: auto;
 		object-fit: contain;
 		mix-blend-mode: multiply;
-		filter: grayscale(1) contrast(1.05);
-		opacity: 0.84;
+		opacity: 1;
 	}
 
 	@media (max-width: $bp-sm) {
@@ -132,12 +131,12 @@
 		}
 
 		.logo-item {
-			width: 88px;
-			height: 58px;
+			width: 104px;
+			height: 70px;
 		}
 
 		img {
-			max-height: 46px;
+			max-height: 54px;
 		}
 	}
 </style>

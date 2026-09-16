@@ -9,6 +9,7 @@ const STATIC_ROUTES = [
 	'/about',
 	'/about/what-happens',
 	'/about/governing-body',
+	'/about/committee-of-management',
 	'/about/team',
 	'/about/faq',
 	'/about/blog',

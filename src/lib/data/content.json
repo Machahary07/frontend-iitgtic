@@ -255,362 +255,275 @@
 			"pastEyebrow": "Past events",
 			"posts": [
 				{
-					"slug": "speaker-series-deep-tech-north-east",
-					"isUpcoming": true,
-					"date": "2026-06-12",
-					"title": "Deep tech in the North-East",
-					"sliderTitle": "Deep tech in the North-East",
-					"sliderTagline": "Three founders, one evening, hard questions.",
-					"excerpt": "An evening with three founders building hardware ventures across Guwahati and Shillong — how they raised, who they shipped to, what they got wrong.",
-					"author": "Hosted by IITG-TIC",
-					"readTime": "90 min · evening",
-					"coverImage": {
-						"alt": "A previous edition of the speaker series at the centre."
-					},
-					"body": [
-						{
-							"type": "paragraph",
-							"text": "We're hosting three founders for an evening conversation about building hardware ventures in the North-East. The session is informal, the questions land where the audience takes them, and the answers are not curated."
-						},
-						{
-							"type": "paragraph",
-							"text": "Confirmed: a robotics founder shipping field equipment to tea estates, a sensor company that landed its first defence contract last quarter, and a battery startup that pivoted twice before product-market fit."
-						},
-						{
-							"type": "image",
-							"alt": "Speaker series at the centre.",
-							"caption": "A previous edition of the series, March 2026."
-						},
-						{
-							"type": "heading",
-							"text": "Schedule"
-						},
-						{
-							"type": "paragraph",
-							"text": "6:30pm — arrivals and tea. 7:00pm — talks (twenty minutes each, plus questions). 8:30pm — open conversation. 9:30pm — close."
-						},
-						{
-							"type": "heading",
-							"text": "Who should attend"
-						},
-						{
-							"type": "paragraph",
-							"text": "Current cohort, applicants thinking through their next year, partners and mentors. Outside founders welcome — please RSVP so we can plan seating."
-						}
-					]
-				},
-				{
-					"slug": "cohort-showcase-q2",
-					"isUpcoming": true,
-					"date": "2026-07-18",
-					"title": "Cohort showcase: Q2 2026",
-					"sliderTitle": "Cohort showcase: Q2 2026",
-					"sliderTagline": "Quarterly cohort review, held in public.",
-					"excerpt": "The current cohort presents what they've shipped this quarter — open to mentors, partners and invited investors. Followed by an open Q&A.",
-					"author": "Programme team",
-					"readTime": "Half day · presentations",
-					"coverImage": {
-						"alt": "A previous cohort showcase audience."
-					},
-					"body": [
-						{
-							"type": "paragraph",
-							"text": "Once a quarter, the current cohort presents what they've shipped — to mentors, partners, and a small set of invited investors. It's not a pitch competition; it's a working review held in public."
-						},
-						{
-							"type": "paragraph",
-							"text": "Each team gets fifteen minutes — ten to show what they built, five for questions. We keep the questions hard and the audience small enough that real answers can land."
-						},
-						{
-							"type": "image",
-							"alt": "Previous cohort showcase in session.",
-							"caption": "Q1 2026 showcase — four teams, two hundred attendees."
-						},
-						{
-							"type": "heading",
-							"text": "Agenda"
-						},
-						{
-							"type": "paragraph",
-							"text": "10:00am — opening remarks. 10:30am — team presentations. 1:00pm — lunch and informal exchange. 2:30pm — Q&A panel. 4:00pm — close."
-						},
-						{
-							"type": "heading",
-							"text": "Attending"
-						},
-						{
-							"type": "paragraph",
-							"text": "Mentors and partners receive invitations automatically. Investors and outside guests by curated invitation. If you'd like to attend, write to us — we keep the room small but the door isn't closed."
-						}
-					]
-				},
-				{
-					"slug": "ide-bootcamp-2026",
+					"slug": "mc2-ignite-2026",
 					"isUpcoming": false,
-					"date": "2026-04-20",
-					"title": "IDE Bootcamp 2026",
-					"sliderTitle": "IDE Bootcamp 2026",
-					"sliderTagline": "150 student innovators, five days, hands-on.",
-					"excerpt": "Five days of design thinking, business development, financial planning and pitch prep — 150 student innovators from 27 institutions across 14 states.",
-					"author": "IITG-TIC with SART, MoE Innovation Cell and AICTE",
-					"readTime": "5 days · 20–24 April 2026",
+					"date": "2026-09-10",
+					"title": "mc² + IGNITE: strengthening the startup ecosystem",
+					"sliderTitle": "mc² + IGNITE 2026",
+					"sliderTagline": "Energy innovation, 1,500+ at IIT Guwahati.",
+					"excerpt": "India's flagship energy innovation accelerator came to IIT Guwahati — bringing startups, students, PSUs, investors and policymakers onto one platform, with 1,500+ participants and 100+ startups.",
+					"author": "IITG-TIC with Oil India Limited and the MC² Foundation",
+					"readTime": "Full day · 10 September 2026",
 					"coverImage": {
-						"alt": "Participants at the IDE Bootcamp finale."
+						"alt": "Dignitaries on stage at the mc² + IGNITE accelerator.",
+						"src": "/MC2IgniteEvent/Dignataries.JPG"
 					},
 					"body": [
 						{
 							"type": "paragraph",
-							"text": "The Innovation, Design and Entrepreneurship Bootcamp ran from 20 to 24 April 2026 — five immersive days organised by IITG-TIC together with the School of Agro and Rural Technology (SART), with support from the Ministry of Education's Innovation Cell and AICTE."
+							"text": "mc² + IGNITE — India’s flagship energy innovation accelerator — concluded at IIT Guwahati, bringing startups, students, entrepreneurs, policymakers, PSUs, industry leaders, investors and academia onto a single platform. The IITG Technology Incubation Centre (IITG-TIC) and IIT Guwahati were partners in the initiative, connecting innovation, academia, industry and entrepreneurship."
+						},
+						{
+							"type": "heading",
+							"text": "A vision for the ecosystem"
 						},
 						{
 							"type": "paragraph",
-							"text": "Nearly 150 student innovators travelled from 27 institutions across 14 states. The format was action-packed by design — design thinking sessions in the morning, startup business development through the afternoon, financial planning and pitch preparation in the evenings."
+							"text": "The Hon’ble Chief Minister of Assam, Dr Himanta Biswa Sarma, spoke to the potential of entrepreneurship and technology-led innovation, and to the need for a stronger, more collaborative ecosystem to drive growth and create opportunity — a vision that sits close to IITG-TIC’s own work of helping ideas become sustainable, scalable ventures."
 						},
 						{
 							"type": "image",
-							"alt": "Bootcamp working session.",
-							"caption": "A working session inside the centre on day two."
+							"alt": "The startup expo at mc² + IGNITE.",
+							"caption": "The Startup Expo showcased solutions from emerging ventures.",
+							"src": "/MC2IgniteEvent/StartupExpo%201.JPG"
 						},
 						{
 							"type": "heading",
-							"text": "What participants did"
+							"text": "PSUs, founders and industry"
 						},
 						{
 							"type": "paragraph",
-							"text": "Beyond the lecture content, participants spent time inside the IITG-TIC facility and the BioNest Incubator — real labs, real benches, real founders walking through. The bootcamp closed with a competitive product-pitching finale, judged by a panel of startup and industry experts."
+							"text": "The participation of Oil India Limited and other energy-sector PSUs underlined the role industry plays in supporting startups — through real-world challenges, technology validation, pilot opportunities and deployment. At the Startup Expo, the Chief Minister met founders and explored their innovations directly."
+						},
+						{
+							"type": "image",
+							"alt": "Panel discussion with founders at mc² + IGNITE.",
+							"caption": "Founders from Quant Solar, MadVR Solutions and Ecoet Technologies in conversation.",
+							"src": "/MC2IgniteEvent/Panel%20Discussion.JPG"
+						},
+						{
+							"type": "paragraph",
+							"text": "A panel of founders from Quant Solar, MadVR Solutions and Ecoet Technologies discussed opportunities, challenges, investment, the role of incubators and pathways to scale. Prof. Ashok Jhunjhunwala of IIT Madras spoke on how startups and innovation can address India’s large, complex challenges, and Prof. Senthilmurugan Subbiah shared practical notes on founder commitment, product development and the work of incubation."
 						},
 						{
 							"type": "heading",
-							"text": "Outcome"
+							"text": "The response"
 						},
 						{
 							"type": "paragraph",
-							"text": "A handful of teams left with concrete next steps — applications into the next cohort, mentor connections, and in two cases, early customer conversations. The bootcamp is now an annual fixture in the centre's calendar."
+							"text": "With more than 1,500 participants, over 100 startups and around 1,000 students, the turnout reflected the growing entrepreneurial energy in the region. For IITG-TIC, mc² + IGNITE reaffirmed a simple commitment: nurture ideas, support founders, connect academia with industry, and help startups scale."
 						}
 					]
 				},
 				{
-					"slug": "seminar-series-startups-entrepreneurship",
+					"slug": "bharat-innovates-2026",
 					"isUpcoming": false,
-					"date": "2025-05-09",
-					"title": "Seminar series on startups & entrepreneurship",
-					"sliderTitle": "IITG-TIC Seminar Series",
-					"sliderTagline": "Weekly Friday sessions with guest experts.",
-					"excerpt": "Launched May 2025 — a weekly online seminar series for early-stage startups, researchers and student entrepreneurs. Every Friday, guided by guest experts.",
-					"author": "Hosted by IITG-TIC",
-					"readTime": "Weekly · Fridays · 2025+",
+					"date": "2026-06-14",
+					"title": "Bharat Innovates 2026, Nice",
+					"sliderTitle": "Bharat Innovates 2026",
+					"sliderTagline": "Quant Solar on the global stage in Nice.",
+					"excerpt": "Quant Solar, an IITG-TIC incubated startup, represented India at Bharat Innovates in Nice, France — a global showcase of 120 startups across 13 frontier sectors.",
+					"author": "Quant Solar, incubated at IITG-TIC",
+					"readTime": "3 days · 14–16 June 2026",
 					"coverImage": {
-						"alt": "A speaker delivering a seminar session over Zoom."
+						"alt": "The Quant Solar team at Bharat Innovates in Nice.",
+						"src": "/Bharats%20Innovates/Bharat%20Innovate%201.jpg"
 					},
 					"body": [
 						{
 							"type": "paragraph",
-							"text": "Launched in May 2025, the IITG-TIC seminar series is a weekly online knowledge-sharing initiative for early-stage startups, researchers and budding student entrepreneurs. Sessions run every Friday over Zoom."
+							"text": "From the labs of IIT Guwahati to the global innovation stage: Quant Solar, an IITG Technology Incubation Centre (IITG-TIC) incubated startup, represented India’s innovation ecosystem at the inaugural edition of Bharat Innovates, held in Nice, France, from 14 to 16 June 2026 — a global showcase featuring 120 startups across 13 frontier sectors, selected from institutions across the country."
+						},
+						{
+							"type": "heading",
+							"text": "Research, ready for the world"
 						},
 						{
 							"type": "paragraph",
-							"text": "Each week brings a different guest expert — legal professionals, chartered accountants, venture capital investors, veteran founders. The roster is chosen to cover the operating questions founders actually run into, rather than the inspirational territory."
+							"text": "Quant Solar’s presence reflected the growing strength of IIT Guwahati’s research and innovation ecosystem, and the readiness of its startups to compete internationally. At IITG-TIC, the work is to turn research into market-ready technologies that address global challenges in clean energy, climate resilience and sustainability."
 						},
 						{
 							"type": "image",
-							"alt": "A guest speaker mid-session over Zoom.",
-							"caption": "A recent Friday session with a venture investor."
+							"alt": "Quant Solar at the Bharat Innovates showcase.",
+							"caption": "Quant Solar among 120 startups selected for the showcase.",
+							"src": "/Bharats%20Innovates/Bharat%20Innovates%202.jpg"
 						},
 						{
 							"type": "heading",
-							"text": "What gets covered"
+							"text": "Beyond the showcase"
 						},
 						{
 							"type": "paragraph",
-							"text": "The sessions are structured around the real startup milestones — ideation and business modeling, navigating intellectual property rights and legal compliances, leveraging available government schemes, and pitching to investors."
+							"text": "Bharat Innovates offered more than a stage. It opened conversations with European universities, research institutions, industry leaders, investors and policymakers — new avenues for technology validation, research collaboration, commercialisation and international market access."
 						},
 						{
-							"type": "heading",
-							"text": "How to attend"
+							"type": "image",
+							"alt": "The Bharat Innovates gathering in Nice.",
+							"caption": "Engaging with global universities, investors and industry in Nice.",
+							"src": "/Bharats%20Innovates/Bharat%20Innovates%203.jpg"
 						},
 						{
 							"type": "paragraph",
-							"text": "Open to founders, researchers and students. Register through the contact form on the apply page to be added to the weekly invitation list."
+							"text": "Congratulations to the Quant Solar team on the milestone. It is the kind of moment IITG-TIC hopes to see repeated — more of its startups carrying Indian innovation to the world."
 						}
 					]
 				},
 				{
-					"slug": "aquatech-hackathon-2025",
+					"slug": "ai-assisted-coding-training-2026",
 					"isUpcoming": false,
-					"date": "2025-03-17",
-					"title": "AquaTech Innovators Hackathon 2025",
-					"sliderTitle": "AquaTech Hackathon 2025",
-					"sliderTagline": "Five days building underwater robots.",
-					"excerpt": "A 5-day hackathon focused on underwater robotics — undergraduate and postgraduate engineers designing autonomous underwater vehicles for marine exploration.",
-					"author": "IITG-TIC with IITG TIDF",
-					"readTime": "5 days · 17–21 March 2025",
+					"date": "2026-06-01",
+					"title": "AI-Assisted Coding Training Program",
+					"sliderTitle": "AI-Assisted Coding Program",
+					"sliderTagline": "Five days of AI-assisted building at TIC.",
+					"excerpt": "A five-day intensive for professionals from Numaligarh Refinery Limited — from the fundamentals of AI-assisted development to hands-on product building with modern AI tools.",
+					"author": "IITG-TIC for Numaligarh Refinery Limited",
+					"readTime": "5 days · 1–5 June 2026",
 					"coverImage": {
-						"alt": "An AUV prototype being tested during the hackathon."
+						"alt": "Participants at the AI-Assisted Coding Training Program.",
+						"src": "/AI%20Assisted%20Coding%20Trainning%20Program/WhatsApp%20Image%202026-06-01%20at%2011.41.39%20AM.jpeg"
 					},
 					"body": [
 						{
 							"type": "paragraph",
-							"text": "Organised in collaboration with the IIT Guwahati Technology Innovation Hub (IITG TIDF), the AquaTech Innovators Hackathon ran from 17 to 21 March 2025 — five days dedicated to pioneering the future of underwater robotics."
+							"text": "To equip professionals for a period in which AI is reshaping how we build and solve problems, IITG Technology Incubation Centre (IITG-TIC) ran an intensive five-day AI-Assisted Coding Training Program for participants from Numaligarh Refinery Limited."
+						},
+						{
+							"type": "heading",
+							"text": "Foundations, then building"
 						},
 						{
 							"type": "paragraph",
-							"text": "The event drew undergraduate and postgraduate engineering students from across the country. The challenge: design and develop autonomous underwater vehicles capable of tackling real-world marine exploration problems."
+							"text": "The programme opened with an inaugural session and a talk by Urmi Buragohain on the innovation and incubation ecosystem. Early days covered the fundamentals of AI-assisted development, an introduction to large language models, and the shape of the evolving AI ecosystem. Participants then moved from concepts to creation — using tools such as Cursor AI and Claude Code for rapid prototyping and product development."
 						},
 						{
 							"type": "image",
-							"alt": "Hackathon team working on an AUV.",
-							"caption": "A team during the fabrication phase of the hackathon."
+							"alt": "A hands-on session during the training program.",
+							"caption": "From concepts to creation — building AI-enabled products.",
+							"src": "/AI%20Assisted%20Coding%20Trainning%20Program/WhatsApp%20Image%202026-06-03%20at%2012.47.26%20PM.jpeg"
 						},
 						{
 							"type": "heading",
-							"text": "What was on offer"
+							"text": "Data, machine learning and industry"
 						},
 						{
 							"type": "paragraph",
-							"text": "Hands-on fabrication workshops, expert mentorship and access to the centre's specialised facilities — the Mechatronics Lab and 3D Printing Lab — all available for the full five days."
+							"text": "Later sessions went deeper into the foundations. Prof. Senthilmurugan Subbiah led on data fundamentals, machine-learning concepts and preprocessing, and on the transformative role of AI in chemical engineering and process industries — industry use cases, process optimisation, and the importance of pairing AI with domain expertise. Prof. Neeraj Sharma introduced machine learning, deep learning, image processing and computer vision, and speech-processing technologies."
 						},
 						{
-							"type": "heading",
-							"text": "Rewards"
+							"type": "image",
+							"alt": "A working session on the later days of the program.",
+							"caption": "Deep-tech foundations, from data preprocessing to computer vision.",
+							"src": "/AI%20Assisted%20Coding%20Trainning%20Program/WhatsApp%20Image%202026-06-15%20at%2011.06.57%20AM.jpeg"
 						},
 						{
 							"type": "paragraph",
-							"text": "Top teams earned cash rewards and were offered incubation and funding pathways up to ₹5 lakhs through IITG-TIC. Several of those teams went on to formal incubation enquiries in the following months."
+							"text": "A session with Dr Geetha Manjunath — Founder, CEO and CTO of Niramai Health Analytix — traced her journey building a deep-tech healthcare startup and the role of innovation in creating impact. Across the week, participants left with a firmer grasp of both the theory and the practice of applying AI within their own domains."
 						}
 					]
 				},
 				{
-					"slug": "agri-startup-financing-agritech",
+					"slug": "battle-blitz-2026",
 					"isUpcoming": false,
-					"date": "2024-08-22",
-					"title": "Agri-startup financing and agritech innovation",
-					"sliderTitle": "Agri-startup financing",
-					"sliderTagline": "Scaling agritech across the North-East.",
-					"excerpt": "A joint programme with Assam Startup, NABARD and BIRD — focused on scaling agritech ventures across the North-East.",
-					"author": "IITG-TIC with Assam Startup, NABARD and BIRD",
-					"readTime": "Multi-day · 2024",
+					"date": "2026-04-27",
+					"title": "Battle Blitz 2026",
+					"sliderTitle": "Battle Blitz 2026",
+					"sliderTagline": "A startup pitching contest, 20+ ideas.",
+					"excerpt": "A startup pitching competition at IITG-TIC — 20+ ideas from young founders across Assam, judged by a panel drawn from the region’s innovation ecosystem.",
+					"author": "IITG-TIC with Smile Foundation, Assam Startup and Apun NGO",
+					"readTime": "One day · 27 April 2026",
 					"coverImage": {
-						"alt": "Agritech founders at the financing workshop."
+						"alt": "Participants at the Battle Blitz pitching competition.",
+						"src": "/Battle%20Blitz/Battle%20Blitz%201.jpg"
 					},
 					"body": [
 						{
 							"type": "paragraph",
-							"text": "IITG-TIC has co-organised specialised programmes focused on scaling agritech startups across the North-East. The most prominent of these — a joint foundational programme held with Assam Startup, the National Bank for Agriculture and Rural Development (NABARD), and the Banking Institute of Rural Development (BIRD)."
+							"text": "Battle Blitz 2026 — a startup pitching competition — was held at the Technology Incubation Centre, IIT Guwahati (IITG-TIC), organised together with the Smile Foundation, Assam Startup and Apun NGO. It brought a diverse, talented pool of participants into one room for an afternoon of ideas."
+						},
+						{
+							"type": "heading",
+							"text": "The pitches"
 						},
 						{
 							"type": "paragraph",
-							"text": "The programme was built for modern agritech founders. The content sat squarely on the practical side — financial planning, securing credit lines, navigating agricultural subsidies, and deploying smart-farming solutions in the regional context."
+							"text": "More than twenty innovative ideas were pitched by students, startups and aspiring entrepreneurs from universities and colleges across Assam. The competition was a platform for creativity, entrepreneurial vision and problem-solving — a reflection of the region’s growing innovation ecosystem."
 						},
 						{
 							"type": "image",
-							"alt": "A working session at the agritech programme.",
-							"caption": "A financing workshop in session with NABARD facilitators."
+							"alt": "A pitch in progress at Battle Blitz.",
+							"caption": "Twenty-plus ideas from founders across Assam.",
+							"src": "/Battle%20Blitz/Battle%20Blitz%202.jpg"
 						},
 						{
 							"type": "heading",
-							"text": "Why this matters here"
+							"text": "The jury"
 						},
 						{
 							"type": "paragraph",
-							"text": "The region's economy remains heavily agrarian. Scaling agritech ventures locally has knock-on effects far beyond the founders themselves — better tooling for small holders, better routes to market, and a viable career path for engineers from the region who want to stay."
+							"text": "A distinguished panel evaluated the pitches: Trailukya Dutta, founder of Tholua Pratishthan, whose work centres on social impact and grassroots innovation; Kaushik Khanikar, consultant at Assam Startup, who supports emerging startups across the ecosystem; and Urmi Buragohain, CEO of the Technology Incubation Centre, IIT Guwahati."
 						},
 						{
-							"type": "heading",
-							"text": "What founders left with"
+							"type": "image",
+							"alt": "The audience and jury at Battle Blitz.",
+							"caption": "Enthusiastic participation and high-quality pitches through the day.",
+							"src": "/Battle%20Blitz/Battle%20Blitz%203.jpg"
 						},
 						{
 							"type": "paragraph",
-							"text": "Concrete next steps on credit lines, subsidy applications and pilot deployments — and an introduction into the wider agritech network that the centre has built across the North-East over the last several years."
+							"text": "Between the engaged discussions and the quality of the pitches, Battle Blitz 2026 stood as a marker of the momentum building around innovation and entrepreneurship in the region — with thanks to every participant, partner and jury member who made it work."
 						}
 					]
 				},
 				{
-					"slug": "samsung-solve-for-tomorrow-2024",
+					"slug": "maruti-suzuki-innovation-hackathon-2026",
 					"isUpcoming": false,
-					"date": "2024-04-12",
-					"title": "Samsung's 'Solve for Tomorrow' roadshow",
-					"sliderTitle": "Solve for Tomorrow roadshow",
-					"sliderTagline": "Youth pitching tech for sustainability.",
-					"excerpt": "The Guwahati leg of Samsung India's national 'Solve for Tomorrow' roadshow — over 100 participants pitching tech-driven solutions for environmental challenges.",
-					"author": "IITG-TIC with Samsung India",
-					"readTime": "Half day · April 2024",
+					"date": "2026-03-10",
+					"title": "Maruti Suzuki Innovation Hackathon",
+					"sliderTitle": "Maruti Suzuki Hackathon",
+					"sliderTagline": "60+ innovators, 12 teams, one jury.",
+					"excerpt": "60+ young innovators across 12 teams pitched to a jury from Maruti Suzuki India and IIM Calcutta Innovation Park, in collaboration with IITG-TIC.",
+					"author": "IITG-TIC with Maruti Suzuki India and IIM Calcutta Innovation Park",
+					"readTime": "One day · 10 March 2026",
 					"coverImage": {
-						"alt": "Solve for Tomorrow roadshow at IIT Guwahati."
+						"alt": "Teams at the Maruti Suzuki Innovation Hackathon.",
+						"src": "/Maruti%20Suzuki%20Innovation%20Hackathon/Maruti%20Suzuki%20Innovation%20Hackathon%201.jpg"
 					},
 					"body": [
 						{
 							"type": "paragraph",
-							"text": "In April 2024, IITG-TIC partnered with Samsung India to host the Guwahati leg of the national 'Solve for Tomorrow' roadshow. The event targeted youth between 18 and 22, with one stated aim — to nurture a culture of innovative problem-solving and environmental sustainability."
+							"text": "The Maruti Suzuki Innovation Hackathon was held in collaboration with the Technology Incubation Centre, IIT Guwahati (IITG-TIC), and IIT Guwahati’s Students’ Academic Board. More than sixty young innovators, across twelve teams, pitched bold ideas — and the energy in the room carried the day."
+						},
+						{
+							"type": "heading",
+							"text": "The jury"
 						},
 						{
 							"type": "paragraph",
-							"text": "Over 100 participants from IIT Guwahati and surrounding institutions took part. The format paired motivational insights from award-winning rocket scientists with working sessions on pitching tech-driven solutions."
+							"text": "Teams presented to a jury of senior officials from Maruti Suzuki India Limited and IIM Calcutta Innovation Park, across a fast round of presentations and evaluations."
 						},
 						{
 							"type": "image",
-							"alt": "Participants pitching during the roadshow.",
-							"caption": "A team pitching during the Guwahati leg of the roadshow."
+							"alt": "A team presenting at the hackathon.",
+							"caption": "Twelve teams, one round of bold ideas.",
+							"src": "/Maruti%20Suzuki%20Innovation%20Hackathon/Maruti%20Suzuki%20Innovation%20Hackathon%202.jpg"
 						},
 						{
 							"type": "heading",
-							"text": "What participants tackled"
+							"text": "The winners"
 						},
 						{
 							"type": "paragraph",
-							"text": "Three problem areas anchored the day — waste segregation, carbon emission tracking, and water pollution control. Each team picked one and built a pitch over the course of the session."
-						},
-						{
-							"type": "heading",
-							"text": "Why it mattered"
-						},
-						{
-							"type": "paragraph",
-							"text": "The roadshow exposed a younger audience to the centre's facilities and to early-stage product thinking. A few participants returned later for the IDE Bootcamp; one filed an application to the cohort the following year."
-						}
-					]
-				},
-				{
-					"slug": "defense-national-security-idex-outreach",
-					"isUpcoming": false,
-					"date": "2024-02-15",
-					"title": "Defense innovation outreach with iDEX-DIO",
-					"sliderTitle": "Defense innovation outreach",
-					"sliderTagline": "ADITI and DISC opportunities for the NE.",
-					"excerpt": "Outreach sessions in collaboration with iDEX and the Defence Innovation Organisation — guiding North East Indian innovators toward national defence and aerospace challenges.",
-					"author": "IITG-TIC with iDEX and DIO",
-					"readTime": "Multiple sessions · early 2024",
-					"coverImage": {
-						"alt": "A defence outreach session at the centre."
-					},
-					"body": [
-						{
-							"type": "paragraph",
-							"text": "In early 2024, IITG-TIC organised multiple defence innovation outreach sessions in collaboration with the Innovation for Defence Excellence (iDEX) and the Defence Innovation Organisation (DIO)."
-						},
-						{
-							"type": "paragraph",
-							"text": "The sessions brought together defence experts, technology innovators and startup founders to discuss opportunities under national initiatives — specifically the ADITI and DISC challenge frameworks."
+							"text": "Three teams emerged on top, with a special jury recognition alongside. Winners: Avinash and Rithvik. Runners-up: Devraj Choudhary and Saksham Barnwal. Second runner-up: Himanta Doley. Jury award for the most unique idea: Sachin Kumar Sharma."
 						},
 						{
 							"type": "image",
-							"alt": "A defence outreach session in progress.",
-							"caption": "An iDEX briefing session at the centre."
-						},
-						{
-							"type": "heading",
-							"text": "Where the focus sat"
+							"alt": "Prize-giving at the Maruti Suzuki Innovation Hackathon.",
+							"caption": "Three winning teams and a jury award for the most unique idea.",
+							"src": "/Maruti%20Suzuki%20Innovation%20Hackathon/Maruti%20Suzuki%20Innovation%20Hackathon%203.jpg"
 						},
 						{
 							"type": "paragraph",
-							"text": "The technical sessions focused on guiding North East Indian innovators to build deep-tech prototypes for national defence, aerospace and secure communication. The region's specific advantages — proximity to strategic borders, established hardware talent — were threaded through the conversation."
-						},
-						{
-							"type": "heading",
-							"text": "What followed"
-						},
-						{
-							"type": "paragraph",
-							"text": "Several attendees went on to file challenge proposals under iDEX. The centre continues to host targeted outreach as new defence challenges are announced."
+							"text": "With thanks to Maruti Suzuki India Limited, IIT Guwahati’s Students’ Academic Board, and every participant who turned the day into a genuine celebration of innovation."
 						}
 					]
 				}
@@ -1008,438 +921,7 @@
 						"lede": "These are the ventures currently incubating at IITG-TIC — working from our labs, drawing on our mentor network and shipping to their first cohort of customers. Most are in their first two years."
 					},
 					"listEyebrow": "Current cohort",
-					"startups": [
-						{
-							"slug": "northeast-robotics",
-							"name": "Northeast Robotics",
-							"sector": "Agricultural automation",
-							"tagline": "Field robots for tea-estate work.",
-							"oneLiner": "Autonomous field robots for India's tea estates.",
-							"industry": "AgriTech · Robotics",
-							"stage": "MVP",
-							"foundingYear": 2024,
-							"hqLocation": "Jorhat, Assam",
-							"description": "Building autonomous wheeled platforms that handle plucking and crop-monitoring across the tea estates of Upper Assam. First two pilots running with regional estates; commercial deployment scheduled for late 2026.",
-							"logo": {
-								"alt": "Northeast Robotics company mark."
-							},
-							"website": "https://northeastrobotics.example.in",
-							"socials": {
-								"linkedin": "https://linkedin.com/company/northeast-robotics",
-								"twitter": "https://twitter.com/ne_robotics",
-								"youtube": "https://youtube.com/@northeast-robotics"
-							},
-							"registration": {
-								"type": "Private Limited Company",
-								"cin": "U72900AS2024PTC024891",
-								"gstin": "18AABCN1234M1Z5",
-								"dpiit": "DIPP167432",
-								"incorporatedOn": "2024-02-14"
-							},
-							"problem": "Tea plucking is labour-intensive, seasonal, and increasingly hard to staff. Estates lose 8–12% of yield to delayed plucking windows alone.",
-							"solution": "A rugged, low-ground-pressure wheeled robot that navigates rows of tea bushes, plucks selectively using a vision-guided arm, and uploads field-health telemetry from onboard sensors.",
-							"features": [
-								"Selective plucking with leaf-grade classification",
-								"Row-following autonomy on uneven terrain",
-								"Onboard pest and disease detection",
-								"Telemetry dashboard for estate managers"
-							],
-							"targetMarket": "Mid-to-large tea estates across Assam, West Bengal and Tamil Nadu — roughly 1,200 estates above 200 hectares.",
-							"traction": [
-								{
-									"label": "Active pilots",
-									"value": "2 estates"
-								},
-								{
-									"label": "Hectares covered",
-									"value": "180 ha"
-								},
-								{
-									"label": "LOIs signed",
-									"value": "5"
-								}
-							],
-							"funding": {
-								"raised": "₹1.2 Cr seed (Sept 2024)",
-								"grants": ["NIDHI-SSS grant — ₹15 L", "DST-TIDE 2.0 — ₹25 L"]
-							},
-							"incubation": {
-								"program": "IITG-TIC Resident Cohort",
-								"duration": "24 months · Jan 2024 → Jan 2026",
-								"mentors": [
-									"Prof. R. Sharma · IITG, Mechanical Engineering",
-									"Anita Bose · Operating Partner, AgFunder India"
-								]
-							},
-							"founders": [
-								{
-									"name": "Diganta Kalita",
-									"role": "Co-founder & CEO",
-									"bio": "Former robotics engineer at a Bengaluru deeptech firm; grew up in a tea-estate family in Dibrugarh."
-								},
-								{
-									"name": "Priyam Goswami",
-									"role": "Co-founder & CTO",
-									"bio": "ML researcher, IITG '21; built the perception stack for an autonomous wheelchair project."
-								}
-							],
-							"achievements": [
-								"Winner · NER Startup Conclave 2024",
-								"Top-10 · TATA AgriPrize 2025"
-							],
-							"mediaMentions": [
-								{
-									"outlet": "The Hindu BusinessLine",
-									"title": "Tea estates turn to homegrown robotics",
-									"url": "#"
-								},
-								{
-									"outlet": "YourStory",
-									"title": "Inside Assam's first ag-robotics startup",
-									"url": "#"
-								}
-							],
-							"partnerships": [
-								"Tocklai Tea Research Institute",
-								"Assam Branch Indian Tea Association (ABITA)"
-							],
-							"techStack": ["ROS 2", "PyTorch", "Jetson Orin", "Rust embedded firmware"],
-							"hiring": {
-								"isHiring": true,
-								"rolesUrl": "/opportunities",
-								"openRoles": 4
-							},
-							"contactEmail": "hello@northeastrobotics.example.in",
-							"testimonials": [
-								{
-									"quote": "The selective-plucking accuracy beat what we'd seen from imported systems at three times the price.",
-									"author": "Estate manager",
-									"role": "Partner estate, Dibrugarh"
-								}
-							],
-							"milestones": [
-								{
-									"year": "2024",
-									"event": "Incorporated, joined IITG-TIC resident cohort"
-								},
-								{
-									"year": "2024",
-									"event": "First field prototype deployed on partner estate"
-								},
-								{
-									"year": "2025",
-									"event": "Closed ₹1.2 Cr seed round"
-								},
-								{
-									"year": "2026",
-									"event": "Commercial release planned · Q4"
-								}
-							],
-							"supportedBy": ["NIDHI-PRAYAS", "DST-TIDE 2.0", "Startup India"],
-							"graduateOutcome": null,
-							"impactCreated": "180 ha under robotic surveillance; ~25 estate jobs upskilled from plucking to robot supervision.",
-							"ipPatents": [
-								"IN-PA-2024-118934 (filed): Selective leaf-grade plucking end-effector"
-							],
-							"sdgAlignment": [
-								"SDG 2: Zero Hunger",
-								"SDG 8: Decent Work",
-								"SDG 9: Industry & Innovation"
-							]
-						},
-						{
-							"slug": "sensora-labs",
-							"name": "Sensora Labs",
-							"sector": "Industrial sensing",
-							"tagline": "Low-cost vibration sensors for legacy machinery.",
-							"oneLiner": "Wireless retrofit sensors that give old machines a voice.",
-							"industry": "Industrial IoT",
-							"stage": "MVP",
-							"foundingYear": 2024,
-							"hqLocation": "IITG Campus, Guwahati",
-							"description": "Retrofit vibration and temperature sensors for older industrial machines — wireless, battery-powered, with a backend that flags failure signatures weeks in advance. Currently piloting with two cement plants in the region.",
-							"logo": {
-								"alt": "Sensora Labs company mark."
-							},
-							"website": "https://sensoralabs.example.in",
-							"socials": {
-								"linkedin": "https://linkedin.com/company/sensora-labs",
-								"github": "https://github.com/sensora-labs"
-							},
-							"registration": {
-								"type": "Private Limited Company",
-								"cin": "U31909AS2024PTC025112",
-								"gstin": "18AAFCS9912H1Z2",
-								"dpiit": "DIPP172110"
-							},
-							"problem": "Most legacy industrial plants in India run machines built before 2010 — no telemetry, no condition monitoring. Unplanned downtime costs the average cement plant ₹4–6 Cr per year.",
-							"solution": "A battery-powered wireless sensor that clamps onto any motor or pump in minutes, paired with a backend that learns each machine's failure signature.",
-							"features": [
-								"5-minute install, no rewiring",
-								"3-year battery life on a single cell",
-								"Edge ML for failure prediction",
-								"On-prem dashboard option for air-gapped plants"
-							],
-							"targetMarket": "Mid-tier process manufacturers — cement, paper, steel re-rolling — roughly 8,000 plants nationwide.",
-							"traction": [
-								{
-									"label": "Plants piloting",
-									"value": "2"
-								},
-								{
-									"label": "Sensors deployed",
-									"value": "140"
-								},
-								{
-									"label": "Predicted failures caught",
-									"value": "11"
-								}
-							],
-							"funding": {
-								"raised": "Pre-seed · ₹40 L (angel)",
-								"grants": ["MeitY TIDE 2.0 — ₹15 L"]
-							},
-							"incubation": {
-								"program": "IITG-TIC Resident Cohort",
-								"duration": "18 months · April 2024 → Oct 2025",
-								"mentors": [
-									"Prof. K. Hazarika · IITG, Electronics",
-									"Vivek Menon · ex-Honeywell India"
-								]
-							},
-							"founders": [
-								{
-									"name": "Manash Bordoloi",
-									"role": "Co-founder & CEO",
-									"bio": "Electronics engineer; spent four years on factory-floor automation projects in Pune."
-								},
-								{
-									"name": "Riya Saikia",
-									"role": "Co-founder & Head of Engineering",
-									"bio": "Embedded firmware specialist; IITG '22."
-								}
-							],
-							"achievements": ["Selected · NIDHI-PRAYAS 2024"],
-							"mediaMentions": [
-								{
-									"outlet": "ET Manufacturing",
-									"title": "How a Guwahati startup is wiring up India's old factories",
-									"url": "#"
-								}
-							],
-							"partnerships": ["Calcom Cement", "NEEPCO"],
-							"techStack": ["Zephyr RTOS", "LoRaWAN", "TensorFlow Lite", "TimescaleDB"],
-							"hiring": {
-								"isHiring": true,
-								"rolesUrl": "/opportunities",
-								"openRoles": 2
-							},
-							"contactEmail": "team@sensoralabs.example.in",
-							"testimonials": [
-								{
-									"quote": "Two months in, they flagged a bearing failure on a kiln motor that would have cost us a four-day shutdown.",
-									"author": "Plant Head",
-									"role": "Cement major, Meghalaya"
-								}
-							],
-							"milestones": [
-								{
-									"year": "2024",
-									"event": "Founded, joined IITG-TIC"
-								},
-								{
-									"year": "2024",
-									"event": "First sensor v0 deployed in plant pilot"
-								},
-								{
-									"year": "2025",
-									"event": "Pre-seed raised · expand to 5 plants"
-								}
-							],
-							"supportedBy": ["MeitY TIDE 2.0", "NIDHI-PRAYAS", "Startup India"],
-							"impactCreated": "Estimated ₹1.8 Cr in avoided downtime across partner plants in the first 9 months.",
-							"ipPatents": [],
-							"sdgAlignment": ["SDG 9: Industry & Innovation", "SDG 12: Responsible Consumption"]
-						},
-						{
-							"slug": "voltaic-cells",
-							"name": "Voltaic Cells",
-							"sector": "Energy storage",
-							"tagline": "Battery packs built for Indian climate conditions.",
-							"oneLiner": "Lithium-ion packs tuned for high-humidity, high-heat operation.",
-							"industry": "CleanTech · Energy",
-							"stage": "Idea",
-							"foundingYear": 2024,
-							"hqLocation": "IITG Campus, Guwahati",
-							"description": "Designing lithium-ion packs that hold up under the temperature and humidity ranges of the North-East. Two product lines in development — one for e-rickshaws, one for telecom backup. First batch ships Q3 2026.",
-							"logo": {
-								"alt": "Voltaic Cells company mark."
-							},
-							"socials": {
-								"linkedin": "https://linkedin.com/company/voltaic-cells"
-							},
-							"registration": {
-								"type": "Private Limited Company (incorporation in progress)",
-								"dpiit": "DIPP178904"
-							},
-							"problem": "Standard imported battery packs degrade 30–40% faster in NE-India humidity and monsoon-heat cycles than their datasheet suggests.",
-							"solution": "Climate-tuned BMS, conformal-coated cell stacks and a thermal architecture validated against monsoon-cycle stress tests.",
-							"features": [
-								"Climate-tuned battery management",
-								"Modular design for swap stations",
-								"Telecom-grade backup variant"
-							],
-							"targetMarket": "E-rickshaw OEMs in Eastern India, plus telecom tower operators across Tier-2/3 NE locations.",
-							"incubation": {
-								"program": "IITG-TIC Resident Cohort",
-								"duration": "24 months · Sept 2024 → Sept 2026",
-								"mentors": ["Prof. S. Dutta · IITG, Electrical Engineering"]
-							},
-							"founders": [
-								{
-									"name": "Aniket Borah",
-									"role": "Founder & CEO",
-									"bio": "Energy-systems engineer; previously at a Hyderabad EV powertrain startup."
-								}
-							],
-							"hiring": {
-								"isHiring": false
-							},
-							"contactEmail": "founder@voltaiccells.example.in",
-							"milestones": [
-								{
-									"year": "2024",
-									"event": "Joined IITG-TIC idea cohort"
-								},
-								{
-									"year": "2025",
-									"event": "First pack prototype · target Q3"
-								}
-							],
-							"supportedBy": ["NIDHI-EIR", "Startup India"],
-							"sdgAlignment": ["SDG 7: Affordable Clean Energy", "SDG 13: Climate Action"]
-						},
-						{
-							"slug": "millet-labs",
-							"name": "Millet Labs",
-							"sector": "Food technology",
-							"tagline": "Shelf-stable millet products for urban markets.",
-							"oneLiner": "Ready-to-cook millet from NE-India farmer collectives.",
-							"industry": "FoodTech · CPG",
-							"stage": "Revenue",
-							"foundingYear": 2023,
-							"hqLocation": "Guwahati, Assam",
-							"description": "Building a small range of ready-to-cook millet products sourced from farmer collectives across Assam and Meghalaya. Two SKUs in market trial, distribution conversations in progress with two national chains.",
-							"logo": {
-								"alt": "Millet Labs company mark."
-							},
-							"website": "https://milletlabs.example.in",
-							"socials": {
-								"instagram": "https://instagram.com/milletlabs",
-								"facebook": "https://facebook.com/milletlabs"
-							},
-							"registration": {
-								"type": "Private Limited Company",
-								"cin": "U15400AS2023PTC024110",
-								"gstin": "18AAGCM7723K1Z9",
-								"udyam": "UDYAM-AS-04-0089123",
-								"fssai": "10024031000789"
-							},
-							"problem": "Indian urban consumers want healthier carbs but find millet hard to cook and inconsistent in quality.",
-							"solution": "Pre-processed, ready-in-12-minute millet meals sourced directly from women-led farmer collectives in Assam and Meghalaya.",
-							"features": [
-								"12-minute cook time",
-								"Traceable to source FPO",
-								"Two SKUs · breakfast & lunch lines"
-							],
-							"targetMarket": "Health-conscious urban households across Tier-1 Indian cities; ~38M households addressable.",
-							"traction": [
-								{
-									"label": "Monthly revenue",
-									"value": "₹4.2 L"
-								},
-								{
-									"label": "Retail stores",
-									"value": "62"
-								},
-								{
-									"label": "Farmer households sourced from",
-									"value": "240"
-								}
-							],
-							"funding": {
-								"raised": "Seed · ₹80 L (April 2025)",
-								"grants": ["NABARD producer-organisation linkage grant"]
-							},
-							"incubation": {
-								"program": "IITG-TIC Resident Cohort",
-								"duration": "18 months · Aug 2023 → Feb 2025",
-								"mentors": ["Bhavna Iyer · ex-ITC Foods", "Prof. M. Talukdar · IITG"]
-							},
-							"founders": [
-								{
-									"name": "Joyita Sharma",
-									"role": "Co-founder & CEO",
-									"bio": "Food technologist; spent five years at ITC's R&D before returning to Guwahati."
-								},
-								{
-									"name": "Pankaj Deka",
-									"role": "Co-founder & COO",
-									"bio": "Supply-chain operator; built distribution for two regional FMCG brands."
-								}
-							],
-							"achievements": [
-								"Winner · Assam Startup Awards 2024 (FoodTech)",
-								"Featured · India Millet Mission 2025"
-							],
-							"mediaMentions": [
-								{
-									"outlet": "Mint",
-									"title": "The new wave of NE-India food brands",
-									"url": "#"
-								}
-							],
-							"partnerships": [
-								"NABARD",
-								"Assam State Rural Livelihoods Mission",
-								"BigBasket (regional)"
-							],
-							"hiring": {
-								"isHiring": true,
-								"rolesUrl": "/opportunities",
-								"openRoles": 3
-							},
-							"contactEmail": "hello@milletlabs.example.in",
-							"testimonials": [
-								{
-									"quote": "I would have spent two years building my own farmer network. They brought one with them from day one.",
-									"author": "Joyita Sharma",
-									"role": "Co-founder"
-								}
-							],
-							"milestones": [
-								{
-									"year": "2023",
-									"event": "Founded, joined IITG-TIC"
-								},
-								{
-									"year": "2024",
-									"event": "First SKU launch · Guwahati retail"
-								},
-								{
-									"year": "2025",
-									"event": "Seed raised · expansion to 4 metros"
-								}
-							],
-							"supportedBy": ["Startup India", "NABARD", "Assam Startup"],
-							"impactCreated": "₹52 L paid directly to 240 farmer households in FY24-25; women-led FPOs supply 70% of grain.",
-							"sdgAlignment": [
-								"SDG 2: Zero Hunger",
-								"SDG 5: Gender Equality",
-								"SDG 12: Responsible Consumption"
-							]
-						}
-					]
+					"startups": []
 				},
 				{
 					"slug": "virtual",
@@ -1453,241 +935,7 @@
 						"lede": "Teams on the virtual track work with the same mentors, the same programme structure and the same investor network as our in-house cohort — they just do it from wherever they are. The depth of engagement does not change with geography."
 					},
 					"listEyebrow": "Virtual cohort",
-					"startups": [
-						{
-							"slug": "aqua-monitor",
-							"name": "Aqua Monitor",
-							"sector": "Water quality · Shillong",
-							"tagline": "Real-time water-quality sensors for municipal supply.",
-							"oneLiner": "Continuous drinking-water monitoring for municipal utilities.",
-							"industry": "GovTech · Environmental sensing",
-							"stage": "MVP",
-							"foundingYear": 2024,
-							"hqLocation": "Shillong, Meghalaya",
-							"description": "Building deployed sensor networks that monitor drinking-water quality at the municipal level. Two pilots running in Meghalaya and one in Mizoram. Team operates from Shillong; works with our mentors over weekly remote sessions.",
-							"logo": {
-								"alt": "Aqua Monitor company mark."
-							},
-							"website": "https://aquamonitor.example.in",
-							"socials": {
-								"linkedin": "https://linkedin.com/company/aqua-monitor"
-							},
-							"registration": {
-								"type": "Private Limited Company",
-								"cin": "U41000ML2024PTC011432",
-								"gstin": "17AABCA9981Q1Z4",
-								"dpiit": "DIPP181203"
-							},
-							"problem": "Municipal water boards in NE India rely on weekly manual sampling — contamination events are detected days late.",
-							"solution": "Low-power probe arrays measure pH, turbidity, residual chlorine and conductivity every 60 seconds, with SMS alerts to ward engineers.",
-							"features": [
-								"60-second sampling",
-								"SMS alerts in local language",
-								"Solar-powered field nodes"
-							],
-							"targetMarket": "Municipal water utilities across NE India (~120 ULBs).",
-							"traction": [
-								{
-									"label": "Active deployments",
-									"value": "3 ULBs"
-								},
-								{
-									"label": "Field nodes online",
-									"value": "27"
-								}
-							],
-							"incubation": {
-								"program": "IITG-TIC Virtual Cohort",
-								"duration": "12 months · June 2024 → June 2025",
-								"mentors": ["Dr. P. Nongkynrih · NEHU"]
-							},
-							"founders": [
-								{
-									"name": "Banlam Marbaniang",
-									"role": "Co-founder & CEO",
-									"bio": "Environmental engineer; built water-quality dashboards for the Meghalaya PHED."
-								},
-								{
-									"name": "Iba Lyngdoh",
-									"role": "Co-founder & CTO",
-									"bio": "Embedded-systems engineer."
-								}
-							],
-							"achievements": ["Selected · Atal Community Innovation Centre cohort 2024"],
-							"partnerships": ["Meghalaya PHED", "Mizoram PHE"],
-							"hiring": {
-								"isHiring": false
-							},
-							"contactEmail": "team@aquamonitor.example.in",
-							"milestones": [
-								{
-									"year": "2024",
-									"event": "Joined IITG-TIC virtual track"
-								},
-								{
-									"year": "2024",
-									"event": "First municipal pilot · Shillong"
-								}
-							],
-							"supportedBy": ["NIDHI-PRAYAS", "Atal Innovation Mission"],
-							"impactCreated": "~85,000 residents on continuously-monitored water supply across pilot wards.",
-							"sdgAlignment": ["SDG 6: Clean Water", "SDG 11: Sustainable Cities"]
-						},
-						{
-							"slug": "weave-tech",
-							"name": "Weave Tech",
-							"sector": "Textile technology · Dimapur",
-							"tagline": "Digital tools for the regional weaving industry.",
-							"oneLiner": "Software and small-batch automation for handloom cooperatives.",
-							"industry": "Textile · Cooperatives",
-							"stage": "Idea",
-							"foundingYear": 2024,
-							"hqLocation": "Dimapur, Nagaland",
-							"description": "Software and small-batch automation tools for traditional weaving cooperatives across Nagaland. The team prefers to stay close to their workshops — the virtual track lets them keep that proximity while drawing on our network.",
-							"logo": {
-								"alt": "Weave Tech company mark."
-							},
-							"socials": {
-								"instagram": "https://instagram.com/weave.tech"
-							},
-							"registration": {
-								"type": "Limited Liability Partnership",
-								"llpin": "ACA-9981",
-								"udyam": "UDYAM-NL-02-0004421"
-							},
-							"problem": "Traditional Naga weavers spend 40% of their time on order management, dye-batch tracking and inventory — work that pulls them off the loom.",
-							"solution": "A mobile-first cooperative OS in Nagamese/English that handles orders, dye batches, payouts and design libraries.",
-							"features": [
-								"Offline-first order book",
-								"Dye-batch traceability",
-								"UPI payouts to weavers"
-							],
-							"targetMarket": "~600 registered weaving cooperatives across Nagaland, Mizoram and Manipur.",
-							"incubation": {
-								"program": "IITG-TIC Virtual Cohort",
-								"duration": "9 months · Sept 2024 → June 2025",
-								"mentors": ["Ekta Singh · NIFT Shillong"]
-							},
-							"founders": [
-								{
-									"name": "Imnatoshi Aier",
-									"role": "Founder",
-									"bio": "Daughter of a master weaver; software engineer by training."
-								}
-							],
-							"hiring": {
-								"isHiring": false
-							},
-							"contactEmail": "imna@weavetech.example.in",
-							"milestones": [
-								{
-									"year": "2024",
-									"event": "Joined IITG-TIC virtual cohort"
-								}
-							],
-							"supportedBy": ["MSME Champions", "NABARD"],
-							"sdgAlignment": ["SDG 5: Gender Equality", "SDG 8: Decent Work"]
-						},
-						{
-							"slug": "pathlab-ai",
-							"name": "PathLab AI",
-							"sector": "Diagnostics · Imphal",
-							"tagline": "AI-assisted pathology for tier-two hospitals.",
-							"oneLiner": "Slide-review assistance for pathologists in smaller hospitals.",
-							"industry": "HealthTech · MedAI",
-							"stage": "MVP",
-							"foundingYear": 2023,
-							"hqLocation": "Imphal, Manipur",
-							"description": "Building a diagnostic-imaging assistant that helps pathologists in smaller hospitals review slides faster. Two pilot deployments in Manipur and one in Tripura. Team operates from Imphal with remote programme support.",
-							"logo": {
-								"alt": "PathLab AI company mark."
-							},
-							"website": "https://pathlab.example.in",
-							"socials": {
-								"linkedin": "https://linkedin.com/company/pathlab-ai",
-								"twitter": "https://twitter.com/pathlab_ai"
-							},
-							"registration": {
-								"type": "Private Limited Company",
-								"cin": "U85100MN2023PTC008764",
-								"gstin": "14AAFCP4421L1Z7",
-								"dpiit": "DIPP169876"
-							},
-							"problem": "Tier-2 and tier-3 hospitals across NE India often have one pathologist serving 60+ slides a day. Turnaround is slow and error rates rise toward the end of the shift.",
-							"solution": "An AI assistant that pre-screens digitised slides, flags candidate regions of interest, and ranks them by likelihood — letting the pathologist work top-down.",
-							"features": [
-								"Pre-screens H&E slides for malignancy markers",
-								"On-prem deployment for hospital data sovereignty",
-								"Pathologist-in-the-loop reporting"
-							],
-							"targetMarket": "~2,400 tier-2/3 diagnostic labs in India that perform histopathology but employ a single pathologist.",
-							"traction": [
-								{
-									"label": "Hospital pilots",
-									"value": "3"
-								},
-								{
-									"label": "Slides reviewed",
-									"value": "9,400+"
-								}
-							],
-							"funding": {
-								"raised": "Pre-seed · ₹65 L",
-								"grants": ["BIRAC BIG grant — ₹50 L"]
-							},
-							"incubation": {
-								"program": "IITG-TIC Virtual Cohort",
-								"duration": "18 months · Jan 2024 → July 2025",
-								"mentors": ["Dr. R. Devi · RIMS Imphal", "Sandeep Iyer · ex-Niramai"]
-							},
-							"founders": [
-								{
-									"name": "Khaidem Tomba",
-									"role": "Co-founder & CEO",
-									"bio": "Bioinformatician; MS from NIT Silchar."
-								},
-								{
-									"name": "Lhing Nungshi",
-									"role": "Co-founder & Chief Medical Officer",
-									"bio": "MD Pathology, RIMS Imphal."
-								}
-							],
-							"achievements": ["BIRAC BIG awardee 2024"],
-							"mediaMentions": [
-								{
-									"outlet": "ETHealthworld",
-									"title": "Imphal-based startup brings AI to small-town pathology",
-									"url": "#"
-								}
-							],
-							"partnerships": ["RIMS Imphal", "Agartala Government Medical College"],
-							"techStack": ["PyTorch", "OpenSlide", "Django", "FastAPI"],
-							"hiring": {
-								"isHiring": true,
-								"rolesUrl": "/opportunities",
-								"openRoles": 2
-							},
-							"contactEmail": "founders@pathlab.example.in",
-							"milestones": [
-								{
-									"year": "2023",
-									"event": "Founded"
-								},
-								{
-									"year": "2024",
-									"event": "BIRAC BIG · joined IITG-TIC virtual"
-								},
-								{
-									"year": "2025",
-									"event": "Third hospital pilot live"
-								}
-							],
-							"supportedBy": ["BIRAC", "Startup India", "AIM"],
-							"impactCreated": "Pathologist turnaround reduced from 3.2 days to 1.4 days on average across pilots.",
-							"ipPatents": ["Provisional · IN-PA-2025-007612 (RoI ranking algorithm)"],
-							"sdgAlignment": ["SDG 3: Good Health", "SDG 10: Reduced Inequalities"]
-						}
-					]
+					"startups": []
 				},
 				{
 					"slug": "graduated",
@@ -1701,452 +949,7 @@
 						"lede": "These ventures completed their time at IITG-TIC and have since moved on — most still have a working relationship with the centre through mentor swaps, hiring referrals or pilot partnerships. A few have raised follow-on capital; all are operating with their own teams and customers."
 					},
 					"listEyebrow": "Alumni",
-					"startups": [
-						{
-							"slug": "kaziranga-foods",
-							"name": "Kaziranga Foods",
-							"sector": "Food technology · Guwahati",
-							"tagline": "Regional food brand, exporting across India.",
-							"oneLiner": "Regional NE-India food brand with a national footprint.",
-							"industry": "FoodTech · CPG · Exports",
-							"stage": "Revenue · Series A",
-							"foundingYear": 2019,
-							"hqLocation": "Changsari, Assam",
-							"description": "Graduated in 2022. Now operates an independent food-processing facility outside Guwahati, ships across India and into the Middle East. Raised a small Series A in 2024.",
-							"logo": {
-								"alt": "Kaziranga Foods company mark."
-							},
-							"website": "https://kazirangafoods.example.in",
-							"socials": {
-								"linkedin": "https://linkedin.com/company/kaziranga-foods",
-								"instagram": "https://instagram.com/kazirangafoods",
-								"facebook": "https://facebook.com/kazirangafoods",
-								"twitter": "https://twitter.com/kazirangafoods"
-							},
-							"registration": {
-								"type": "Private Limited Company",
-								"cin": "U15400AS2019PTC019884",
-								"gstin": "18AAGCK1102K1Z6",
-								"iec": "AAGCK1102K",
-								"fssai": "10019022000456"
-							},
-							"problem": "Authentic NE-India staples — bamboo shoot, axone, smoked meat — had no national CPG presence and zero shelf-life infrastructure.",
-							"solution": "Modern processing facility + cold-chain partnerships that bring shelf-stable NE-India staples to Tier-1 grocery and export markets.",
-							"features": [
-								"18-month shelf-stable line",
-								"Direct sourcing from 11 FPOs",
-								"Export-grade packaging"
-							],
-							"targetMarket": "Indian diaspora, Tier-1 specialty grocery, Middle East exports.",
-							"traction": [
-								{
-									"label": "Annual revenue (FY24)",
-									"value": "₹14 Cr"
-								},
-								{
-									"label": "SKUs",
-									"value": "23"
-								},
-								{
-									"label": "Export markets",
-									"value": "5"
-								}
-							],
-							"funding": {
-								"raised": "Series A · ₹18 Cr (2024)",
-								"grants": ["MoFPI PMFME · ₹50 L"]
-							},
-							"incubation": {
-								"program": "IITG-TIC Resident Cohort (graduated)",
-								"duration": "30 months · 2019 → 2022",
-								"mentors": ["Bhavna Iyer · ex-ITC Foods"]
-							},
-							"founders": [
-								{
-									"name": "Mridul Bharali",
-									"role": "Founder & CEO",
-									"bio": "Second-generation food entrepreneur; grew up in his family's pickle business."
-								}
-							],
-							"achievements": [
-								"Forbes India 30-under-30 · 2023",
-								"MoFPI National FoodTech Award 2024"
-							],
-							"mediaMentions": [
-								{
-									"outlet": "Economic Times",
-									"title": "How Kaziranga Foods scaled NE-India staples",
-									"url": "#"
-								},
-								{
-									"outlet": "BBC Travel",
-									"title": "The shop bringing Assam's bamboo shoot to London",
-									"url": "#"
-								}
-							],
-							"partnerships": [
-								"Reliance Retail",
-								"Lulu Hypermarket",
-								"11 FPOs in Assam & Meghalaya"
-							],
-							"hiring": {
-								"isHiring": true,
-								"rolesUrl": "https://kazirangafoods.example.in/careers",
-								"openRoles": 7
-							},
-							"contactEmail": "hello@kazirangafoods.example.in",
-							"testimonials": [
-								{
-									"quote": "We owe our first 18 months to the centre. The facility, the mentors, the first buyer intro — all from there.",
-									"author": "Mridul Bharali",
-									"role": "Founder & CEO"
-								}
-							],
-							"milestones": [
-								{
-									"year": "2019",
-									"event": "Founded, joined IITG-TIC"
-								},
-								{
-									"year": "2022",
-									"event": "Graduated, independent facility in Changsari"
-								},
-								{
-									"year": "2024",
-									"event": "Series A · ₹18 Cr"
-								}
-							],
-							"supportedBy": ["MoFPI", "Startup India", "APEDA"],
-							"graduateOutcome": "Operating independently since 2022; raised Series A · 64 full-time employees; ₹14 Cr ARR.",
-							"impactCreated": "Direct sourcing from 11 FPOs · ~1,800 farmer households · 64 jobs created in Changsari.",
-							"sdgAlignment": [
-								"SDG 2: Zero Hunger",
-								"SDG 8: Decent Work",
-								"SDG 12: Responsible Consumption"
-							]
-						},
-						{
-							"slug": "brahma-bio",
-							"name": "Brahma Bio",
-							"sector": "Biotech · Guwahati",
-							"tagline": "Plant tissue culture at industrial scale.",
-							"oneLiner": "Industrial tissue-culture facility supplying NE-India nurseries.",
-							"industry": "Biotech · Agri-inputs",
-							"stage": "Revenue · Profitable",
-							"foundingYear": 2018,
-							"hqLocation": "Sonapur, Assam",
-							"description": "Graduated in 2021. Operates a tissue-culture facility that supplies planting material to commercial nurseries across the North-East. Profitable since 2023, no follow-on capital required.",
-							"logo": {
-								"alt": "Brahma Bio company mark."
-							},
-							"socials": {
-								"linkedin": "https://linkedin.com/company/brahma-bio"
-							},
-							"registration": {
-								"type": "Private Limited Company",
-								"cin": "U73100AS2018PTC018221",
-								"gstin": "18AABCB7710M1Z3"
-							},
-							"problem": "Commercial nurseries in NE India relied on planting material imported from Pune and Bengaluru — long lead times, high losses in transit.",
-							"solution": "A regional tissue-culture lab producing banana, orchid and bamboo planting material at industrial scale.",
-							"features": [
-								"650K plantlets/year capacity",
-								"Three core crop lines",
-								"B2B nursery distribution"
-							],
-							"targetMarket": "Commercial horticulture nurseries across NE India and Eastern India.",
-							"traction": [
-								{
-									"label": "Annual output",
-									"value": "640K plantlets"
-								},
-								{
-									"label": "Nursery customers",
-									"value": "78"
-								}
-							],
-							"funding": {
-								"raised": "Bootstrapped (profitable since 2023)",
-								"grants": ["DBT-BIRAC seed · ₹50 L"]
-							},
-							"incubation": {
-								"program": "IITG-TIC Resident Cohort (graduated)",
-								"duration": "36 months · 2018 → 2021",
-								"mentors": ["Prof. A. Bhattacharya · IITG, Bioscience"]
-							},
-							"founders": [
-								{
-									"name": "Dr. Nayan Talukdar",
-									"role": "Founder & MD",
-									"bio": "PhD Plant Biotechnology, IITG."
-								}
-							],
-							"partnerships": ["Assam Agricultural University", "NEDFi"],
-							"hiring": {
-								"isHiring": false
-							},
-							"contactEmail": "info@brahmabio.example.in",
-							"milestones": [
-								{
-									"year": "2018",
-									"event": "Founded, joined IITG-TIC"
-								},
-								{
-									"year": "2021",
-									"event": "Graduated · independent facility"
-								},
-								{
-									"year": "2023",
-									"event": "First profitable year"
-								}
-							],
-							"supportedBy": ["DBT-BIRAC", "NEDFi"],
-							"graduateOutcome": "Operating profitably since 2023 without follow-on capital · 22 full-time staff.",
-							"impactCreated": "Reduced planting-material lead time for NE nurseries from 14 days to 36 hours.",
-							"sdgAlignment": ["SDG 2: Zero Hunger", "SDG 15: Life on Land"]
-						},
-						{
-							"slug": "rhinoceros-robotics",
-							"name": "Rhinoceros Robotics",
-							"sector": "Industrial robotics · Bengaluru",
-							"tagline": "Material-handling robots for warehousing.",
-							"oneLiner": "AMRs for India's fast-growing warehouse automation market.",
-							"industry": "Robotics · Logistics",
-							"stage": "Revenue · Series B",
-							"foundingYear": 2017,
-							"hqLocation": "Bengaluru, Karnataka (Engg. office: IITG, Guwahati)",
-							"description": "Graduated in 2020. Subsequently relocated headquarters to Bengaluru and raised a Series B in 2024. Still maintains an engineering office at the centre.",
-							"logo": {
-								"alt": "Rhinoceros Robotics company mark."
-							},
-							"website": "https://rhinorobots.example.in",
-							"socials": {
-								"linkedin": "https://linkedin.com/company/rhinoceros-robotics",
-								"twitter": "https://twitter.com/rhinorobots",
-								"youtube": "https://youtube.com/@rhinorobots",
-								"github": "https://github.com/rhinorobots"
-							},
-							"registration": {
-								"type": "Private Limited Company",
-								"cin": "U29299KA2017PTC101284",
-								"gstin": "29AAFCR9912P1Z8",
-								"dpiit": "DIPP102341"
-							},
-							"problem": "Indian warehouses scaling from 50K to 500K sq.ft. struggle with material-handling labour costs and seasonal turnover.",
-							"solution": "Indoor autonomous mobile robots (AMRs) plus fleet-orchestration software designed for retrofit into existing warehouses.",
-							"features": [
-								"Retrofit-friendly AMR design",
-								"Vendor-agnostic fleet manager",
-								"<24-hour deployment SLA"
-							],
-							"targetMarket": "Indian 3PL, quick-commerce and e-commerce warehouses (>50K sq.ft.).",
-							"traction": [
-								{
-									"label": "Active fleets deployed",
-									"value": "120+"
-								},
-								{
-									"label": "ARR (FY24)",
-									"value": "₹38 Cr"
-								},
-								{
-									"label": "Enterprise customers",
-									"value": "14"
-								}
-							],
-							"funding": {
-								"raised": "Series B · ₹190 Cr (2024) · Total raised ₹240 Cr",
-								"grants": []
-							},
-							"incubation": {
-								"program": "IITG-TIC Resident Cohort (graduated)",
-								"duration": "30 months · 2017 → 2020",
-								"mentors": ["Prof. K. Hazarika · IITG", "Naveen Tewari · ex-Greyorange"]
-							},
-							"founders": [
-								{
-									"name": "Arijit Chowdhury",
-									"role": "Co-founder & CEO",
-									"bio": "Robotics PhD; ex-IIT Guwahati researcher."
-								},
-								{
-									"name": "Smita Kashyap",
-									"role": "Co-founder & CTO",
-									"bio": "Computer-vision specialist."
-								},
-								{
-									"name": "Rohit Saharia",
-									"role": "Co-founder & VP Engineering",
-									"bio": "Embedded-systems engineer."
-								}
-							],
-							"achievements": ["NASSCOM Emerge 50 · 2022", "Deloitte Tech Fast 50 India · 2024"],
-							"mediaMentions": [
-								{
-									"outlet": "TechCrunch",
-									"title": "Rhinoceros Robotics raises Series B for warehouse AMRs",
-									"url": "#"
-								},
-								{
-									"outlet": "Forbes India",
-									"title": "From IITG to Bengaluru · Rhino's growth playbook",
-									"url": "#"
-								}
-							],
-							"partnerships": ["Flipkart", "DHL Supply Chain India", "Delhivery"],
-							"techStack": ["ROS 2", "Nav2", "Go (fleet manager)", "Kubernetes"],
-							"hiring": {
-								"isHiring": true,
-								"rolesUrl": "https://rhinorobots.example.in/careers",
-								"openRoles": 23
-							},
-							"contactEmail": "hello@rhinorobots.example.in",
-							"testimonials": [
-								{
-									"quote": "Three of our first ten engineers came through the IITG network. We still recruit from there.",
-									"author": "Arijit Chowdhury",
-									"role": "Co-founder & CEO"
-								}
-							],
-							"milestones": [
-								{
-									"year": "2017",
-									"event": "Founded, joined IITG-TIC"
-								},
-								{
-									"year": "2020",
-									"event": "Graduated · HQ relocated to Bengaluru"
-								},
-								{
-									"year": "2022",
-									"event": "Series A · ₹50 Cr"
-								},
-								{
-									"year": "2024",
-									"event": "Series B · ₹190 Cr"
-								}
-							],
-							"supportedBy": ["Startup India", "DST-NIDHI", "NASSCOM"],
-							"graduateOutcome": "Series B · 230 FTEs across Bengaluru + Guwahati engineering office; serving 14 enterprise customers.",
-							"impactCreated": "120+ deployed fleets · estimated 18% labour-efficiency gain at partner warehouses.",
-							"ipPatents": [
-								"IN-PA-2021-093412 (granted): Retrofit-friendly AMR chassis",
-								"IN-PA-2023-118807 (filed): Multi-fleet vendor-agnostic orchestration"
-							],
-							"sdgAlignment": ["SDG 8: Decent Work", "SDG 9: Industry & Innovation"]
-						},
-						{
-							"slug": "easternsky-aerospace",
-							"name": "EasternSky Aerospace",
-							"sector": "Aerospace · Guwahati",
-							"tagline": "Lightweight UAVs for survey and inspection.",
-							"oneLiner": "Survey-grade UAVs for government and infrastructure customers.",
-							"industry": "Aerospace · Drones",
-							"stage": "Revenue",
-							"foundingYear": 2020,
-							"hqLocation": "Amingaon, Assam",
-							"description": "Graduated in 2023. Now ships survey-grade UAVs to government and infrastructure customers; operating from a dedicated facility outside Guwahati with a team of 18 engineers.",
-							"logo": {
-								"alt": "EasternSky Aerospace company mark."
-							},
-							"website": "https://easternsky.example.in",
-							"socials": {
-								"linkedin": "https://linkedin.com/company/easternsky-aerospace",
-								"twitter": "https://twitter.com/easternsky_in"
-							},
-							"registration": {
-								"type": "Private Limited Company",
-								"cin": "U35100AS2020PTC020661",
-								"gstin": "18AAECE6612R1Z1",
-								"dpiit": "DIPP138904",
-								"dgca": "OEM/RPAS/EXT/2023/0084"
-							},
-							"problem": "Imported survey UAVs are expensive and have restricted approvals for the strategic NE region.",
-							"solution": "Indigenously-designed, DGCA-certified survey UAVs built for the geography and regulatory context of NE India.",
-							"features": [
-								"DGCA Type Certified",
-								"Up to 4-hour endurance",
-								"Mission-planner software included"
-							],
-							"targetMarket": "State PWDs, power-transmission utilities, oil & gas survey, mining concessions.",
-							"traction": [
-								{
-									"label": "Units shipped (cumulative)",
-									"value": "210"
-								},
-								{
-									"label": "Government customers",
-									"value": "9"
-								}
-							],
-							"funding": {
-								"raised": "Seed · ₹6 Cr (2023)",
-								"grants": ["iDEX Open Challenge · ₹1.5 Cr"]
-							},
-							"incubation": {
-								"program": "IITG-TIC Resident Cohort (graduated)",
-								"duration": "30 months · 2020 → 2023",
-								"mentors": ["Prof. V. Krishnan · IITG, Mechanical", "Wing Cdr. (Retd.) A. Bose"]
-							},
-							"founders": [
-								{
-									"name": "Tarun Phukan",
-									"role": "Co-founder & CEO",
-									"bio": "Aerospace engineer; ex-HAL."
-								},
-								{
-									"name": "Bhaskar Sarmah",
-									"role": "Co-founder & CTO",
-									"bio": "UAV systems engineer."
-								}
-							],
-							"achievements": ["iDEX Winner 2022", "Aero India 2025 · MSME Excellence"],
-							"mediaMentions": [
-								{
-									"outlet": "Defence News India",
-									"title": "EasternSky's NE-built survey UAV gets DGCA cert",
-									"url": "#"
-								}
-							],
-							"partnerships": ["Assam PWD", "Power Grid Corporation", "Oil India Limited"],
-							"techStack": ["PX4", "Mission Planner", "C++ flight stack"],
-							"hiring": {
-								"isHiring": true,
-								"rolesUrl": "/opportunities",
-								"openRoles": 5
-							},
-							"contactEmail": "info@easternsky.example.in",
-							"testimonials": [
-								{
-									"quote": "The DGCA certification work alone would have taken us a year longer outside an incubator setup.",
-									"author": "Tarun Phukan",
-									"role": "Co-founder & CEO"
-								}
-							],
-							"milestones": [
-								{
-									"year": "2020",
-									"event": "Founded, joined IITG-TIC"
-								},
-								{
-									"year": "2022",
-									"event": "iDEX win · prototype delivery"
-								},
-								{
-									"year": "2023",
-									"event": "Graduated · DGCA Type Certification"
-								},
-								{
-									"year": "2024",
-									"event": "Scaled to 18-engineer team"
-								}
-							],
-							"supportedBy": ["iDEX-DIO", "Startup India", "MSME"],
-							"graduateOutcome": "Independent facility in Amingaon · 18-engineer team · 9 government & infrastructure customers.",
-							"ipPatents": ["IN-PA-2022-104891 (granted): Foldable VTOL airframe for survey UAV"],
-							"sdgAlignment": ["SDG 9: Industry & Innovation", "SDG 11: Sustainable Cities"]
-						}
-					]
+					"startups": []
 				}
 			]
 		},
@@ -2472,165 +1275,7 @@
 				"lede": "Short writing from our team and incubatees — what we're seeing in applications, what we're learning from cohorts, and what the work actually looks like in practice."
 			},
 			"sectionEyebrow": "Latest writing",
-			"posts": [
-				{
-					"slug": "what-we-look-for",
-					"date": "2026-04-18",
-					"title": "What we look for",
-					"excerpt": "A note from the programme team on the signals in an application that catch our attention — and the ones that don't.",
-					"author": "The IITG-TIC programme team",
-					"readTime": "5 min read",
-					"coverImage": {
-						"alt": "A whiteboard from a recent application review session."
-					},
-					"body": [
-						{
-							"type": "paragraph",
-							"text": "Every application that lands in our inbox gets read by at least two people on the programme team. We don't have a rubric we tick down — we have a feeling we're chasing. Below is our best attempt to write it down."
-						},
-						{
-							"type": "paragraph",
-							"text": "The first thing we look for is specificity. Vague ideas with broad ambition are common; specific ideas with narrow ambition are rare. We back the second."
-						},
-						{
-							"type": "image",
-							"alt": "A whiteboard from our last cohort review session.",
-							"caption": "Most of our application reads start here — one whiteboard, two chairs."
-						},
-						{
-							"type": "heading",
-							"text": "Founder–problem fit"
-						},
-						{
-							"type": "paragraph",
-							"text": "You don't need to be the world's expert on the problem, but you should be the person in the room who cares most about this particular problem — and has been thinking about it for longer than a quarter."
-						},
-						{
-							"type": "paragraph",
-							"text": "We look at the years of context behind an application. Not for credentials — for the slow conviction that comes from staying with a problem when the easier thing was to leave it."
-						},
-						{
-							"type": "image",
-							"alt": "Notebooks from a 2026 application review.",
-							"caption": "Application notes accumulate. We keep them across cohorts."
-						},
-						{
-							"type": "heading",
-							"text": "What won't work"
-						},
-						{
-							"type": "paragraph",
-							"text": "This is the one most applications miss. If you can tell us five reasons your idea might fail and how you'd notice each one, we'll spend an hour with you on a call. Most applicants only tell us why it will work."
-						},
-						{
-							"type": "paragraph",
-							"text": "We're less interested in pitch decks than in the application body. Read what you've written out loud before you submit it. If a sentence sounds like a press release, change it."
-						}
-					]
-				},
-				{
-					"slug": "hardware-and-soft-loans",
-					"date": "2026-03-02",
-					"title": "Hardware and soft loans",
-					"excerpt": "A short essay on funding deep-tech ideas in the North-East — and why patience is part of the work.",
-					"author": "IITG-TIC editorial",
-					"readTime": "6 min read",
-					"coverImage": {
-						"alt": "An incubatee's prototype enclosure, mid-iteration."
-					},
-					"body": [
-						{
-							"type": "paragraph",
-							"text": "Software startups raise capital. Hardware startups raise capital, then raise more capital, then raise more capital again — usually with nothing visibly different to show for it between rounds. That gap is where the soft-loan facility lives."
-						},
-						{
-							"type": "paragraph",
-							"text": "Most hardware ventures coming through IITG-TIC need around eighteen months between a working prototype and a paying customer. That's not because the team is slow — it's because the supply chain, the certifications, the bill-of-materials engineering, and the field trials all stack."
-						},
-						{
-							"type": "image",
-							"alt": "An incubatee's prototype enclosure mid-iteration.",
-							"caption": "Iteration four of an enclosure that took six iterations to ship."
-						},
-						{
-							"type": "heading",
-							"text": "Patient by design"
-						},
-						{
-							"type": "paragraph",
-							"text": "A soft loan is patient by design. It doesn't ask for an exit. It doesn't push you to ship before the product is ready. It buys the year and a half between knowing-it-works and knowing-it-sells."
-						},
-						{
-							"type": "paragraph",
-							"text": "We've had cohorts where the soft-loan facility was the only capital between pre-seed and revenue. It's not glamorous funding. It's the kind that lets you stop checking your bank balance every Friday."
-						},
-						{
-							"type": "image",
-							"alt": "The TIC machine workshop on a quiet weekend.",
-							"caption": "Most of the hard work happens here on the weekends — quietly."
-						},
-						{
-							"type": "paragraph",
-							"text": "If you're thinking about applying with a hardware idea: bring a credible plan for how the next eighteen months will look. You don't need to be right about every step. You need to have already walked yourself through them."
-						}
-					]
-				},
-				{
-					"slug": "notes-from-the-cohort",
-					"date": "2026-01-14",
-					"title": "Notes from the cohort",
-					"excerpt": "Three incubatees share what they learned by writing about their work as it happened — building in public.",
-					"author": "Aru, Priyanka and Rohan — current cohort",
-					"readTime": "7 min read",
-					"coverImage": {
-						"alt": "Cohort whiteboards at the end of Q1."
-					},
-					"body": [
-						{
-							"type": "paragraph",
-							"text": "We asked three founders from the current cohort to write about what they learned by writing about their work as it happened. Building in public is a phrase that gets thrown around — these are notes from people who actually tried it."
-						},
-						{
-							"type": "image",
-							"alt": "Our cohort whiteboards at the end of Q1.",
-							"caption": "Every whiteboard becomes a draft of next quarter's plan."
-						},
-						{
-							"type": "heading",
-							"text": "Aru — hardware lead at a sensor startup"
-						},
-						{
-							"type": "paragraph",
-							"text": "When I started writing weekly updates, I thought I was writing for our community. I wasn't. I was writing for myself. The act of explaining the week to a hypothetical reader is the act of finding out what I actually did."
-						},
-						{
-							"type": "heading",
-							"text": "Priyanka — founder of a data infrastructure company"
-						},
-						{
-							"type": "paragraph",
-							"text": "Writing in public meant our customer pipeline filled before we had a finished product. People emailed us because they recognised their problem in our notes. We were not selling — we were just thinking out loud, and that was enough."
-						},
-						{
-							"type": "image",
-							"alt": "A copy of Priyanka's printed customer logbook.",
-							"caption": "A logbook compiled from the cold inbound that came from public notes."
-						},
-						{
-							"type": "heading",
-							"text": "Rohan — building in robotics"
-						},
-						{
-							"type": "paragraph",
-							"text": "I almost stopped writing twice. Both times, something an investor said three weeks later traced back to one of those posts. The signal is delayed. You have to keep going past where it feels worth it."
-						},
-						{
-							"type": "paragraph",
-							"text": "We've put together the full essays from each of them in a separate publication. Mail us if you'd like a copy."
-						}
-					]
-				}
-			]
+			"posts": []
 		},
 		"mentors": {
 			"title": "Mentors · IITG TIC",
@@ -3079,104 +1724,7 @@
 			},
 			"listEyebrow": "Open roles",
 			"emptyMessage": "No open roles right now. Check back in a couple of weeks — the cohort hires in bursts.",
-			"posts": [
-				{
-					"slug": "job-no-8",
-					"role": "Mechanical Engineer · Field robots",
-					"company": "Northeast Robotics",
-					"companySlug": "northeast-robotics",
-					"location": "Guwahati · in-person",
-					"type": "Full-time",
-					"sector": "Agricultural automation",
-					"posted": "2026-05-14",
-					"description": "Designing and iterating on the mechanical platforms behind our tea-estate field robots — chassis, drivetrains and the moving parts that meet the weather. Comfortable on a bench and at a CAD station.",
-					"applyLink": "mailto:hiring@northeast-robotics.example"
-				},
-				{
-					"slug": "job-no-7",
-					"role": "Embedded Firmware Engineer",
-					"company": "Sensora Labs",
-					"companySlug": "sensora-labs",
-					"location": "Guwahati · hybrid",
-					"type": "Full-time",
-					"sector": "Industrial sensing",
-					"posted": "2026-05-09",
-					"description": "Owning the firmware that runs on our wireless vibration sensors — low-power C on ARM Cortex-M, BLE/LoRa stacks, and the OTA path that keeps deployed units in the field updateable.",
-					"applyLink": "mailto:careers@sensoralabs.example"
-				},
-				{
-					"slug": "job-no-6",
-					"role": "Battery Management Intern",
-					"company": "Voltaic Cells",
-					"companySlug": "voltaic-cells",
-					"location": "Guwahati · in-person",
-					"type": "Internship · 6 months",
-					"sector": "Energy storage",
-					"posted": "2026-05-04",
-					"description": "Working alongside the BMS team on cell-level characterisation, thermal modelling and the test rigs that prove our packs hold up under field conditions. Open to final-year students and recent graduates.",
-					"applyLink": "mailto:interns@voltaiccells.example"
-				},
-				{
-					"slug": "job-no-5",
-					"role": "Supply Chain Lead",
-					"company": "Millet Labs",
-					"companySlug": "millet-labs",
-					"location": "Guwahati · in-person",
-					"type": "Full-time",
-					"sector": "Food technology",
-					"posted": "2026-04-28",
-					"description": "Building the procurement and distribution backbone — relationships with farmer collectives upstream, logistics into the two national chains we're talking to downstream. Strong fit if you've worked with FPOs or rural supply chains before.",
-					"applyLink": "mailto:careers@milletlabs.example"
-				},
-				{
-					"slug": "job-no-4",
-					"role": "ML Engineer · Medical Imaging",
-					"company": "PathLab AI",
-					"companySlug": "pathlab-ai",
-					"location": "Imphal · remote-friendly",
-					"type": "Full-time",
-					"sector": "Diagnostics",
-					"posted": "2026-04-22",
-					"description": "Working on the slide-review assistant that supports pathologists in tier-two hospitals. Experience with vision transformers, weakly-supervised learning or histopathology data is a strong plus.",
-					"applyLink": "mailto:hiring@pathlabai.example"
-				},
-				{
-					"slug": "job-no-3",
-					"role": "Data Engineer",
-					"company": "Aqua Monitor",
-					"companySlug": "aqua-monitor",
-					"location": "Shillong · hybrid",
-					"type": "Full-time",
-					"sector": "Water quality",
-					"posted": "2026-04-15",
-					"description": "Owning the pipeline that takes raw sensor data from our municipal deployments and turns it into the dashboards municipalities actually use. Comfortable with Python, time-series stores and the operational side of running a live system.",
-					"applyLink": "mailto:careers@aquamonitor.example"
-				},
-				{
-					"slug": "job-no-2",
-					"role": "Flight Controls Engineer",
-					"company": "EasternSky Aerospace",
-					"companySlug": "easternsky-aerospace",
-					"location": "Guwahati · in-person",
-					"type": "Full-time",
-					"sector": "Aerospace",
-					"posted": "2026-04-08",
-					"description": "Tuning the autopilot and control loops on our survey-grade UAVs. PX4/ArduPilot experience is useful but not required — what matters is that you understand the control theory and have shipped a flying platform before.",
-					"applyLink": "mailto:hiring@easternsky.example"
-				},
-				{
-					"slug": "job-no-1",
-					"role": "Design Engineer Intern",
-					"company": "Weave Tech",
-					"companySlug": "weave-tech",
-					"location": "Dimapur · in-person",
-					"type": "Internship · 4 months",
-					"sector": "Textile technology",
-					"posted": "2026-03-30",
-					"description": "Designing the small-batch loom-side jigs and software interfaces we ship to weaving cooperatives. Best fit if you can talk to weavers, sketch a fix, and prototype it the same week.",
-					"applyLink": "mailto:interns@weavetech.example"
-				}
-			]
+			"posts": []
 		},
 		"ticJobs": {
 			"heading": "TIC Jobs",

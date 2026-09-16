@@ -1,8 +1,4 @@
 <script lang="ts">
-	import '@fontsource-variable/montserrat/index.css';
-	import '@fontsource-variable/montserrat/wght-italic.css';
-	import '@fontsource-variable/source-serif-4/index.css';
-	import '@fontsource-variable/source-serif-4/wght-italic.css';
 	import '$styles/app.scss';
 	import { dev } from '$app/environment';
 	import { untrack } from 'svelte';
@@ -35,7 +31,7 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" type="image/webp" href={images.favicon} />
+	<link rel="icon" type="image/svg+xml" href={images.favicon} />
 </svelte:head>
 
 <!-- Description, canonical and social cards for every route, in one place.

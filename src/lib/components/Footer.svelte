@@ -74,7 +74,7 @@
 			<div class="footer-intro">
 				<div class="footer-brand">
 					<span class="footer-logo">
-						<img src={images.logo} alt="" loading="lazy" decoding="async" />
+						<img src={images.ticTextLogo} alt="IIT Guwahati Technology Incubation Centre" loading="lazy" decoding="async" />
 					</span>
 					<span class="footer-tagline">{footer.tagline}</span>
 				</div>
@@ -202,15 +202,15 @@
 	}
 
 	.footer-logo {
-		display: grid;
-		place-items: center;
-		width: 52px;
-		height: 52px;
+		display: block;
+		width: min(100%, 260px);
+		height: auto;
 		flex: 0 0 auto;
 
 		img {
-			width: 34px;
-			height: 34px;
+			display: block;
+			width: 100%;
+			height: auto;
 			object-fit: contain;
 		}
 	}

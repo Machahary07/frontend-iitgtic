@@ -37,11 +37,16 @@
 
 	onMount(() => {
 		void refreshAccount();
+		updateScrollState();
+		window.addEventListener('scroll', updateScrollState, { passive: true });
 		// Live updates for a login / logout that happens without a navigation.
 		const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
 			account = readAccount(session?.user);
 		});
-		return () => authSub.subscription.unsubscribe();
+		return () => {
+			window.removeEventListener('scroll', updateScrollState);
+			authSub.subscription.unsubscribe();
+		};
 	});
 
 	async function signOut() {
@@ -93,6 +98,11 @@
 	// Mobile menu
 	let mobileOpen = $state(false);
 	let openAccordion = $state<string | null>(null);
+	let scrolled = $state(false);
+
+	function updateScrollState() {
+		scrolled = window.scrollY > 24;
+	}
 
 	const findSubmenu = (label: string) =>
 		document.querySelector<HTMLElement>(`[data-submenu="${CSS.escape(label)}"]`);
@@ -314,8 +324,15 @@
 </div>
 
 <!-- Layer 3: logo -->
-<a href={resolve('/')} class="nav-logo" aria-label={content.nav.logoAlt}>
-	<img src={images.logo} alt="" width="32" height="32" decoding="async" fetchpriority="high" />
+<a href={resolve('/')} class="nav-logo" class:scrolled aria-label={content.nav.logoAlt}>
+	<img
+		src={images.logo}
+		alt=""
+		width="32"
+		height="32"
+		decoding="async"
+		fetchpriority="high"
+	/>
 </a>
 
 <!-- Hamburger button — mobile only -->
@@ -405,6 +422,7 @@
 
 	$nav-height: 64px;
 	$nav-logo-size: 32px;
+	$nav-logo-large-size: 56px;
 	$nav-cluster-gap: $space-8;
 	$nav-link-gap: $space-8;
 	$nav-cluster-gap-tablet: $space-4;
@@ -696,9 +714,15 @@
 
 		img {
 			display: block;
+			width: $nav-logo-large-size;
+			height: $nav-logo-large-size;
+			object-fit: contain;
+			transition: width $transition-slow, height $transition-slow;
+		}
+
+		&.scrolled img {
 			width: $nav-logo-size;
 			height: $nav-logo-size;
-			object-fit: contain;
 		}
 	}
 
