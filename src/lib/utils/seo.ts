@@ -37,6 +37,7 @@ const SECTION_FOR: Record<string, string> = {
 	'/programs': 'pages.programs',
 	'/events': 'pages.events',
 	'/schemes': 'pages.schemes',
+	'/schemes/funding': 'pages.schemesFunding',
 	'/partners': 'pages.partners',
 	'/opportunities': 'pages.opportunities',
 	'/opportunities/tic-jobs': 'pages.ticJobs',
