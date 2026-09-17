@@ -1062,6 +1062,16 @@
 					"role": "Member, IITG-TIC",
 					"affiliation": "Institute Professor, IIT Madras",
 					"bio": ""
+				},
+				{
+					"name": "Pankaj Kumar",
+					"avatar": {
+						"src": "",
+						"alt": ""
+					},
+					"role": "Member, IITG-TIC",
+					"affiliation": "Founder, Quant Solar",
+					"bio": ""
 				}
 			]
 		},
