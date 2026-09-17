@@ -18,7 +18,7 @@ export type SignInResult =
 	| { ok: true; role: SignedInAs; redirect: string; name: string; email: string }
 	| { ok: false; error: string };
 
-export async function signIn(email: string, password: string): Promise<SignInResult> {
+export async function signIn(email: string, password: string, captchaToken: string): Promise<SignInResult> {
 	const { data, error } = await supabase.auth.signInWithPassword({
 		email: email.trim().toLowerCase(),
 		password
@@ -41,10 +41,11 @@ export async function signIn(email: string, password: string): Promise<SignInRes
 		const res = await fetch('/api/session-login', {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ accessToken: token })
+			body: JSON.stringify({ accessToken: token, captchaToken })
 		});
 		body = (await res.json().catch(() => ({}))) as typeof body;
 	} catch {
+		await supabase.auth.signOut();
 		return { ok: false, error: 'Could not reach the server. Please try again.' };
 	}
 

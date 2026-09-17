@@ -14,7 +14,7 @@ const SIGNED_URL_SECONDS = 600;
 
 /** A short-lived link to one object in a private bucket, for preview or download. */
 export const GET: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const bucket = url.searchParams.get('bucket');
 	const path = url.searchParams.get('path');
@@ -30,7 +30,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 };
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const bucket = url.searchParams.get('bucket');
 	const path = url.searchParams.get('path');

@@ -31,6 +31,7 @@
 				<article class="card">
 					<span class="card__index">{String(i + 1).padStart(2, '0')}</span>
 					<h2 class="card__name">{mentor.name}</h2>
+					<p class="card__affiliation">Mentor, IITG-TIC</p>
 					{#if mentor.affiliation}<p class="card__affiliation">{mentor.affiliation}</p>{/if}
 					{#if mentor.specialisation}<p class="card__spec">{mentor.specialisation}</p>{/if}
 					{#if mentor.bio}<p class="card__bio">{mentor.bio}</p>{/if}
@@ -130,6 +131,7 @@
 	}
 
 	.card__name {
+		text-align: center;
 		margin: $space-2 0 0;
 		font-family: $font-family-serif;
 		font-size: clamp(1.25rem, 2vw, #{$font-size-xl});
@@ -140,6 +142,7 @@
 	}
 
 	.card__affiliation {
+		text-align: center;
 		margin: 0;
 		font-family: $font-family-base;
 		font-size: $font-size-sm;
@@ -148,6 +151,7 @@
 	}
 
 	.card__spec {
+		text-align: center;
 		margin: $space-1 0 0;
 		font-family: $font-family-base;
 		font-size: $font-size-sm;
@@ -157,6 +161,7 @@
 	}
 
 	.card__bio {
+		text-align: center;
 		margin: $space-2 0 0;
 		font-family: $font-family-serif;
 		font-size: $font-size-base;

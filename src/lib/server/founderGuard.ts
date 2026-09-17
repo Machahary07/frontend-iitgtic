@@ -2,7 +2,8 @@ import { error } from '@sveltejs/kit';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
-import { readFounderSession, type FounderSession } from '$lib/server/founderSession';
+import { type FounderSession } from '$lib/server/founderSession';
+import { validatedFounderSession } from '$lib/server/sessionValidation';
 import type { Cookies } from '@sveltejs/kit';
 
 // The founder counterpart to requireAdmin(). Same shape, same actor tagging, and
@@ -88,7 +89,7 @@ export async function requireFounder(
 	cookies: Cookies,
 	companyId: string | null | undefined
 ): Promise<FounderContext> {
-	const founder = readFounderSession(cookies);
+	const founder = await validatedFounderSession(cookies);
 	if (!founder) error(401, 'Not signed in.');
 	if (!companyId) error(400, 'No company chosen.');
 
@@ -114,11 +115,11 @@ export async function requireCompanyOwner(
 }
 
 /** Signed in, with no company in view yet — creating the first one, for instance. */
-export function requireSignedInFounder(cookies: Cookies): {
+export async function requireSignedInFounder(cookies: Cookies): Promise<{
 	founder: FounderSession;
 	db: SupabaseClient;
-} {
-	const founder = readFounderSession(cookies);
+}> {
+	const founder = await validatedFounderSession(cookies);
 	if (!founder) error(401, 'Not signed in.');
 	return { founder, db: founderDb(founder.userId) };
 }

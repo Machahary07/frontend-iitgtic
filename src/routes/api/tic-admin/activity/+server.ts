@@ -8,7 +8,7 @@ import type { RequestHandler } from './$types';
 const PAGE_SIZE = 100;
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const view = url.searchParams.get('view') ?? 'audit';
 	const before = url.searchParams.get('before');

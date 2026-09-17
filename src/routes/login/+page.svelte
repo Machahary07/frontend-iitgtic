@@ -7,7 +7,6 @@
 	import Turnstile from '$lib/components/Turnstile.svelte';
 	import { requestPasswordReset, sendFounderLoginNotice } from '$lib/utils/userSession';
 	import { signIn } from '$lib/utils/appAuth';
-	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	let email = $state('');
 	let password = $state('');
@@ -54,17 +53,11 @@
 		}
 		submitting = true;
 		try {
-			const human = await verifyTurnstileToken(turnstileToken);
-			captcha?.reset();
-			if (!human) {
-				error = 'Verification failed. Please try again.';
-				return;
-			}
 			// One door for everyone. The server reads the account's role, issues the
 			// matching session cookie and says which console to open — a founder
 			// never lands in /tic-admin, and an admin never has to find a second
 			// sign-in page.
-			const result = await signIn(email, password);
+			const result = await signIn(email, password, turnstileToken);
 			if (!result.ok) {
 				error = result.error;
 				return;
@@ -83,6 +76,8 @@
 			// eslint-disable-next-line svelte/no-navigation-without-resolve
 			await goto(safeNext(next, result.redirect));
 		} finally {
+			captcha?.reset();
+			turnstileToken = '';
 			submitting = false;
 		}
 	}

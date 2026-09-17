@@ -28,7 +28,7 @@ function slugify(value: string): string {
 }
 
 export const POST: RequestHandler = async ({ cookies, request }) => {
-	const { founder, db } = requireSignedInFounder(cookies);
+	const { founder, db } = await requireSignedInFounder(cookies);
 	const body = (await request.json().catch(() => ({}))) as {
 		companyName?: string;
 		website?: string;
@@ -103,7 +103,7 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 };
 
 export const PUT: RequestHandler = async ({ cookies, request }) => {
-	const { founder, db } = requireSignedInFounder(cookies);
+	const { founder, db } = await requireSignedInFounder(cookies);
 	const body = (await request.json().catch(() => ({}))) as { companyId?: string };
 	if (!body.companyId) error(400, 'Missing company id.');
 

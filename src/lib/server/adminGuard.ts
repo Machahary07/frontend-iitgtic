@@ -2,7 +2,8 @@ import { error } from '@sveltejs/kit';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
-import { readTicAdminSession, type AdminSession } from '$lib/server/ticAdminSession';
+import { type AdminSession } from '$lib/server/ticAdminSession';
+import { validatedAdminSession } from '$lib/server/sessionValidation';
 import type { Cookies } from '@sveltejs/kit';
 
 // Every admin route starts here: it proves the caller is a signed-in admin and
@@ -16,8 +17,8 @@ export type AdminContext = {
 	db: SupabaseClient;
 };
 
-export function requireAdmin(cookies: Cookies): AdminContext {
-	const admin = readTicAdminSession(cookies);
+export async function requireAdmin(cookies: Cookies): Promise<AdminContext> {
+	const admin = await validatedAdminSession(cookies);
 	if (!admin) error(401, 'Not signed in as a TIC admin.');
 
 	const db: SupabaseClient = createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {

@@ -3,10 +3,10 @@ import { founderDb, listMyCompanies } from '$lib/server/founderGuard';
 import {
 	issueFounderSession,
 	readActiveCompany,
-	readFounderSession,
 	setActiveCompany
 } from '$lib/server/founderSession';
 import type { LayoutServerLoad } from './$types';
+import { validatedFounderSession } from '$lib/server/sessionValidation';
 
 // The gate for the whole founder console, run once per request rather than in
 // each page's onMount — so a page arrives already authenticated and already
@@ -17,7 +17,7 @@ import type { LayoutServerLoad } from './$types';
 // open up on their next click, not after signing out and back in.
 
 export const load: LayoutServerLoad = async ({ cookies, url }) => {
-	const session = readFounderSession(cookies);
+	const session = await validatedFounderSession(cookies);
 	if (!session) redirect(303, `/login?next=${encodeURIComponent(url.pathname)}`);
 
 	const db = founderDb(session.userId);

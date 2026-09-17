@@ -10,6 +10,8 @@ import {
 } from '$lib/server/ticAdminSession';
 import { LIMITS, retryMinutes, withinLimit } from '$lib/server/rateLimit';
 import type { RequestHandler } from './$types';
+import { currentAccount, validatedAdminSession } from '$lib/server/sessionValidation';
+import { verifyTurnstile } from '$lib/server/turnstile';
 
 // GET     current session, plus whether the console still needs its first admin
 // POST    { accessToken }                       sign in as an existing admin
@@ -41,7 +43,7 @@ async function adminCount(): Promise<number> {
 }
 
 export const GET: RequestHandler = async ({ cookies }) => {
-	const session = readTicAdminSession(cookies);
+	const session = await validatedAdminSession(cookies);
 	try {
 		return json({
 			ok: session !== null,
@@ -71,7 +73,9 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 		email?: string;
 		password?: string;
 		fullName?: string;
+		captchaToken?: string;
 	};
+	if (!(await verifyTurnstile(body.captchaToken, getClientAddress()))) error(400, 'Verification failed. Please try again.');
 
 	// --- bootstrap: only while the console has no admin at all ---------------
 	if (body.bootstrapPassword !== undefined) {
@@ -124,11 +128,7 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 		return json({ ok: false, error: 'Invalid or expired session.' }, { status: 401 });
 	}
 
-	const { data: profile } = await supabaseAdmin
-		.from('profiles')
-		.select('role, full_name, email')
-		.eq('id', data.user.id)
-		.maybeSingle();
+	const profile = await currentAccount(data.user.id);
 
 	if (profile?.role !== 'admin') {
 		return json({ ok: false, error: 'This account does not have admin access.' }, { status: 403 });
@@ -137,7 +137,7 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 	const session = {
 		userId: data.user.id,
 		email: profile.email || data.user.email || '',
-		name: profile.full_name || ''
+		name: profile.name || ''
 	};
 	issueTicAdminSession(cookies, session);
 

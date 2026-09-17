@@ -5,6 +5,8 @@ import { issueTicAdminSession, clearTicAdminSession } from '$lib/server/ticAdmin
 import { issueFounderSession, clearFounderSession } from '$lib/server/founderSession';
 import { LIMITS, retryMinutes, withinLimit } from '$lib/server/rateLimit';
 import type { RequestHandler } from './$types';
+import { currentAccount } from '$lib/server/sessionValidation';
+import { verifyTurnstile } from '$lib/server/turnstile';
 
 // The one door. /login authenticates the credentials with supabase-js and hands
 // the resulting access token here; this route reads the profile, decides which
@@ -24,7 +26,8 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 		);
 	}
 
-	const body = (await request.json().catch(() => ({}))) as { accessToken?: string };
+	const body = (await request.json().catch(() => ({}))) as { accessToken?: string; captchaToken?: string };
+	if (!(await verifyTurnstile(body.captchaToken, getClientAddress()))) error(400, 'Verification failed. Please try again.');
 	if (!body.accessToken) error(400, 'Missing access token.');
 
 	const { data, error: authError } = await supabaseAdmin.auth.getUser(body.accessToken);
@@ -32,14 +35,9 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 		return json({ ok: false, error: 'Invalid or expired session.' }, { status: 401 });
 	}
 
-	const { data: profile } = await supabaseAdmin
-		.from('profiles')
-		.select('role, full_name, email')
-		.eq('id', data.user.id)
-		.maybeSingle();
-
-	const name = (profile?.full_name as string) || '';
-	const email = (profile?.email as string) || data.user.email || '';
+	const profile = await currentAccount(data.user.id);
+	if (!profile) error(403, 'This account is unavailable.');
+	const { name, email } = profile;
 
 	// --- TIC team ------------------------------------------------------------
 	if (profile?.role === 'admin') {

@@ -6,7 +6,7 @@ import type { RequestHandler } from './$types';
 // which the public jobs policy hides.
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const id = url.searchParams.get('id');
 	if (!id) error(400, 'Missing job id.');
 

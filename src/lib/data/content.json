@@ -969,7 +969,7 @@
 						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1788611300226-Chairman_Prof_Devendra_Jalihal_Director_IITG.png",
 						"alt": "Prof. Devendra Jalihal"
 					},
-					"role": "Chairman",
+					"role": "Chairman, IITG-TIC",
 					"affiliation": "Director, IIT Guwahati",
 					"bio": ""
 				},
@@ -979,7 +979,7 @@
 						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1788611455622-Vice_Chairman_Prof_Rohit_Sinha_Dean_Research_Development_IIT.jpg",
 						"alt": "Prof. Rohit Sinha"
 					},
-					"role": "Vice-Chairman",
+					"role": "Vice Chairman, IITG-TIC",
 					"affiliation": "Dean, Research & Development (R&D), IIT Guwahati",
 					"bio": ""
 				},
@@ -989,7 +989,7 @@
 						"src": "https://iitg.ac.in/chemeng/faculty/887823b1e234f21b80b15a2f9f76c957a518bc1e.jpg",
 						"alt": "Prof. Senthilmurugan Subbiah"
 					},
-					"role": "Member Secretary",
+					"role": "Member Secretary, IITG-TIC",
 					"affiliation": "Professor, Department of Chemical Engineering & Professor-in-Charge, IITG-TIC, IIT Guwahati",
 					"bio": ""
 				},
@@ -999,8 +999,8 @@
 						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1789012278372-urmi_borgohain.jpg",
 						"alt": "Urmi Buragohain"
 					},
-					"role": "Member",
-					"affiliation": "Chief Executive Officer (CEO), IITG-TIC",
+					"role": "Special Invitee, IITG-TIC",
+					"affiliation": "CEO, IITG-TIC",
 					"bio": ""
 				},
 				{
@@ -1009,7 +1009,7 @@
 						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1789015132705-amit_vyas.jpg",
 						"alt": "Dr. Amit Vyas"
 					},
-					"role": "Member",
+					"role": "Member, IITG-TIC",
 					"affiliation": "Managing Director, Amul Dairy, Anand",
 					"bio": ""
 				},
@@ -1019,7 +1019,7 @@
 						"src": "https://www.indiaenergyweek.com/media/3k2hcxj4/bhaskar-jyoti.png?width=300&height=300&v=1dc894ac57581f0",
 						"alt": "Mr. Bhaskar Phukan"
 					},
-					"role": "Member",
+					"role": "Member, IITG-TIC",
 					"affiliation": "Managing Director, Numaligarh Refinery Limited (NRL)",
 					"bio": ""
 				},
@@ -1029,7 +1029,7 @@
 						"src": "https://iitk.ac.in/dora/imag/profile/gupta-daa.jpg",
 						"alt": "Dr. Mahesh Gupta"
 					},
-					"role": "Member",
+					"role": "Member, IITG-TIC",
 					"affiliation": "Founder & Chairman, KENT RO Systems",
 					"bio": ""
 				},
@@ -1039,7 +1039,7 @@
 						"src": "https://www.pyrotechworkspace.com/wp-content/uploads/2025/05/puneet-talesara.png",
 						"alt": "Mr. Puneet Thalasara"
 					},
-					"role": "Member",
+					"role": "Member, IITG-TIC",
 					"affiliation": "Founder & CMD, OnePWS (Pyrotech Workspace Solutions Pvt. Ltd.)",
 					"bio": ""
 				},
@@ -1049,7 +1049,7 @@
 						"src": "https://media.licdn.com/dms/image/v2/C4D03AQEFZbLjqJIUEA/profile-displayphoto-shrink_800_800/profile-displayphoto-shrink_800_800/0/1627228130009?e=1790812800&v=beta&t=aCIv2WZIvvSuLPpvb6Cb2H-h9-zMA4lJHdSIuCL0Ltw",
 						"alt": "Dr. Jeevan B. IAS"
 					},
-					"role": "Member",
+					"role": "Member, IITG-TIC",
 					"affiliation": "Secretary to the Government of Assam, Department of Innovation, Incubation & Start-Ups (DIIS)",
 					"bio": ""
 				},
@@ -1059,7 +1059,7 @@
 						"src": "https://media.licdn.com/dms/image/v2/D5603AQHJgiMoTlE7MA/profile-displayphoto-crop_800_800/B56Zy85tuwH8AI-/0/1772695772979?e=1790812800&v=beta&t=7RKLiSrEXvjb8L5BmrwHPmfdLKz8FffdDEqbigR5JGE",
 						"alt": "Prof. Ashok Jhunjhunwala"
 					},
-					"role": "Member",
+					"role": "Member, IITG-TIC",
 					"affiliation": "Institute Professor, IIT Madras",
 					"bio": ""
 				}
@@ -1081,7 +1081,7 @@
 						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1788611455622-Vice_Chairman_Prof_Rohit_Sinha_Dean_Research_Development_IIT.jpg",
 						"alt": "Prof. Rohit Sinha"
 					},
-					"role": "Chairman",
+					"role": "Chairman, IITG-TIC",
 					"affiliation": "Dean, Research & Development (R&D), IIT Guwahati",
 					"bio": ""
 				},
@@ -1091,7 +1091,7 @@
 						"src": "https://iitg.ac.in/chemeng/faculty/887823b1e234f21b80b15a2f9f76c957a518bc1e.jpg",
 						"alt": "Prof. Senthilmurugan Subbiah"
 					},
-					"role": "Member Secretary",
+					"role": "Member Secretary, IITG-TIC",
 					"affiliation": "Professor, Department of Chemical Engineering & Professor-in-Charge, IITG-TIC, IIT Guwahati",
 					"bio": ""
 				},
@@ -1101,7 +1101,7 @@
 						"src": "https://www.iitg.ac.in/design/faculty/ajit-20230615054549.jpg",
 						"alt": "Dr. Ajeet Kumar"
 					},
-					"role": "Member",
+					"role": "Member, IITG-TIC",
 					"affiliation": "Faculty, Department of Design, IIT Guwahati",
 					"bio": ""
 				},
@@ -1111,7 +1111,7 @@
 						"src": "https://www.iitg.ac.in/rkmittal/assets/img/profile.jpg",
 						"alt": "Dr. Rinku Kumar Mittal"
 					},
-					"role": "Member",
+					"role": "Member, IITG-TIC",
 					"affiliation": "Faculty, Department of Mechanical Engineering, IIT Guwahati",
 					"bio": ""
 				},
@@ -1121,7 +1121,7 @@
 						"src": "https://www.iitg.ac.in/awekar/images/awekarsolo.jpg",
 						"alt": "Dr. Amit Chintamani Awekar"
 					},
-					"role": "Member",
+					"role": "Member, IITG-TIC",
 					"affiliation": "Faculty, Department of Computer Science & Engineering, IIT Guwahati",
 					"bio": ""
 				},
@@ -1131,7 +1131,7 @@
 						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1789012278372-urmi_borgohain.jpg",
 						"alt": "Urmi Buragohain"
 					},
-					"role": "Member",
+					"role": "Member, IITG-TIC",
 					"affiliation": "Chief Executive Officer (CEO), IITG-TIC",
 					"bio": ""
 				}
@@ -1153,7 +1153,7 @@
 						"src": "https://iitg.ac.in/chemeng/faculty/887823b1e234f21b80b15a2f9f76c957a518bc1e.jpg",
 						"alt": "Dr. Senthilmurugan Subbiah"
 					},
-					"role": "Professor Incharge",
+					"role": "Prof-in-charge",
 					"bio": "",
 					"email": "inchargetic@iitg.ac.in",
 					"phone": ""
@@ -1186,7 +1186,7 @@
 						"src": "https://vbgldorzvhuippjmqiwq.supabase.co/storage/v1/object/public/site-assets/1789017458838-sanket_umap.jpg",
 						"alt": "Sanket Umap"
 					},
-					"role": "Project Outreach Associate",
+					"role": "Programme Outreach Officer",
 					"bio": "",
 					"email": "poa@iitgtic.com",
 					"phone": ""
@@ -1197,7 +1197,7 @@
 						"src": "",
 						"alt": ""
 					},
-					"role": "Project Coordinator",
+					"role": "Programme Coordinator",
 					"bio": "",
 					"email": "coordinator@iitgtic.com",
 					"phone": ""
@@ -1214,12 +1214,12 @@
 					"phone": ""
 				},
 				{
-					"name": "Roshan Sarma",
+					"name": "Roshan Sharma",
 					"avatar": {
 						"src": "",
 						"alt": ""
 					},
-					"role": "Admin Assistant",
+					"role": "Administrative Assistant",
 					"bio": "",
 					"email": "roshan.iitgtic@gmail.com",
 					"phone": ""
@@ -2040,7 +2040,7 @@
 						"src": "",
 						"alt": ""
 					},
-					"role": "Project Coordinator",
+					"role": "Programme Coordinator",
 					"bio": "",
 					"email": "coordinator@iitgtic.com",
 					"phone": ""

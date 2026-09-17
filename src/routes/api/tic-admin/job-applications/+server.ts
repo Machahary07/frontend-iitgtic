@@ -21,7 +21,7 @@ const TEMPLATE_FOR: Partial<Record<Status, string>> = {
 };
 
 export const PATCH: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const body = (await request.json().catch(() => ({}))) as {
 		id?: string;
@@ -79,7 +79,7 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 // answer into the HTML of a list view is a waste at best. An export needs the
 // whole record, so it asks for it here instead.
 export const GET: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const jobSlug = url.searchParams.get('jobSlug');
 
 	let query = ctx.db
@@ -106,7 +106,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 // only noticed once it has already run. Clearing a closed role is a decision
 // somebody makes, and it is audited like every other admin action.
 export const POST: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const jobSlug = url.searchParams.get('jobSlug');
 	if (!jobSlug) error(400, 'Missing job slug.');
 
@@ -138,7 +138,7 @@ export const POST: RequestHandler = async ({ cookies, url }) => {
 };
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const id = url.searchParams.get('id');
 	if (!id) error(400, 'Missing application id.');
 

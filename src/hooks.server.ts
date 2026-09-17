@@ -3,6 +3,7 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { readTicAdminSession } from '$lib/server/ticAdminSession';
 import { readFounderSession } from '$lib/server/founderSession';
 import { redirect, type Handle } from '@sveltejs/kit';
+import { validatedAdminSession, validatedFounderSession } from '$lib/server/sessionValidation';
 
 // Records one row per page view, admin routes included. Only HTML responses to
 // GET requests are counted, so assets, API calls and the sitemap never land here.
@@ -34,6 +35,23 @@ const MOVED: Record<string, string> = {
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const visitorId = randomUUID();
+	// Layouts can be reused during client navigation. Guard each page/data request
+	// here too, before any child load can use cached parent identity.
+	const routePath = event.route.id;
+	if (
+		routePath &&
+		(routePath === '/tic-admin' || routePath.startsWith('/tic-admin/')) &&
+		routePath !== '/tic-admin/login'
+	) {
+		if (!(await validatedAdminSession(event.cookies))) {
+			redirect(303, '/login?next=/tic-admin');
+		}
+	}
+	if (routePath && (routePath === '/founder' || routePath.startsWith('/founder/'))) {
+		if (!(await validatedFounderSession(event.cookies))) {
+			redirect(303, `/login?next=${encodeURIComponent(event.url.pathname)}`);
+		}
+	}
 
 	const moved = MOVED[event.url.pathname.replace(/\/$/, '') || '/'];
 	if (moved) redirect(308, moved);

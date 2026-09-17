@@ -34,7 +34,7 @@ function cleanMessages(value: unknown): StoredMessage[] {
 
 // List the admin's conversations, or return one in full with ?id=.
 export const GET: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const id = url.searchParams.get('id');
 
 	if (id) {
@@ -64,7 +64,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 // it); without one it creates a new conversation and returns its id, which the
 // console then reuses for every later autosave of the same chat.
 export const PUT: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const body = (await request.json().catch(() => ({}))) as {
 		id?: string;
@@ -100,7 +100,7 @@ export const PUT: RequestHandler = async ({ cookies, request }) => {
 };
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const id = url.searchParams.get('id');
 	if (!id) error(400, 'Missing conversation id.');
 

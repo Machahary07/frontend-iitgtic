@@ -19,7 +19,7 @@ const PAGE_SIZE = 25;
 // page load; bodies are left out here because the list only shows metadata —
 // a preview fetches the one row it needs through ?id=.
 export const GET: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const id = url.searchParams.get('id');
 	if (id) {
@@ -57,7 +57,7 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 // Save one template. The audit trigger on email_templates records the full
 // before/after, so a bad edit is recoverable from Activity.
 export const PUT: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const payload = (await request.json().catch(() => ({}))) as {
 		key?: string;
@@ -125,7 +125,7 @@ export const PUT: RequestHandler = async ({ cookies, request }) => {
 
 // Restores a template to the copy bundled in emailTemplates.ts.
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const key = url.searchParams.get('key');
 	if (!key) error(400, 'Missing template key.');
 	if (!templateDef(key)) error(400, 'Unknown template.');
@@ -146,7 +146,7 @@ export const DELETE: RequestHandler = async ({ cookies, url }) => {
 // given, uses the sample values from the template definition, and is tagged
 // is_test so it is filtered out of the log by default.
 export const POST: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const body = (await request.json().catch(() => ({}))) as { key?: string; to?: string };
 	if (!body.key) error(400, 'Missing template key.');

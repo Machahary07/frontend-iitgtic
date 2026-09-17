@@ -7,7 +7,7 @@ import type { RequestHandler } from './$types';
 // before/after, so a bad edit can be seen — and read back — from Activity.
 
 export const PUT: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const body = (await request.json().catch(() => ({}))) as {
 		key?: string;
@@ -43,7 +43,7 @@ export const PUT: RequestHandler = async ({ cookies, request }) => {
 
 // Restores a section to the copy bundled in content.json.
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const key = url.searchParams.get('key');
 	if (!key) error(400, 'Missing section key.');
 

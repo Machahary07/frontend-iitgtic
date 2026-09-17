@@ -17,7 +17,7 @@ type Body = {
 };
 
 export const PATCH: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const body = (await request.json().catch(() => ({}))) as Body;
 
 	if (!body.id) error(400, 'Missing id.');

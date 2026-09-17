@@ -11,7 +11,7 @@ import type { RequestHandler } from './$types';
 // audit trigger on the table records who did.
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const email = url.searchParams.get('email')?.trim().toLowerCase();
 	if (!email) error(400, 'Missing email address.');
 

@@ -55,7 +55,7 @@
 					</div>
 					<h2 class="card__name">{member.name || member.role}</h2>
 					{#if member.name}<p class="card__role">{member.role}</p>{/if}
-					<p class="card__bio">{member.bio}</p>
+					{#if member.bio}<p class="card__bio">{member.bio}</p>{/if}
 					{#if member.email || member.phone}
 						<ul class="card__contact">
 							{#if member.email}
@@ -186,6 +186,7 @@
 	}
 
 	.card__role {
+		text-align: center;
 		margin: 0;
 		font-family: $font-family-base;
 		font-size: $font-size-xs;
@@ -196,6 +197,7 @@
 	}
 
 	.card__name {
+		text-align: center;
 		margin: 0;
 		font-family: $font-family-serif;
 		font-size: clamp(1.25rem, 2vw, #{$font-size-xl});
@@ -206,6 +208,7 @@
 	}
 
 	.card__bio {
+		text-align: center;
 		margin: 0;
 		font-family: $font-family-serif;
 		font-size: $font-size-base;

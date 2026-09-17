@@ -12,7 +12,7 @@ import type { RequestHandler } from './$types';
 // auto-approve path; approval only decides *when* the tool runs, not how.
 
 export const POST: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const body = (await request.json().catch(() => ({}))) as {
 		tool?: string;

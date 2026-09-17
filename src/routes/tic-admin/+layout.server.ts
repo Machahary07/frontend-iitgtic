@@ -1,15 +1,14 @@
 import { redirect } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
-import { issueTicAdminSession, readTicAdminSession } from '$lib/server/ticAdminSession';
+import { issueTicAdminSession } from '$lib/server/ticAdminSession';
+import { validatedAdminSession } from '$lib/server/sessionValidation';
 import type { LayoutServerLoad } from './$types';
 
-// The admin gate runs here rather than in each page's onMount. Reading a signed
-// cookie is free, so a page arrives already authenticated and already rendered —
-// which is why moving between sections no longer flashes an empty screen.
+// Validate current account permissions before rendering or renewing a cookie.
 
 export const load: LayoutServerLoad = async ({ cookies, url }) => {
-	const admin = readTicAdminSession(cookies);
+	const admin = await validatedAdminSession(cookies);
 
 	// There is one sign-in page for the whole site now. /tic-admin/login survives
 	// only as the first-admin setup screen: with an admin already on file it has

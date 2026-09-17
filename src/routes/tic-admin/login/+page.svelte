@@ -5,7 +5,6 @@
 	import { bootstrapFirstAdmin } from '$lib/utils/ticAdminAuth';
 	import type { PageData } from './$types';
 	import Turnstile from '$lib/components/Turnstile.svelte';
-	import { verifyTurnstileToken } from '$lib/utils/turnstile';
 
 	// The layout load already knows whether an admin exists, so this screen paints
 	// in its right state immediately rather than after a round trip.
@@ -31,16 +30,9 @@
 	let setupConfirm = $state('');
 	let setupDone = $state(false);
 
-	async function passedCaptcha() {
+	function passedCaptcha() {
 		if (!turnstileToken) {
 			error = 'Please complete the verification below.';
-			return false;
-		}
-		const human = await verifyTurnstileToken(turnstileToken);
-		captcha?.reset();
-		turnstileToken = '';
-		if (!human) {
-			error = 'Verification failed. Please try again.';
 			return false;
 		}
 		return true;
@@ -60,7 +52,8 @@
 				setupPassword,
 				email: setupEmail,
 				password: setupPw,
-				fullName: setupName
+				fullName: setupName,
+				captchaToken: turnstileToken
 			});
 			if (!result.ok) {
 				error = result.error;
@@ -74,6 +67,8 @@
 			setupPw = '';
 			setupConfirm = '';
 		} finally {
+			captcha?.reset();
+			turnstileToken = '';
 			submitting = false;
 		}
 	}

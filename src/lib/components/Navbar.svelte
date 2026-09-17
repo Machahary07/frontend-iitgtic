@@ -18,7 +18,7 @@
 
 	function readAccount(user: User | null | undefined): { name: string } | null {
 		if (!user) return null;
-		return { name: (user.user_metadata?.full_name as string) || user.email || 'Account' };
+		return { name: 'Account' };
 	}
 
 	async function refreshAccount() {

@@ -6,7 +6,7 @@ import type { RequestHandler } from './$types';
 // console can pull it for export and remove an address on request.
 
 export const GET: RequestHandler = async ({ cookies }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const { data, error: dbError } = await ctx.db
 		.from('newsletter_subscribers')
@@ -24,7 +24,7 @@ export const GET: RequestHandler = async ({ cookies }) => {
 
 // Someone asking to come off the list is not a soft preference — the row goes.
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const email = url.searchParams.get('email')?.trim().toLowerCase();
 	if (!email) error(400, 'Missing email address.');
 

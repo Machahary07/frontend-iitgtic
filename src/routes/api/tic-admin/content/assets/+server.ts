@@ -21,7 +21,7 @@ const TYPES: Record<string, string> = {
 };
 
 export const POST: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const form = await request.formData().catch(() => null);
 	const file = form?.get('file');

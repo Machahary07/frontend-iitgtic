@@ -19,6 +19,7 @@ export async function bootstrapFirstAdmin(input: {
 	email: string;
 	password: string;
 	fullName: string;
+	captchaToken: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
 	try {
 		const res = await fetch('/api/tic-admin-login', {
@@ -28,7 +29,8 @@ export async function bootstrapFirstAdmin(input: {
 				bootstrapPassword: input.setupPassword,
 				email: input.email,
 				password: input.password,
-				fullName: input.fullName
+				fullName: input.fullName,
+				captchaToken: input.captchaToken
 			})
 		});
 		const body = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string };

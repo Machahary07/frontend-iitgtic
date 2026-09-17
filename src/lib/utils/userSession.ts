@@ -6,6 +6,7 @@
 // $lib/utils/appAuth.
 
 import { supabase } from '$lib/supabaseClient';
+import { signOut } from '$lib/utils/appAuth';
 import {
 	AFTER_FOUNDER_SIGNUP,
 	AFTER_PASSWORD_RESET,
@@ -114,7 +115,7 @@ export async function saveUserSession(patch: Partial<UserSession>): Promise<void
 }
 
 export async function clearUserSession(): Promise<void> {
-	await supabase.auth.signOut();
+	await signOut();
 }
 
 /**

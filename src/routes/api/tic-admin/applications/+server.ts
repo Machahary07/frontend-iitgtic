@@ -23,7 +23,7 @@ const TEMPLATE_FOR: Partial<Record<Status, string>> = {
 type DocumentEntry = { path: string; name: string; size: number };
 
 export const PATCH: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const body = (await request.json().catch(() => ({}))) as {
 		id?: string;
@@ -77,7 +77,7 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 };
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const id = url.searchParams.get('id');
 	if (!id) error(400, 'Missing application id.');
 

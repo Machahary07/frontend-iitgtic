@@ -12,7 +12,7 @@ const ROLES = ['founder', 'admin'] as const;
 type Role = (typeof ROLES)[number];
 
 export const PATCH: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const body = (await request.json().catch(() => ({}))) as {
 		id?: string;
 		role?: string;
@@ -74,7 +74,7 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 // Sends the account a password-reset email. Admins never see or set another
 // person's password — each account keeps its own.
 export const PUT: RequestHandler = async ({ cookies, request, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const body = (await request.json().catch(() => ({}))) as { email?: string; id?: string };
 	if (!body.email) error(400, 'Missing email.');
 
@@ -97,7 +97,7 @@ export const PUT: RequestHandler = async ({ cookies, request, url }) => {
 };
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const id = url.searchParams.get('id');
 	if (!id) error(400, 'Missing user id.');
 	if (id === ctx.admin.userId) error(400, 'You cannot delete your own account.');
@@ -140,7 +140,7 @@ export const DELETE: RequestHandler = async ({ cookies, url }) => {
 
 // Creates another admin. Ordinary founders and companies sign themselves up.
 export const POST: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 	const body = (await request.json().catch(() => ({}))) as {
 		email?: string;
 		password?: string;

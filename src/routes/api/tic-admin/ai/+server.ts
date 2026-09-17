@@ -171,7 +171,7 @@ async function runTool(ctx: AdminContext, call: ToolCall): Promise<string> {
 }
 
 export const POST: RequestHandler = async ({ cookies, request }) => {
-	const ctx = requireAdmin(cookies);
+	const ctx = await requireAdmin(cookies);
 
 	const body = (await request.json().catch(() => ({}))) as {
 		model?: string;
