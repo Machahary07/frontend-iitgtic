@@ -109,6 +109,13 @@ export const LIST_TEMPLATES: Record<string, () => unknown> = {
 		email: '',
 		phone: ''
 	}),
+	'pages.ticCoordinators.facultyCoordinators.members': () => ({
+		name: '',
+		avatar: { src: '', alt: '' },
+		role: 'TIC Coordinator',
+		affiliation: '',
+		bio: ''
+	}),
 	'pages.schemes.schemes': () => ({
 		name: '',
 		shortName: '',

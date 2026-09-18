@@ -2055,7 +2055,62 @@
 					"email": "coordinator@iitgtic.com",
 					"phone": ""
 				}
-			]
+			],
+			"facultyCoordinators": {
+				"title": "TIC Coordinators",
+				"intro": "Appointed for one year with immediate effect. Coordinators support IITG TIC in startup evaluation, mentoring, and related activities.",
+				"members": [
+					{
+						"name": "Prof. Nageswara Rao Peela",
+						"avatar": { "src": "", "alt": "" },
+						"role": "TIC Coordinator",
+						"affiliation": "Department of Chemical Engineering",
+						"bio": ""
+					},
+					{
+						"name": "Dr. Sajan Kapil",
+						"avatar": { "src": "", "alt": "" },
+						"role": "TIC Coordinator",
+						"affiliation": "Department of Mechanical Engineering",
+						"bio": ""
+					},
+					{
+						"name": "Prof. Sachin Kumar",
+						"avatar": { "src": "", "alt": "" },
+						"role": "TIC Coordinator",
+						"affiliation": "Department of Biosciences and Bioengineering",
+						"bio": ""
+					},
+					{
+						"name": "Dr. Sharmila R. B.",
+						"avatar": { "src": "", "alt": "" },
+						"role": "TIC Coordinator",
+						"affiliation": "Department of Civil Engineering",
+						"bio": ""
+					},
+					{
+						"name": "Dr. Ajeet Kumar",
+						"avatar": { "src": "", "alt": "" },
+						"role": "TIC Coordinator",
+						"affiliation": "Department of Design",
+						"bio": ""
+					},
+					{
+						"name": "Dr. Neeraj Kumar Sharma",
+						"avatar": { "src": "", "alt": "" },
+						"role": "TIC Coordinator",
+						"affiliation": "Mehta Family School of Data Science and Artificial Intelligence",
+						"bio": ""
+					},
+					{
+						"name": "Dr. Ravindra Kumar Jha",
+						"avatar": { "src": "", "alt": "" },
+						"role": "TIC Coordinator",
+						"affiliation": "Department of Electronics and Electrical Engineering",
+						"bio": ""
+					}
+				]
+			}
 		}
 	},
 	"cta": {

@@ -8,11 +8,26 @@
 	const content = getContent();
 
 	const page = content.pages.ticCoordinators;
+	const faculty = page.facultyCoordinators;
 	const ctaContent = content.cta.apply;
 
 	// tel: wants the number without the spacing that makes it readable on screen.
 	function telHref(phone: string): string {
 		return `tel:${phone.replace(/[^\d+]/g, '')}`;
+	}
+
+	// Initials for the placeholder avatar, from the first and last name once
+	// honorifics (Prof./Dr./Mr./…) are dropped.
+	function initials(name: string): string {
+		const parts = name
+			.split(/\s+/)
+			.filter((w) => !/^(prof|dr|mr|mrs|ms|shri|smt)\.?$/i.test(w))
+			.map((w) => w.replace(/[^A-Za-z]/g, ''))
+			.filter(Boolean);
+		if (parts.length === 0) return '';
+		const first = parts[0][0];
+		const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+		return (first + last).toUpperCase();
 	}
 </script>
 
@@ -78,6 +93,40 @@
 						{/if}
 					</article>
 				{/each}
+			</div>
+		{/if}
+
+		{#if faculty}
+			<div class="faculty">
+				<div class="faculty__head">
+					<h2 class="faculty__title">{faculty.title}</h2>
+					<p class="faculty__intro">{faculty.intro}</p>
+				</div>
+				<div class="grid">
+					{#each faculty.members as member, i (i)}
+						<article class="card">
+							<span class="card__index">0{i + 1}</span>
+							<div class="card__avatar-wrap">
+								{#if member.avatar?.src}
+									<img
+										class="card__avatar card__avatar--photo"
+										src={member.avatar.src}
+										alt={member.avatar.alt}
+										loading="lazy"
+										decoding="async"
+									/>
+								{:else}
+									<div class="card__avatar card__avatar--initials" aria-hidden="true">
+										{initials(member.name)}
+									</div>
+								{/if}
+							</div>
+							<h2 class="card__name">{member.name}</h2>
+							<p class="card__role">{member.role}</p>
+							<p class="card__bio">{member.affiliation}</p>
+						</article>
+					{/each}
+				</div>
 			</div>
 		{/if}
 	</div>
@@ -197,6 +246,57 @@
 	.card__avatar--photo {
 		object-fit: cover;
 		display: block;
+	}
+
+	.card__avatar--initials {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: $color-white;
+		font-family: $font-family-base;
+		font-size: clamp(1.5rem, 4vw, 2.25rem);
+		font-weight: $font-weight-semibold;
+		letter-spacing: 0.04em;
+	}
+
+	// The faculty coordinators: a quietly set-apart block below the programme
+	// contacts. A hairline divider and a faint tint mark it as a distinct group
+	// without pulling focus.
+	.faculty {
+		margin-top: $space-4;
+		padding-top: $space-7;
+		border-top: 1px solid rgba($color-black, 0.08);
+		display: flex;
+		flex-direction: column;
+		gap: $space-6;
+	}
+
+	.faculty__head {
+		display: flex;
+		flex-direction: column;
+		gap: $space-2;
+		padding: $space-4 $space-5;
+		border-left: 2px solid rgba($color-black, 0.45);
+		background: rgba($color-black, 0.03);
+	}
+
+	.faculty__title {
+		margin: 0;
+		font-family: $font-family-serif;
+		font-size: clamp(1.1rem, 2vw, #{$font-size-lg});
+		font-style: italic;
+		font-weight: $font-weight-regular;
+		line-height: $line-height-tight;
+		letter-spacing: $letter-spacing-tight;
+	}
+
+	.faculty__intro {
+		margin: 0;
+		max-width: 640px;
+		font-family: $font-family-serif;
+		font-size: $font-size-base;
+		line-height: $line-height-base;
+		color: rgba($color-black, 0.72);
 	}
 
 	.card__role {
