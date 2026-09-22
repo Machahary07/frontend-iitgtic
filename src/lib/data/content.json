@@ -143,9 +143,9 @@
 	},
 	"homeHero": {
 		"intro": {
-			"headlineLead": "Transforming innovative ideas into",
-			"headlineEmphasis": "viable ventures",
-			"citation": "A platform for innovators, researchers, and young entrepreneurs to build impactful businesses with guidance, infrastructure, and multidisciplinary mentorship.",
+			"headlineLead": "Building DeepTech ventures",
+			"headlineEmphasis": "from the Northeast.",
+			"citation": "IIT Guwahati's platform for founders and researchers turning hard science into companies where technology, talent, capital, industry and markets are in one place.",
 			"attribution": "— IITG TIC",
 			"ctaLabel": "Apply for Incubation",
 			"ctaHref": "/apply"
@@ -536,7 +536,7 @@
 				"eyebrow": "Incubation · IITG TIC",
 				"headlineLead": "Five forms of support,",
 				"headlineEmphasis": "one shared goal.",
-				"intro": "At IITG-TIC we don't just give you a desk and walk away. The centre is built around five connected forms of support — infrastructure, programme, technical depth, capital, and a place to live while you build. Each one exists to lower the cost of starting something hard, and shorten the distance between an idea and a paying customer."
+				"intro": "At IITG-TIC you don't just get a desk. You get access — to the five things a hard-tech venture needs: infrastructure, a structured programme, technical depth, capital, and a place to live while you build. Each one lowers the cost of starting something hard, and shortens the distance between an idea and a paying customer."
 			},
 			"gridEyebrow": "What you'll get",
 			"links": [
@@ -840,8 +840,8 @@
 			"title": "Partners · IITG TIC",
 			"hero": {
 				"eyebrow": "Partnerships",
-				"headlineLead": "Built on the back of",
-				"headlineEmphasis": "strong partnerships.",
+				"headlineLead": "Who we",
+				"headlineEmphasis": "build with.",
 				"lede": "The centre's work is supported by a network across government, industry and academia — each contributing the capital, frameworks or recognition that make our incubation programmes possible."
 			},
 			"sectionEyebrow": "Our partners",
@@ -903,8 +903,8 @@
 			"title": "Incubated Startups · IITG TIC",
 			"hero": {
 				"eyebrow": "Incubated Startups · IITG TIC",
-				"headlineLead": "The ventures",
-				"headlineEmphasis": "we work with.",
+				"headlineLead": "Ventures",
+				"headlineEmphasis": "we back.",
 				"intro": "Three views of the cohort — the teams currently inside the centre, the ones we support remotely on our virtual track, and the alumni that have graduated and moved on. Each list is small on purpose; we'd rather work deeply with a few than thinly with many."
 			},
 			"gridEyebrow": "By stage",
@@ -2134,7 +2134,7 @@
 		"backHome": "← Back to home"
 	},
 	"footer": {
-		"tagline": "Make something people want.",
+		"tagline": "DeepTech ventures, built at IIT Guwahati.",
 		"newsletter": {
 			"heading": "Stay in the loop",
 			"text": "Get updates on programs, events, and incubated startups."
