@@ -68,23 +68,23 @@
 				"href": "/incubation",
 				"dropdown": [
 					{
-						"label": "Incubation Support",
+						"label": "Incubation Programme",
 						"href": "/incubation/support"
 					},
 					{
-						"label": "Infrastructure Support",
+						"label": "Labs & Infrastructure",
 						"href": "/incubation/infrastructure"
 					},
 					{
-						"label": "Funding Support",
+						"label": "Access to Capital",
 						"href": "/incubation/funding"
 					},
 					{
-						"label": "Technical Support",
+						"label": "Faculty & Technical Expertise",
 						"href": "/incubation/technical"
 					},
 					{
-						"label": "Residence Support",
+						"label": "Campus Residence",
 						"href": "/incubation/residence"
 					}
 				]
@@ -145,8 +145,8 @@
 		"intro": {
 			"headlineLead": "Building DeepTech ventures",
 			"headlineEmphasis": "from the Northeast.",
-			"citation": "IIT Guwahati's platform for founders and researchers turning hard science into companies where technology, talent, capital, industry and markets are in one place.",
-			"attribution": "— IITG TIC",
+			"citation": "IIT Guwahati's incubator connecting founders and researchers to labs, faculty, talent, capital, industry and markets.",
+			"attribution": "",
 			"ctaLabel": "Apply for Incubation",
 			"ctaHref": "/apply"
 		},
@@ -179,7 +179,7 @@
 	"seo": {
 		"siteName": "IIT Guwahati TIC",
 		"homeTitle": "IIT Guwahati Technology Incubation Centre",
-		"defaultDescription": "The Technology Incubation Centre at IIT Guwahati — incubation, mentorship, funding access and workspace for deep-tech founders in the North-East."
+		"defaultDescription": "IIT Guwahati's platform for building DeepTech ventures in Northeast India — connecting founders and researchers to faculty, labs, talent, capital, industry and markets."
 	},
 	"pages": {
 		"about": {
@@ -189,13 +189,13 @@
 				"eyebrow": "About · IITG TIC",
 				"headlineLead": "Where ideas at IIT Guwahati",
 				"headlineEmphasis": "find their first runway.",
-				"intro": "IITG-TIC is the Technology Incubation Centre of IIT Guwahati — a home for researchers, students and founders to turn early-stage ideas into businesses worth backing. We pair entrepreneurs with multidisciplinary mentors, run technical and business support, and lower the risk around an idea so it can grow into a venture that stands on its own."
+				"intro": "IITG-TIC is IIT Guwahati's platform for building DeepTech ventures and strengthening the innovation economy of Northeast India. We connect researchers, students and founders to the institute's faculty, labs and talent — and through it to capital, industry, markets and government networks — so an idea from the lab can grow into a venture that stands on its own."
 			},
 			"gridEyebrow": "Explore the centre",
 			"links": [
 				{
 					"title": "What Happens at TIC",
-					"tagline": "Know what happens inside the centre — the mission, the support, and the day-to-day work.",
+					"tagline": "Know what happens inside the centre — the mission, what founders get access to, and the day-to-day work.",
 					"href": "/about/what-happens",
 					"icon": "compass"
 				},
@@ -534,7 +534,7 @@
 			"title": "Incubation · IITG TIC",
 			"hero": {
 				"eyebrow": "Incubation · IITG TIC",
-				"headlineLead": "Five forms of support,",
+				"headlineLead": "Five kinds of access,",
 				"headlineEmphasis": "one shared goal.",
 				"intro": "At IITG-TIC you don't just get a desk. You get access — to the five things a hard-tech venture needs: infrastructure, a structured programme, technical depth, capital, and a place to live while you build. Each one lowers the cost of starting something hard, and shortens the distance between an idea and a paying customer."
 			},
@@ -542,14 +542,14 @@
 			"links": [
 				{
 					"slug": "support",
-					"title": "Incubation Support",
+					"title": "Incubation Programme",
 					"tagline": "Launch your tech startup with in-house or digital incubation — workspace, labs, mentorship and a community that holds it together.",
 					"icon": "rocket",
 					"hero": {
-						"eyebrow": "Incubation · Programme support",
+						"eyebrow": "Incubation · Programme",
 						"headlineLead": "Launch your tech startup",
 						"headlineEmphasis": "in-house or digitally.",
-						"lede": "IITG-TIC offers two ways to incubate — a fully equipped in-house programme inside our campus, and a digital track for founders who can't be physically here. The support stays the same; the geography is yours to choose."
+						"lede": "IITG-TIC offers two ways to incubate — a fully equipped in-house programme inside our campus, and a digital track for founders who can't be physically here. The access stays the same; the geography is yours to choose."
 					},
 					"scrollspyEyebrow": "On this page",
 					"sections": [
@@ -601,7 +601,7 @@
 				},
 				{
 					"slug": "infrastructure",
-					"title": "Infrastructure Support",
+					"title": "Labs & Infrastructure",
 					"tagline": "Office space, shared facilities and access to IIT Guwahati's wider infrastructure — labs, library and expert opinion on call.",
 					"icon": "building",
 					"hero": {
@@ -620,7 +620,7 @@
 							"headlineEmphasis": "configured to fit.",
 							"paragraphs": [
 								"Office space is allocated against requirement — from a single desk to a private team room. Each setup includes a personal computer, internet connection and a working telephone line.",
-								"Office furniture is provided. On-campus accommodation is offered subject to availability — see our residence-support page if you'll need it."
+								"Office furniture is provided. On-campus accommodation is offered subject to availability — see the Campus Residence page if you'll need it."
 							],
 							"image": {
 								"alt": "An allocated office setup at the centre."
@@ -658,7 +658,7 @@
 				},
 				{
 					"slug": "funding",
-					"title": "Funding Support",
+					"title": "Access to Capital",
 					"tagline": "Soft loans up to 80% of project cost, navigation across major government schemes, and CSR partnerships with corporates.",
 					"icon": "banknote",
 					"hero": {
@@ -717,7 +717,7 @@
 				},
 				{
 					"slug": "technical",
-					"title": "Technical Support",
+					"title": "Faculty & Technical Expertise",
 					"tagline": "Labs, workshops and library access — plus faculty mentors and institute-grade testing facilities for product validation.",
 					"icon": "wrench",
 					"hero": {
@@ -749,7 +749,7 @@
 							"headlineLead": "Senior engineers,",
 							"headlineEmphasis": "in the room.",
 							"paragraphs": [
-								"Our mentors are faculty from IIT Guwahati. They provide full technical support — sitting in on architecture reviews, design reviews and code reviews as engineers, not as evaluators.",
+								"Our mentors are faculty from IIT Guwahati, and founders get their full technical depth — they sit in on architecture reviews, design reviews and code reviews as engineers, not as evaluators.",
 								"Mentor matches are made deliberately. A hardware founder is paired with someone who has built hardware; a software venture with someone who has shipped systems. The fit is the point of the match — not the title.",
 								"Beyond scheduled reviews, mentors are reachable for the small judgement calls that don't warrant a meeting but compound across a quarter."
 							],
@@ -776,7 +776,7 @@
 				},
 				{
 					"slug": "residence",
-					"title": "Residence Support",
+					"title": "Campus Residence",
 					"tagline": "Shared on-campus hostels inside IIT Guwahati — for founders who need to live close to the centre during a build cycle.",
 					"icon": "home",
 					"hero": {
@@ -824,7 +824,7 @@
 							"headlineLead": "In your application,",
 							"headlineEmphasis": "or mid-cohort.",
 							"paragraphs": [
-								"If you'll need residence support to join a cohort, mention it in your application — it helps us plan early and gives us time to confirm availability.",
+								"If you'll need campus residence to join a cohort, mention it in your application — it helps us plan early and gives us time to confirm availability.",
 								"If the need arises mid-cohort, raise it with the programme manager. We respond within a week with a real answer — yes or no, with reasoning."
 							],
 							"image": {
@@ -842,34 +842,66 @@
 				"eyebrow": "Partnerships",
 				"headlineLead": "Who we",
 				"headlineEmphasis": "build with.",
-				"lede": "The centre's work is supported by a network across government, industry and academia — each contributing the capital, frameworks or recognition that make our incubation programmes possible."
+				"lede": "IITG-TIC connects founders to a network across government, industry, academia and capital. Each partner opens a specific door — funding, pilots, technical expertise, market access, mentorship or programmes."
 			},
 			"sectionEyebrow": "Our partners",
 			"partners": [
 				{
 					"name": "IIT Guwahati",
 					"image": "iitGuwahati",
-					"href": "https://www.iitg.ac.in/"
+					"href": "https://www.iitg.ac.in/",
+					"category": "academic",
+					"enables": "Host institute — faculty expertise, labs, research infrastructure and student talent for every incubated startup."
 				},
 				{
 					"name": "MeitY",
 					"image": "meity",
-					"href": "https://www.meity.gov.in/"
+					"href": "https://www.meity.gov.in/",
+					"category": "government",
+					"enables": "Funded the centre's core infrastructure and soft-loan facility, and runs the GENESIS programme that IITG-TIC implements in the North-East."
 				},
 				{
 					"name": "MSME",
 					"image": "msme",
-					"href": "https://msme.gov.in/"
+					"href": "https://msme.gov.in/",
+					"category": "government",
+					"enables": "Recognises IITG-TIC as an approved Business Incubator under the Ministry of Micro, Small and Medium Enterprises."
 				},
 				{
 					"name": "Startup India",
 					"image": "startupIndia",
-					"href": "https://www.startupindia.gov.in/"
+					"href": "https://www.startupindia.gov.in/",
+					"category": "government",
+					"enables": "Startup India Seed Fund Scheme — seed grants and funding for DPIIT-recognised startups, given through IITG-TIC."
 				},
 				{
 					"name": "Technology Development Board",
 					"image": "technologyDevelopmentBoard",
-					"href": "https://tdb.gov.in/"
+					"href": "https://tdb.gov.in/",
+					"category": "government",
+					"enables": "Grant assistance to IITG-TIC for supporting startup units, under the Ministry of Science & Technology."
+				}
+			],
+			"categories": [
+				{
+					"id": "government",
+					"title": "Government & Public Institutions",
+					"description": "Ministries and public bodies whose schemes and recognition fund the centre and the startups it incubates."
+				},
+				{
+					"id": "industry",
+					"title": "Industry & Corporate",
+					"description": "Companies and PSUs that open pilots, validation and market access for incubated startups."
+				},
+				{
+					"id": "academic",
+					"title": "Academic & Ecosystem",
+					"description": "Institutions and networks that bring research depth, mentorship and programmes."
+				},
+				{
+					"id": "capital",
+					"title": "Investment & Capital",
+					"description": "Funds and investors that back ventures built at the centre."
 				}
 			]
 		},
@@ -905,7 +937,7 @@
 				"eyebrow": "Incubated Startups · IITG TIC",
 				"headlineLead": "Ventures",
 				"headlineEmphasis": "we back.",
-				"intro": "Three views of the cohort — the teams currently inside the centre, the ones we support remotely on our virtual track, and the alumni that have graduated and moved on. Each list is small on purpose; we'd rather work deeply with a few than thinly with many."
+				"intro": "Three views of the portfolio — the teams currently inside the centre, the ones building remotely on our virtual track, and the alumni that have graduated and moved on. Each list is small on purpose; we'd rather work deeply with a few than thinly with many."
 			},
 			"gridEyebrow": "By stage",
 			"categories": [
@@ -926,11 +958,11 @@
 				{
 					"slug": "virtual",
 					"title": "Virtual Incubatees",
-					"tagline": "Founders we support remotely — same depth of engagement, none of the relocation.",
+					"tagline": "Founders building remotely — the same access to labs, faculty and networks, none of the relocation.",
 					"icon": "wifi",
 					"hero": {
 						"eyebrow": "Incubated Startups · Virtual",
-						"headlineLead": "Same support,",
+						"headlineLead": "Same access,",
 						"headlineEmphasis": "without the relocation.",
 						"lede": "Teams on the virtual track work with the same mentors, the same programme structure and the same investor network as our in-house cohort — they just do it from wherever they are. The depth of engagement does not change with geography."
 					},
@@ -951,6 +983,18 @@
 					"listEyebrow": "Alumni",
 					"startups": []
 				}
+			],
+			"sectors": [
+				"Clean Energy & Climate",
+				"Agriculture & Food",
+				"Health & Life Sciences",
+				"Electronics & Semiconductors",
+				"Robotics & Automation",
+				"AI, Data & Software",
+				"Advanced Materials & Manufacturing",
+				"Water & Environment",
+				"Mobility & Aerospace",
+				"Education & Social Impact"
 			]
 		},
 		"governingBody": {
@@ -1493,17 +1537,17 @@
 				},
 				{
 					"id": "infrastructure",
-					"label": "Infrastructure & Support",
-					"eyebrow": "Infrastructure & Support",
+					"label": "Infrastructure & Access",
+					"eyebrow": "Infrastructure & Access",
 					"headlineLead": "4,000 m² inside the",
 					"headlineEmphasis": "Technology Complex.",
 					"paragraphs": [
-						"Technical support, business mentoring, and a soft-loan facility — subject to availability — are the key services of this centre. Spreading across an area of approximately 4,000 square metres within the Technology Complex of IIT Guwahati, IITG-TIC has the adequate infrastructure for this endeavour.",
+						"Access to technical expertise, business mentoring and a soft-loan facility — subject to availability — is at the heart of the centre. Spread across approximately 4,000 square metres within the Technology Complex of IIT Guwahati, IITG-TIC has the infrastructure to back it.",
 						"Funds for developing basic infrastructure and the soft-loan facility are provided by the Department of Information Technology, Govt. of India. IITG-TIC is also one of the Business Incubators approved and recognised by the Ministry of Micro, Small and Medium Enterprises (MSME), Govt. of India. The Technology Development Board, under the Ministry of Science & Technology, has additionally approved grant assistance to IITG-TIC to support startup units."
 					],
 					"showAssociationMarquee": true,
 					"callout": {
-						"text": "Wondering what working out of this space actually looks like? Take a closer look at our incubation programmes and the support we offer.",
+						"text": "Wondering what working out of this space actually looks like? Take a closer look at our incubation programmes and everything founders get access to.",
 						"label": "Explore Incubation",
 						"href": "/incubation"
 					}
@@ -1756,19 +1800,19 @@
 				"eyebrow": "Schemes & Programs · IITG TIC",
 				"headlineLead": "The programmes that run here,",
 				"headlineEmphasis": "and the schemes behind them.",
-				"intro": "Everything the centre puts on for founders — the events and workshops that happen through the year, and the funding and support schemes a startup incubated here can apply to."
+				"intro": "Everything the centre runs for founders — the events and workshops that happen through the year, and the government and institutional schemes that give incubated startups access to grants and early capital."
 			},
 			"gridEyebrow": "What runs here",
 			"links": [
 				{
 					"title": "Events & Workshops",
-					"tagline": "Cohort sessions, demo days, clinics and workshops across the year.",
+					"tagline": "Cohort sessions, pitch days, clinics and workshops across the year.",
 					"href": "/events",
 					"icon": "calendar"
 				},
 				{
 					"title": "Schemes",
-					"tagline": "Funding and support schemes open to startups incubated at the centre.",
+					"tagline": "Grants, seed funding and schemes open to startups incubated at the centre.",
 					"href": "/schemes",
 					"icon": "banknote"
 				}
@@ -2116,8 +2160,8 @@
 	"cta": {
 		"apply": {
 			"eyebrow": "Ready when you are",
-			"headlineLead": "Have an idea worth building?",
-			"headlineEmphasis": "Let's make it real.",
+			"headlineLead": "Building something hard?",
+			"headlineEmphasis": "Build it at IIT Guwahati.",
 			"label": "Apply for Incubation",
 			"href": "/apply"
 		}
@@ -2144,15 +2188,15 @@
 				"title": "Programs",
 				"links": [
 					{
-						"label": "Incubation Support",
+						"label": "Incubation Programme",
 						"href": "/incubation/support"
 					},
 					{
-						"label": "Funding Support",
+						"label": "Access to Capital",
 						"href": "/incubation/funding"
 					},
 					{
-						"label": "Technical Support",
+						"label": "Faculty & Technical Expertise",
 						"href": "/incubation/technical"
 					},
 					{
@@ -2250,5 +2294,163 @@
 				"href": "/refund"
 			}
 		]
+	},
+	"home": {
+		"proof": {
+			"eyebrow": "IITG-TIC at a glance",
+			"items": [
+				{
+					"value": "Since 2009",
+					"label": "One of the first technology incubators in the North-East",
+					"verified": true
+				},
+				{
+					"value": "TDB · MeitY · MSME",
+					"label": "Supported and recognised by the Government of India",
+					"verified": true
+				},
+				{
+					"value": "GENESIS",
+					"label": "Implementing partner for MeitY's startup programme in the North-East",
+					"verified": true
+				},
+				{
+					"value": "120+",
+					"label": "Startups affiliated with the centre",
+					"verified": false
+				},
+				{
+					"value": "₹600 Cr+",
+					"label": "Aggregate valuation of those startups",
+					"verified": false
+				}
+			]
+		},
+		"why": {
+			"eyebrow": "Why IITG-TIC",
+			"headlineLead": "Not a generic incubator.",
+			"headlineEmphasis": "An IIT, in the Northeast, built for DeepTech.",
+			"items": [
+				{
+					"id": "iitg",
+					"title": "Why IIT Guwahati",
+					"heading": "A research university behind every venture.",
+					"body": "Incubated teams build next to one of India's leading technical institutes — its faculty as mentors, its labs and testing facilities for building and validating product, and its students as the first hires. That depth is hard to find outside a campus like this one."
+				},
+				{
+					"id": "deeptech",
+					"title": "Why DeepTech",
+					"heading": "Hard problems need patient builders.",
+					"body": "Ventures built on science — energy, materials, electronics, biotech, robotics — take longer to reach market and need labs, IP and technical judgement that a general-purpose incubator can't offer. That is exactly what an IIT is built to provide."
+				},
+				{
+					"id": "northeast",
+					"title": "Why the Northeast",
+					"heading": "The next innovation economy is being built here.",
+					"body": "IITG-TIC has anchored the region's startup ecosystem since 2009 and implements MeitY's GENESIS programme across the North-East. Founders from the region shouldn't have to leave it to build — and its challenges, from energy to agriculture, are worth building for."
+				}
+			]
+		},
+		"journey": {
+			"eyebrow": "From lab to market",
+			"headlineLead": "We don't just support startups.",
+			"headlineEmphasis": "We connect them to an ecosystem.",
+			"intro": "IIT Guwahati sits at the centre of the Northeast's innovation economy. IITG-TIC is how a founder or researcher reaches all of it — each step opening access to the next.",
+			"steps": [
+				{
+					"title": "Research",
+					"access": "IITG faculty & expertise",
+					"body": "Work with faculty from across the institute's departments — as mentors, collaborators and technical reviewers.",
+					"href": "/incubation/technical"
+				},
+				{
+					"title": "Technology",
+					"access": "Labs & testing facilities",
+					"body": "Electronics, biotechnology, machining and fabrication labs to turn a prototype into a product.",
+					"href": "/incubation/infrastructure"
+				},
+				{
+					"title": "Incubation",
+					"access": "Programme, workspace & talent",
+					"body": "In-house or virtual incubation, workspace in the Technology Complex, and IIT Guwahati's students as your first team.",
+					"href": "/incubation/support"
+				},
+				{
+					"title": "Capital",
+					"access": "Grants, seed funds & investors",
+					"body": "Soft loans, government schemes such as SISFS and GENESIS, and introductions to investors.",
+					"href": "/incubation/funding"
+				},
+				{
+					"title": "Industry",
+					"access": "Pilots & corporate partners",
+					"body": "Validation and pilot projects with industry and PSU partners — a working prototype becomes a tested product with a reference customer.",
+					"href": "/partners"
+				},
+				{
+					"title": "Markets",
+					"access": "Government & ecosystem networks",
+					"body": "Programmes, showcases and government networks that take ventures from the region to national and global markets.",
+					"href": "/programs"
+				}
+			]
+		},
+		"pathways": {
+			"eyebrow": "How can we work together?",
+			"headlineLead": "Whoever you are,",
+			"headlineEmphasis": "there's a way in.",
+			"items": [
+				{
+					"id": "founder",
+					"audience": "I am a Founder",
+					"body": "Incubate your DeepTech venture at IIT Guwahati — in-house or virtually — with access to labs, faculty, capital and markets.",
+					"ctaLabel": "Apply for incubation",
+					"href": "/apply"
+				},
+				{
+					"id": "researcher",
+					"audience": "I am a Researcher",
+					"body": "Take technology out of the lab and into a company. We work with faculty, scholars and students turning research into ventures.",
+					"ctaLabel": "See how incubation works",
+					"href": "/incubation"
+				},
+				{
+					"id": "investor",
+					"audience": "I am an Investor",
+					"body": "Meet DeepTech ventures built on IIT Guwahati research, from the Northeast and beyond.",
+					"ctaLabel": "Explore the portfolio",
+					"href": "/incubated-startups"
+				},
+				{
+					"id": "corporate",
+					"audience": "I am a Corporate",
+					"body": "Run pilots, set innovation challenges or partner on CSR with startups solving problems in your sector.",
+					"ctaLabel": "Partner with us",
+					"href": "/contact"
+				},
+				{
+					"id": "student",
+					"audience": "I am a Student",
+					"body": "Join events and workshops, intern at an incubated startup, or start building an idea of your own.",
+					"ctaLabel": "Find opportunities",
+					"href": "/opportunities"
+				},
+				{
+					"id": "government",
+					"audience": "I am a Government / Ecosystem Partner",
+					"body": "Work with us on programmes and schemes that grow the Northeast's innovation economy.",
+					"ctaLabel": "Talk to us",
+					"href": "/contact"
+				}
+			]
+		},
+		"stories": {
+			"eyebrow": "Built at IITG-TIC",
+			"headlineLead": "Founder stories",
+			"headlineEmphasis": "from the centre.",
+			"intro": "What they built, what the centre brought to it, and where they are now.",
+			"ctaLabel": "See all startups",
+			"href": "/incubated-startups"
+		}
 	}
 }
