@@ -5,7 +5,7 @@
 	// is driven by the data rather than by a hand-written form per section.
 	import Self from './ContentField.svelte';
 	import { resolveMedia } from '$lib/media';
-	import { LIST_TEMPLATES } from '$lib/content';
+	import { FIELD_OPTIONS, LIST_TEMPLATES } from '$lib/content';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 
 	interface Props {
@@ -19,15 +19,19 @@
 		/** This value's path within its section, list indexes written as `[]`.
 		 *  Only used to look up a shape for adding to an empty list. */
 		path?: string;
+		/** The whole section being edited, for fields whose choices live
+		 *  elsewhere in it. Omitted at the root, which is the section itself. */
+		section?: unknown;
 	}
 
-	let { node, field, label, depth = 0, bare = false, path = '' }: Props = $props();
+	let { node, field, label, depth = 0, bare = false, path = '', section }: Props = $props();
 
 	// A child's path: `[]` for a list item, `.name` for an object field.
 	const childPath = (key: string | number) =>
 		typeof key === 'number' ? `${path}[]` : path ? `${path}.${key}` : String(key);
 
 	const value = $derived((node as Record<string | number, unknown>)[field]);
+	const sectionRoot = $derived(section ?? value);
 
 	const kind = $derived.by(() => {
 		if (Array.isArray(value)) return 'array';
@@ -42,7 +46,7 @@
 
 	// Long-form copy deserves a textarea even when it is currently short.
 	const LONG_FIELDS =
-		/^(body|bio|answer|excerpt|lede|citation|description|summary|intro|text|content|blurb|note)$/i;
+		/^(body|bio|answer|excerpt|lede|citation|description|summary|intro|text|content|blurb|note|enables|whatTheyBuilt|whatTicContributed|whereTheyAreNow)$/i;
 	const isLong = $derived(kind === 'longtext' || LONG_FIELDS.test(String(field)));
 
 	// A string field whose name reads as an image gets an uploader with a preview
@@ -64,6 +68,18 @@
 	const contact = $derived(
 		kind === 'text' && !isMedia ? CONTACT_FIELDS[String(field).toLowerCase()] : undefined
 	);
+
+	// A field with a fixed set of values gets a dropdown. A value outside the set
+	// (typed before the list existed) stays selectable rather than vanishing.
+	const options = $derived.by(() => {
+		if (kind !== 'text' || isMedia) return undefined;
+		const choices = FIELD_OPTIONS[path]?.(sectionRoot);
+		if (!choices) return undefined;
+		const current = String(value ?? '');
+		return current && !choices.some((c) => c.value === current)
+			? [...choices, { value: current, label: `${current} (not in list)` }]
+			: choices;
+	});
 
 	let uploading = $state(false);
 	let mediaError = $state<string | null>(null);
@@ -169,6 +185,7 @@
 				label={humanise(childKey)}
 				{depth}
 				path={childPath(childKey)}
+				section={sectionRoot}
 			/>
 		{/each}
 	</div>
@@ -183,6 +200,7 @@
 					label={humanise(childKey)}
 					depth={depth + 1}
 					path={childPath(childKey)}
+					section={sectionRoot}
 				/>
 			{/each}
 		</div>
@@ -229,6 +247,7 @@
 							label={itemLabel(item, index)}
 							depth={depth + 1}
 							path={childPath(index)}
+							section={sectionRoot}
 							bare
 						/>
 					</div>
@@ -256,6 +275,20 @@
 			value={value as number}
 			oninput={(e) => set(Number((e.currentTarget as HTMLInputElement).value))}
 		/>
+	</label>
+{:else if options}
+	<label class="field">
+		<span class="field__label">{label}</span>
+		<select
+			class="field__input"
+			value={String(value ?? '')}
+			onchange={(e) => set((e.currentTarget as HTMLSelectElement).value)}
+		>
+			<option value="">— Choose —</option>
+			{#each options as option (option.value)}
+				<option value={option.value}>{option.label}</option>
+			{/each}
+		</select>
 	</label>
 {:else if isMedia}
 	<div class="field field--wide">

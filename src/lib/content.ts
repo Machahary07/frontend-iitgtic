@@ -10,13 +10,93 @@ import fallback from '$lib/data/content.json';
 
 type ContentDoc = typeof fallback;
 
-// TIC Jobs ships with an empty `posts` array, which JSON alone types as never[].
-// It holds the same shape as the startup board's posts, so say so — otherwise
-// nothing can be added to it from the admin console without a cast.
+// Lists that ship empty — job boards, the blog, the startup portfolio — are
+// typed by JSON alone as never[], so every page reading them needs a cast. These
+// are the shapes the console fills them with; they follow LIST_TEMPLATES below.
+
+export type JobPost = {
+	slug: string;
+	role: string;
+	company: string;
+	companySlug: string;
+	location: string;
+	type: string;
+	sector: string;
+	posted: string;
+	description: string;
+	applyLink: string;
+	logo?: { src?: string; alt: string };
+};
+
+export type BlogPost = {
+	slug: string;
+	date: string;
+	title: string;
+	excerpt: string;
+	author: string;
+	readTime: string;
+	coverImage: { src?: string; alt: string };
+	body: ContentDoc['pages']['events']['posts'][number]['body'];
+};
+
+export type Startup = {
+	slug: string;
+	name: string;
+	/** One of `pages.incubatedStartups.sectors` — the portfolio filters on it. */
+	sector: string;
+	tagline?: string;
+	oneLiner?: string;
+	industry?: string;
+	/** Current status: one of STARTUP_STAGES. */
+	stage?: string;
+	foundingYear?: number;
+	hqLocation?: string;
+	description?: string;
+	logo: { src?: string; alt: string };
+	website?: string;
+	/** Shown in the homepage founder stories when set and the story is filled in. */
+	featured?: boolean;
+	founderStory?: { whatTheyBuilt: string; whatTicContributed: string; whereTheyAreNow: string };
+	socials?: Partial<
+		Record<'linkedin' | 'twitter' | 'instagram' | 'facebook' | 'github' | 'youtube', string>
+	>;
+	registration?: Record<string, string>;
+	problem?: string;
+	solution?: string;
+	features?: string[];
+	targetMarket?: string;
+	traction?: { label: string; value: string }[];
+	funding?: { raised?: string; grants?: string[] };
+	incubation?: { program?: string; duration?: string; mentors?: string[] };
+	founders?: { name: string; role: string; bio?: string }[];
+	achievements?: string[];
+	mediaMentions?: { outlet: string; title: string; url: string }[];
+	partnerships?: string[];
+	techStack?: string[];
+	hiring?: { isHiring: boolean; rolesUrl?: string; openRoles?: number };
+	contactEmail?: string;
+	testimonials?: { quote: string; author: string; role?: string }[];
+	/** Funding and market milestones, oldest first. */
+	milestones?: { year: string; event: string }[];
+	supportedBy?: string[];
+	graduateOutcome?: string | null;
+	impactCreated?: string;
+	ipPatents?: string[];
+	sdgAlignment?: string[];
+};
+
+type Pages = ContentDoc['pages'];
+type WithPosts<T, P> = Omit<T, 'posts'> & { posts: P[] };
+
 export type SiteContent = Omit<ContentDoc, 'pages'> & {
-	pages: Omit<ContentDoc['pages'], 'ticJobs'> & {
-		ticJobs: Omit<ContentDoc['pages']['ticJobs'], 'posts'> & {
-			posts: ContentDoc['pages']['startupJobs']['posts'];
+	pages: Omit<Pages, 'ticJobs' | 'startupJobs' | 'blog' | 'incubatedStartups'> & {
+		ticJobs: WithPosts<Pages['ticJobs'], JobPost>;
+		startupJobs: WithPosts<Pages['startupJobs'], JobPost>;
+		blog: WithPosts<Pages['blog'], BlogPost>;
+		incubatedStartups: Omit<Pages['incubatedStartups'], 'categories'> & {
+			categories: (Omit<Pages['incubatedStartups']['categories'][number], 'startups'> & {
+				startups: Startup[];
+			})[];
 		};
 	};
 };
@@ -38,6 +118,7 @@ export const CONTENT_SECTIONS: { key: string; label: string; group: string }[] =
 	{ key: 'nav', label: 'Navigation', group: 'Global' },
 	{ key: 'eventBar', label: 'Announcement bar', group: 'Global' },
 	{ key: 'homeHero', label: 'Home hero', group: 'Global' },
+	{ key: 'home', label: 'Home sections', group: 'Global' },
 	{ key: 'cta', label: 'Call to action', group: 'Global' },
 	{ key: 'error', label: 'Error page', group: 'Global' },
 	{ key: 'seo', label: 'Search & social', group: 'Global' },
@@ -134,8 +215,99 @@ export const LIST_TEMPLATES: Record<string, () => unknown> = {
 		amount: '',
 		eligibility: [],
 		help: []
-	})
+	}),
+	'pages.incubatedStartups.categories[].startups': () => ({
+		slug: '',
+		name: '',
+		sector: '',
+		stage: '',
+		tagline: '',
+		oneLiner: '',
+		industry: '',
+		foundingYear: new Date().getFullYear(),
+		hqLocation: '',
+		description: '',
+		logo: { src: '', alt: '' },
+		website: '',
+		featured: false,
+		founderStory: { whatTheyBuilt: '', whatTicContributed: '', whereTheyAreNow: '' },
+		milestones: [],
+		funding: { raised: '', grants: [] },
+		traction: [],
+		founders: [],
+		problem: '',
+		solution: '',
+		features: [],
+		targetMarket: '',
+		incubation: { program: '', duration: '', mentors: [] },
+		achievements: [],
+		mediaMentions: [],
+		partnerships: [],
+		techStack: [],
+		supportedBy: [],
+		impactCreated: '',
+		ipPatents: [],
+		sdgAlignment: [],
+		testimonials: [],
+		hiring: { isHiring: false, rolesUrl: '/opportunities', openRoles: 0 },
+		contactEmail: '',
+		socials: { linkedin: '', twitter: '', instagram: '', facebook: '', github: '', youtube: '' },
+		registration: { type: '', cin: '', gstin: '', dpiit: '', incorporatedOn: '' },
+		graduateOutcome: ''
+	}),
+	// The startup's own lists start empty too, and most hold small records.
+	'pages.incubatedStartups.categories[].startups[].milestones': () => ({ year: '', event: '' }),
+	'pages.incubatedStartups.categories[].startups[].traction': () => ({ label: '', value: '' }),
+	'pages.incubatedStartups.categories[].startups[].founders': () => ({
+		name: '',
+		role: '',
+		bio: ''
+	}),
+	'pages.incubatedStartups.categories[].startups[].mediaMentions': () => ({
+		outlet: '',
+		title: '',
+		url: ''
+	}),
+	'pages.incubatedStartups.categories[].startups[].testimonials': () => ({
+		quote: '',
+		author: '',
+		role: ''
+	}),
+	'pages.partners.partners': () => ({ name: '', image: '', href: '', category: '', enables: '' })
 };
+
+export const STARTUP_STAGES = [
+	'Ideation',
+	'Proof of concept',
+	'Prototype',
+	'MVP',
+	'Early revenue',
+	'Growth'
+];
+
+export type FieldOption = { value: string; label: string };
+
+// Fields that take one of a known set of values, shown as a dropdown instead of
+// a text box. A typo in a sector or a partner category would quietly drop that
+// entry out of a filter or a group, so these are picked, not typed. Keyed like
+// LIST_TEMPLATES; each receives the whole section being edited, so a list the
+// section itself holds (partner categories, sectors) stays editable there.
+export const FIELD_OPTIONS: Record<string, (section: unknown) => FieldOption[]> = {
+	'pages.partners.partners[].category': (section) =>
+		listAt<{ id: string; title: string }>(section, 'categories').map((c) => ({
+			value: c.id,
+			label: c.title
+		})),
+	'pages.incubatedStartups.categories[].startups[].sector': (section) =>
+		listAt<string>(section, 'sectors').map((s) => ({ value: s, label: s })),
+	'pages.incubatedStartups.categories[].startups[].stage': () =>
+		STARTUP_STAGES.map((s) => ({ value: s, label: s }))
+};
+
+function listAt<T>(section: unknown, field: string): T[] {
+	const list = (section as Record<string, unknown> | null)?.[field];
+	return Array.isArray(list) ? (list as T[]) : [];
+}
 
 export function readPath(doc: unknown, key: string): unknown {
 	return key
