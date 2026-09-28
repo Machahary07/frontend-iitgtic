@@ -39,7 +39,7 @@ export function initialPageSize(): number {
 	return readSize();
 }
 
-export class Pager<T> {
+export class Pager<T> implements Pageable {
 	page = $state(1);
 	size = $state(DEFAULT_SIZE);
 	#source: () => T[];
@@ -91,5 +91,111 @@ export class Pager<T> {
 		this.size = size;
 		this.page = Math.floor(first / size) + 1;
 		rememberPageSize(size);
+	}
+}
+
+/** What the pagination bar drives — both kinds of pager satisfy it. */
+export interface Pageable {
+	readonly current: number;
+	readonly size: number;
+	readonly total: number;
+	readonly loading?: boolean;
+	go(page: number): void;
+	resize(size: number): void;
+}
+
+type Slice<T> = { rows: T[]; total: number };
+
+/**
+ * A list the server pages: one page of rows at a time, plus the total.
+ *
+ * The page load supplies the first page (at FIRST size, under the default
+ * filter), so arriving costs no extra request, and a live refresh of the load
+ * keeps that first page current. Any other page, size or filter is fetched.
+ */
+export class RemotePager<T> implements Pageable {
+	page = $state(1);
+	size = $state(DEFAULT_SIZE);
+	loading = $state(false);
+	#fetched = $state<Slice<T> | null>(null);
+	#seq = 0;
+	#initial: () => Slice<T> & { size: number };
+	#fetch: (page: number, size: number) => Promise<Slice<T>>;
+	#isDefault: () => boolean;
+
+	constructor(options: {
+		/** The first page as the load delivered it. */
+		initial: () => Slice<T> & { size: number };
+		fetch: (page: number, size: number) => Promise<Slice<T>>;
+		/** True while the page's filters are what the load used. */
+		isDefault?: () => boolean;
+	}) {
+		this.#initial = options.initial;
+		this.#fetch = options.fetch;
+		this.#isDefault = options.isDefault ?? (() => true);
+		this.size = readSize();
+		// A reader who prefers a different page size gets it straight away.
+		if (browser && this.size !== untrack(() => this.#initial().size)) {
+			queueMicrotask(() => this.load());
+		}
+	}
+
+	get #onInitial(): boolean {
+		return this.page === 1 && this.size === this.#initial().size && this.#isDefault();
+	}
+
+	get rows(): T[] {
+		if (this.#onInitial) return this.#initial().rows;
+		// Until the first fetch lands, the load's rows stay up (dimmed by the bar)
+		// rather than the list flashing empty.
+		return this.#fetched?.rows ?? this.#initial().rows;
+	}
+
+	get total(): number {
+		if (this.#onInitial) return this.#initial().total;
+		return this.#fetched?.total ?? this.#initial().total;
+	}
+
+	get current(): number {
+		return this.page;
+	}
+
+	/** Fetches whatever the page, size and filters now call for. Call it after
+	 *  changing a filter; go() and resize() call it themselves. */
+	async load(): Promise<void> {
+		const seq = ++this.#seq;
+		if (this.#onInitial) {
+			this.#fetched = null;
+			this.loading = false;
+			return;
+		}
+		this.loading = true;
+		try {
+			const slice = await this.#fetch(this.page, this.size);
+			// Only the latest request may land: quick clicks resolve out of order.
+			if (seq === this.#seq) this.#fetched = slice;
+		} finally {
+			if (seq === this.#seq) this.loading = false;
+		}
+	}
+
+	go(page: number): void {
+		const pages = Math.max(1, Math.ceil(this.total / this.size));
+		this.page = Math.min(Math.max(1, page), pages);
+		void this.load();
+	}
+
+	resize(size: number): void {
+		const first = (this.page - 1) * this.size;
+		this.size = size;
+		this.page = Math.floor(first / size) + 1;
+		rememberPageSize(size);
+		void this.load();
+	}
+
+	/** Back to page 1 and fetch — after a filter changes. */
+	restart(): void {
+		this.page = 1;
+		void this.load();
 	}
 }

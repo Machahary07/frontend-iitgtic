@@ -1,14 +1,14 @@
 <script lang="ts">
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
-	import { PAGE_SIZES, type Pager } from '$lib/utils/pager.svelte';
+	import { PAGE_SIZES, type Pageable } from '$lib/utils/pager.svelte';
 
 	// The one pagination bar every console list uses. Hand it a Pager for a list
 	// already in the page, or page/size/total and two callbacks for a list the
 	// server pages (see $lib/utils/pager).
 
 	interface Props {
-		pager?: Pager<unknown>;
+		pager?: Pageable;
 		page?: number;
 		size?: number;
 		total?: number;
@@ -28,8 +28,10 @@
 		onpage,
 		onsize,
 		noun = '',
-		loading = false
+		loading: loadingProp = false
 	}: Props = $props();
+
+	const loading = $derived(loadingProp || Boolean(pager?.loading));
 
 	const current = $derived(pager ? pager.current : page);
 	const perPage = $derived(pager ? pager.size : size);
@@ -38,11 +40,23 @@
 	const from = $derived(count === 0 ? 0 : (current - 1) * perPage + 1);
 	const to = $derived(Math.min(count, current * perPage));
 
+	let bar = $state<HTMLElement | null>(null);
+
+	// A new page starts at its first row, so the list's top comes back into
+	// view — the bar sits at the bottom, and the reader is down there.
+	function toTop() {
+		const list = bar?.parentElement;
+		if (!list) return;
+		const top = list.getBoundingClientRect().top;
+		if (top < 0) window.scrollBy({ top: top - 90, behavior: 'smooth' });
+	}
+
 	function go(target: number) {
 		const next = Math.min(Math.max(1, target), pages);
 		if (next === current) return;
 		if (pager) pager.go(next);
 		else onpage?.(next);
+		toTop();
 	}
 
 	function resize(next: number) {
@@ -54,10 +68,13 @@
 	// 1 … 4 5 6 … 12 — so the bar stays one short row however long the list.
 	const numbers = $derived.by(() => {
 		const out: (number | 'gap')[] = [];
-		const window = new Set([1, pages, current - 1, current, current + 1]);
-		if (current <= 3) [2, 3, 4].forEach((n) => window.add(n));
-		if (current >= pages - 2) [pages - 1, pages - 2, pages - 3].forEach((n) => window.add(n));
-		const sorted = [...window].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b);
+		// A plain list, deduplicated below: this is a throwaway, not reactive state.
+		const window = [1, pages, current - 1, current, current + 1];
+		if (current <= 3) window.push(2, 3, 4);
+		if (current >= pages - 2) window.push(pages - 1, pages - 2, pages - 3);
+		const sorted = window
+			.filter((n, i) => n >= 1 && n <= pages && window.indexOf(n) === i)
+			.sort((a, b) => a - b);
 		for (const [i, n] of sorted.entries()) {
 			if (i > 0 && n - sorted[i - 1] > 1) out.push('gap');
 			out.push(n);
@@ -67,7 +84,7 @@
 </script>
 
 {#if count > 0}
-	<nav class="pager" class:pager--loading={loading} aria-label="Pagination">
+	<nav class="pager" class:pager--loading={loading} aria-label="Pagination" bind:this={bar}>
 		<p class="pager__summary">
 			Showing <b>{from}–{to}</b> of <b>{count}</b>{noun ? ` ${noun}` : ''}
 		</p>

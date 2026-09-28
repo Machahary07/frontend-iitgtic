@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Pager } from '$lib/utils/pager.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
@@ -150,6 +152,12 @@
 		await logoutTicAdmin();
 		goto(resolve('/login'));
 	}
+
+	// A page at a time; back to the first page whenever the view changes.
+	const pager = new Pager(
+		() => shown,
+		() => [filter]
+	);
 </script>
 
 <svelte:head>
@@ -261,7 +269,7 @@
 			</div>
 		{:else}
 			<div class="files">
-				{#each shown as object (object.bucket + '/' + object.path)}
+				{#each pager.rows as object (object.bucket + '/' + object.path)}
 					<div class="file" class:file--busy={busy === object.path}>
 						<button
 							type="button"
@@ -316,6 +324,7 @@
 					</div>
 				{/each}
 			</div>
+			<Pagination {pager} noun="files" />
 		{/if}
 	</div>
 </AdminShell>

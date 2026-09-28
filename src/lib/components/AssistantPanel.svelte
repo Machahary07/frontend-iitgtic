@@ -2,7 +2,8 @@
 	import { tick } from 'svelte';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
-	import Paperclip from '@lucide/svelte/icons/paperclip';
+	import Eye from '@lucide/svelte/icons/eye';
+	import EyeOff from '@lucide/svelte/icons/eye-off';
 	import Settings from '@lucide/svelte/icons/settings-2';
 	import SquarePen from '@lucide/svelte/icons/square-pen';
 	import Square from '@lucide/svelte/icons/square';
@@ -12,8 +13,9 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import ShieldCheck from '@lucide/svelte/icons/shield-check';
 	import Zap from '@lucide/svelte/icons/zap';
-	import FileText from '@lucide/svelte/icons/file-text';
-	import { ASSISTANT_MODELS } from '$lib/utils/assistantModels';
+	import { page } from '$app/state';
+	import { DEFAULT_MODEL_ID } from '$lib/utils/assistantModels';
+	import { pageKnowledge } from '$lib/utils/assistantPages';
 	import { assistantPanel } from '$lib/utils/assistantPanel.svelte';
 	import { assistantSettings } from '$lib/utils/assistantSettings.svelte';
 	import { renderMarkdown } from '$lib/utils/assistantMarkdown';
@@ -62,27 +64,10 @@
 		note: string;
 	};
 
-	// A file the admin attached. It is uploaded to a public bucket on attach, so
-	// `url` is a link the assistant can drop into content or an email — an image
-	// into a member's avatar, a PDF as an email attachment. The assistant only
-	// ever gets the name and URL, never the file's contents. `dataUrl` is the
-	// thumbnail for an image; `size` the human label for a document.
-	type Attachment = {
-		id: number;
-		name: string;
-		url: string;
-		kind: 'image' | 'file';
-		size: string;
-		dataUrl: string;
-		uploading: boolean;
-	};
-
 	type Message = {
 		id: number;
 		role: 'you' | 'assistant';
 		text: string;
-		/** Images the admin attached, already uploaded to the media bucket. */
-		attachments: Attachment[];
 		/** What the assistant looked at, in the order it looked. */
 		steps: string[];
 		/** sarvam-105b reasons out loud before answering. Kept separate from the
@@ -96,13 +81,10 @@
 
 	let messages = $state<Message[]>([]);
 	let draft = $state('');
-	let pending = $state<Attachment[]>([]);
 	let busy = $state(false);
 	let thread = $state<HTMLDivElement | null>(null);
 	let box = $state<HTMLTextAreaElement | null>(null);
-	let picker = $state<HTMLInputElement | null>(null);
 	let nextId = 0;
-	let attachSeq = 0;
 	let controller: AbortController | null = null;
 
 	// ---- saved chats ---------------------------------------------------------
@@ -115,8 +97,32 @@
 	let historyLoading = $state(false);
 
 	const empty = $derived(messages.length === 0);
-	const uploading = $derived(pending.some((item) => item.uploading));
-	const canSend = $derived(!busy && !uploading && (draft.trim().length > 0 || pending.length > 0));
+	const canSend = $derived(!busy && draft.trim().length > 0);
+
+	// ---- the page behind the panel -------------------------------------------
+
+	// Like the school ERP's assistant: it sees the page the admin is on. Each
+	// question carries that page's address and what is on screen, so "approve
+	// this one" or "what is this?" has something to refer to. On by default —
+	// that is the point of asking from beside the page — and one tap to withhold.
+	let sharePage = $state(true);
+	const here = $derived(pageKnowledge(page.url.pathname));
+
+	const SCREEN_LIMIT = 6000;
+
+	// The visible text of the page's own content, not the shell around it. Read
+	// at the moment of asking, so it is what the admin is looking at right then.
+	function readScreen(): { title?: string; text?: string } {
+		const root = document.querySelector<HTMLElement>('.content__page');
+		if (!root) return {};
+		const title = root.querySelector('h1')?.textContent?.trim() || undefined;
+		let text = root.innerText
+			.replace(/[ \t]+/g, ' ')
+			.replace(/\n\s*\n\s*\n+/g, '\n\n')
+			.trim();
+		if (text.length > SCREEN_LIMIT) text = `${text.slice(0, SCREEN_LIMIT - 1)}…`;
+		return { title, text: text || undefined };
+	}
 
 	// Written against the console as it stands, so the suggestions read as things
 	// this admin could actually ask for rather than filler.
@@ -132,7 +138,6 @@
 	let settingsEl = $state<HTMLDialogElement | null>(null);
 	let settingsOpen = $state(false);
 	let keyDraft = $state('');
-	let modelDraft = $state(assistantSettings.modelId);
 	let keyVisible = $state(false);
 
 	let historyEl = $state<HTMLDialogElement | null>(null);
@@ -161,14 +166,13 @@
 
 	function openSettings() {
 		keyDraft = assistantSettings.apiKey;
-		modelDraft = assistantSettings.modelId;
 		keyVisible = false;
 		settingsOpen = true;
 	}
 
 	function saveSettings(event: SubmitEvent) {
 		event.preventDefault();
-		assistantSettings.save(keyDraft, modelDraft);
+		assistantSettings.save(keyDraft, DEFAULT_MODEL_ID);
 		showToast('Assistant settings saved.');
 		settingsOpen = false;
 	}
@@ -177,98 +181,6 @@
 		assistantSettings.forget();
 		keyDraft = '';
 		showToast('The key was removed from this browser.', 'info');
-	}
-
-	// ---- attachments ---------------------------------------------------------
-
-	// Both buckets cap an upload at 5 MB, so anything larger is refused here before
-	// it is sent. Non-image files can only be what an email can carry.
-	const MAX_BYTES = 5 * 1024 * 1024;
-	const FILE_TYPES = [
-		'application/pdf',
-		'application/msword',
-		'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-		'text/plain',
-		'text/csv'
-	];
-
-	function readAsDataUrl(file: File): Promise<string> {
-		return new Promise((done, fail) => {
-			const reader = new FileReader();
-			reader.onload = () => done(String(reader.result));
-			reader.onerror = () => fail(new Error(`Could not read ${file.name}.`));
-			reader.readAsDataURL(file);
-		});
-	}
-
-	// Images go to the site's media bucket, so the assistant can place one into
-	// content; other files go to the email-assets bucket, so it can attach one to
-	// an email. Both return a public URL the assistant is handed as text.
-	async function uploadAsset(file: File, image: boolean): Promise<{ url: string; size: string }> {
-		const endpoint = image ? '/api/tic-admin/content/assets' : '/api/tic-admin/email/assets';
-		const form = new FormData();
-		form.append('file', file);
-		const response = await fetch(endpoint, { method: 'POST', body: form });
-		if (!response.ok) {
-			const detail = await response
-				.json()
-				.then((payload) => payload?.message)
-				.catch(() => null);
-			throw new Error(detail || 'The upload failed.');
-		}
-		const payload = await response.json();
-		return { url: payload.url as string, size: (payload.size as string) ?? '' };
-	}
-
-	async function onPick(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const files = [...(input.files ?? [])];
-		input.value = '';
-
-		for (const file of files) {
-			const isImage = file.type.startsWith('image/');
-			if (!isImage && !FILE_TYPES.includes(file.type)) {
-				showToast(`${file.name} is not a supported file.`, 'err');
-				continue;
-			}
-			if (file.size > MAX_BYTES) {
-				showToast(`${file.name} is larger than 5 MB.`, 'err');
-				continue;
-			}
-
-			// Show the chip immediately, then upload — the row flips out of its
-			// uploading state once the bucket has the file and a URL to point at.
-			// Updates go through a whole-array reassignment keyed by id: mutating the
-			// pushed object in place would not fire the reactive setter, so the
-			// uploading flag (and the send button that watches it) would never update.
-			const id = attachSeq++;
-			const attachment: Attachment = {
-				id,
-				name: file.name,
-				url: '',
-				kind: isImage ? 'image' : 'file',
-				size: '',
-				dataUrl: isImage ? await readAsDataUrl(file).catch(() => '') : '',
-				uploading: true
-			};
-
-			pending = [...pending, attachment];
-			try {
-				const uploaded = await uploadAsset(file, isImage);
-				pending = pending.map((item) =>
-					item.id === id
-						? { ...item, url: uploaded.url, size: uploaded.size, uploading: false }
-						: item
-				);
-			} catch (cause) {
-				pending = pending.filter((item) => item.id !== id);
-				showToast(cause instanceof Error ? cause.message : `Could not upload ${file.name}.`, 'err');
-			}
-		}
-	}
-
-	function removeAttachment(index: number) {
-		pending = pending.filter((_, position) => position !== index);
 	}
 
 	// ---- sending -------------------------------------------------------------
@@ -300,7 +212,7 @@
 
 	async function send(text: string) {
 		const body = text.trim();
-		if (busy || (!body && pending.length === 0)) return;
+		if (busy || !body) return;
 
 		if (!configured) {
 			showToast('Add a Sarvam API key first.', 'info');
@@ -312,7 +224,6 @@
 			id: nextId++,
 			role: 'you',
 			text: body,
-			attachments: pending,
 			steps: [],
 			reasoning: '',
 			proposals: [],
@@ -323,7 +234,6 @@
 			id: nextId++,
 			role: 'assistant',
 			text: '',
-			attachments: [],
 			steps: [],
 			reasoning: '',
 			proposals: [],
@@ -333,7 +243,6 @@
 
 		messages = [...messages, question, reply];
 		draft = '';
-		pending = [];
 		busy = true;
 		await tick();
 		grow();
@@ -354,26 +263,12 @@
 					model: assistantSettings.modelId,
 					apiKey: assistantSettings.apiKey || undefined,
 					autoApprove: assistantSettings.autoApprove,
+					page: sharePage ? { path: page.url.pathname, ...readScreen() } : undefined,
 					messages: messages
-						.filter((message) => message !== live && (message.text || message.attachments.length))
+						.filter((message) => message !== live && message.text)
 						.map((message) => ({
 							role: message.role === 'you' ? 'user' : 'assistant',
-							content: message.text,
-							// URLs let any model place a file into content or an email; the
-							// base64 data URIs are only images, only for a vision model.
-							attachments: message.attachments
-								.filter((item) => item.url)
-								.map((item) => ({
-									name: item.name,
-									url: item.url,
-									kind: item.kind,
-									size: item.size
-								})),
-							images: model.images
-								? message.attachments
-										.filter((item) => item.kind === 'image')
-										.map((item) => item.dataUrl)
-								: []
+							content: message.text
 						}))
 				})
 			});
@@ -476,7 +371,6 @@
 		stop();
 		messages = [];
 		draft = '';
-		pending = [];
 		busy = false;
 		conversationId = null;
 
@@ -486,8 +380,6 @@
 	}
 
 	// A conversation is worth saving once the assistant has actually answered.
-	// Images are dropped from the stored copy — a base64 attachment would bloat the
-	// row for little value once the question has been answered.
 	function saveConversation() {
 		if (!messages.some((message) => message.role === 'assistant' && message.text.trim())) return;
 
@@ -543,7 +435,6 @@
 					id: nextId++,
 					role: m.role === 'assistant' ? 'assistant' : 'you',
 					text: m.text ?? '',
-					attachments: [],
 					steps: m.steps ?? [],
 					reasoning: m.reasoning ?? '',
 					proposals: [],
@@ -769,22 +660,6 @@
 					<li class="msg msg--{message.role}">
 						{#if message.role === 'you'}
 							<span class="msg__who">You</span>
-							{#if message.attachments.length}
-								<ul class="shots">
-									{#each message.attachments as shot, index (index)}
-										<li>
-											{#if shot.kind === 'image' && (shot.dataUrl || shot.url)}
-												<img src={shot.dataUrl || shot.url} alt={shot.name} />
-											{:else}
-												<span class="doc">
-													<FileText size={15} strokeWidth={1.8} aria-hidden="true" />
-													<span class="doc__name">{shot.name}</span>
-												</span>
-											{/if}
-										</li>
-									{/each}
-								</ul>
-							{/if}
 							{#if message.text}
 								<p class="msg__text">{message.text}</p>
 							{/if}
@@ -912,72 +787,39 @@
 	</div>
 
 	<div class="composer">
-		{#if pending.length}
-			<ul class="queue">
-				{#each pending as item, index (index)}
-					<li
-						class="queue__item"
-						class:queue__item--busy={item.uploading}
-						class:queue__item--file={item.kind === 'file'}
-					>
-						{#if item.kind === 'image'}
-							<img src={item.dataUrl} alt={item.name} />
-						{:else}
-							<span class="queue__doc">
-								<FileText size={16} strokeWidth={1.8} aria-hidden="true" />
-								<span class="queue__docname">{item.name}</span>
-								{#if item.size}<span class="queue__docsize">{item.size}</span>{/if}
-							</span>
-						{/if}
-						{#if item.uploading}
-							<span class="queue__spin" aria-label="Uploading"></span>
-						{/if}
-						<button
-							type="button"
-							class="queue__drop"
-							onclick={() => removeAttachment(index)}
-							aria-label="Remove attachment"
-						>
-							<X size={12} strokeWidth={2.4} />
-						</button>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-
-		<textarea
-			class="composer__box"
-			bind:this={box}
-			bind:value={draft}
-			oninput={grow}
-			onkeydown={onKeydown}
-			rows="1"
-			placeholder="Ask, or describe what you want done…"
-			aria-label="Message the assistant"
-		></textarea>
-
-		<div class="composer__bar">
-			<input
-				type="file"
-				accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv"
-				multiple
-				class="composer__file"
-				bind:this={picker}
-				onchange={onPick}
-				tabindex="-1"
-				aria-hidden="true"
-			/>
+		{#if here}
 			<button
 				type="button"
-				class="composer__icon"
-				title="Attach an image or file"
-				aria-label="Attach an image or file"
-				onclick={() => picker?.click()}
+				class="reading"
+				class:reading--off={!sharePage}
+				onclick={() => (sharePage = !sharePage)}
+				aria-pressed={sharePage}
+				title={sharePage
+					? 'The assistant can see this page. Click to keep it out of your next question.'
+					: 'The assistant cannot see this page. Click to let it.'}
 			>
-				<Paperclip size={16} strokeWidth={1.9} />
+				{#if sharePage}<Eye size={13} strokeWidth={2} aria-hidden="true" />{:else}<EyeOff
+						size={13}
+						strokeWidth={2}
+						aria-hidden="true"
+					/>{/if}
+				{sharePage ? 'Reading' : 'Not reading'}: {here.title}
 			</button>
+		{/if}
 
-			<span class="composer__hint">Enter to send · Shift + Enter for a new line</span>
+		<!-- One row: the box grows upwards with Shift + Enter, and send stays
+		     beside it. -->
+		<div class="composer__row">
+			<textarea
+				class="composer__box"
+				bind:this={box}
+				bind:value={draft}
+				oninput={grow}
+				onkeydown={onKeydown}
+				rows="1"
+				placeholder="Ask, or describe what you want done…"
+				aria-label="Message the assistant (Enter to send, Shift + Enter for a new line)"
+			></textarea>
 
 			{#if busy}
 				<button type="button" class="composer__send" aria-label="Stop" onclick={stop}>
@@ -989,6 +831,7 @@
 					class="composer__send"
 					disabled={!canSend}
 					aria-label="Send"
+					title="Send (Enter)"
 					onclick={() => send(draft)}
 				>
 					<ArrowUp size={17} strokeWidth={2.2} />
@@ -1012,7 +855,8 @@
 				<div>
 					<h2 class="sheet__title">Assistant settings</h2>
 					<p class="sheet__sub">
-						The key stays in this browser and is sent with each question. It is never saved to the
+						Sarvam 105B answers every question. A key pasted here is used first; the deployment's
+						own key is only the fallback. It stays in this browser and is never saved to the
 						database.
 					</p>
 				</div>
@@ -1056,36 +900,11 @@
 				</div>
 				<p class="field__note">
 					{#if hasServerKey}
-						This deployment already has a key set on the server. Paste one here only to use your own
-						instead.
+						Leave it empty to use the deployment's key. Paste your own to use it instead.
 					{:else}
 						From your Sarvam dashboard. Anyone who can open this browser profile can read it, so
 						rotate it if the machine is shared.
 					{/if}
-				</p>
-			</div>
-
-			<div class="field">
-				<span class="field__label">Model</span>
-				<ul class="models">
-					{#each ASSISTANT_MODELS as option (option.id)}
-						<li>
-							<label class="model" class:model--on={modelDraft === option.id}>
-								<input type="radio" name="model" value={option.id} bind:group={modelDraft} />
-								<span class="model__body">
-									<span class="model__name">
-										{option.label}
-										<span class="model__tag">{option.contextLabel}</span>
-									</span>
-									<span class="model__blurb">{option.blurb}</span>
-								</span>
-							</label>
-						</li>
-					{/each}
-				</ul>
-				<p class="field__note">
-					Attach an image on any model to upload it and have the assistant place it in content. Only
-					Gemma 4 can also look at an image to answer questions about it.
 				</p>
 			</div>
 
@@ -1388,44 +1207,6 @@
 
 	// Images sent with a question, shown back so the thread is a full record of
 	// what was actually asked.
-	.shots {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: flex-end;
-		gap: 6px;
-
-		img {
-			display: block;
-			width: 92px;
-			height: 92px;
-			object-fit: cover;
-			border-radius: $admin-radius-md;
-			border: 1px solid $admin-line;
-		}
-	}
-
-	.doc {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		max-width: 220px;
-		padding: 8px 11px;
-		font-size: 12.5px;
-		color: $admin-ink;
-		background: $admin-surface;
-		border: 1px solid $admin-line;
-		border-radius: $admin-radius-md;
-	}
-
-	.doc__name {
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
 	// ---- what the assistant looked at ----------------------------------------
 
 	.steps {
@@ -1646,14 +1427,49 @@
 
 	.composer {
 		border-top: 1px solid $admin-line-soft;
-		padding: 12px 14px 14px;
+		padding: 10px 14px 14px;
 		display: flex;
 		flex-direction: column;
-		gap: 10px;
+		gap: 8px;
+	}
+
+	// The page chip, above the box: what the assistant can see right now.
+	.reading {
+		align-self: flex-start;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		max-width: 100%;
+		padding: 4px 10px;
+		font: inherit;
+		font-size: 11.5px;
+		font-weight: $font-weight-semibold;
+		color: admin-tone-fg('violet');
+		background: admin-tone-bg('violet');
+		border: 0;
+		border-radius: $admin-radius-pill;
+		cursor: pointer;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		@include admin-focus-ring;
+
+		&--off {
+			color: $admin-ink-3;
+			background: $admin-sunken;
+		}
+	}
+
+	.composer__row {
+		display: flex;
+		align-items: flex-end;
+		gap: 8px;
 	}
 
 	.composer__box {
 		@include admin-input;
+		flex: 1;
+		min-width: 0;
 		resize: none;
 		min-height: 44px;
 		max-height: 200px;
@@ -1661,48 +1477,14 @@
 		overflow-y: auto;
 	}
 
-	.composer__bar {
-		display: flex;
-		align-items: center;
-		gap: 12px;
-	}
-
-	.composer__hint {
-		font-size: 11px;
-		color: $admin-ink-3;
-		margin-right: auto;
-	}
-
-	.composer__file {
-		display: none;
-	}
-
-	.composer__icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		flex: none;
-		width: 32px;
-		height: 32px;
-		color: $admin-ink-3;
-		background: transparent;
-		border: 1px solid $admin-line;
-		border-radius: $admin-radius-md;
-		cursor: pointer;
-		@include admin-focus-ring;
-
-		&:hover {
-			color: $admin-ink;
-		}
-	}
-
 	.composer__send {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
 		flex: none;
-		width: 34px;
-		height: 34px;
+		width: 38px;
+		height: 38px;
+		margin-bottom: 3px;
 		color: $color-white;
 		background: $admin-ink;
 		border: 1px solid $admin-ink;
@@ -1718,105 +1500,6 @@
 			opacity: 0.35;
 			cursor: not-allowed;
 		}
-	}
-
-	// ---- queued attachments --------------------------------------------------
-
-	.queue {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-wrap: wrap;
-		gap: 8px;
-	}
-
-	.queue__item {
-		position: relative;
-
-		img {
-			display: block;
-			width: 56px;
-			height: 56px;
-			object-fit: cover;
-			border-radius: $admin-radius-sm;
-			border: 1px solid $admin-line;
-		}
-	}
-
-	.queue__item--busy img,
-	.queue__item--busy .queue__doc {
-		opacity: 0.5;
-	}
-
-	.queue__doc {
-		display: inline-flex;
-		align-items: center;
-		gap: 7px;
-		height: 56px;
-		max-width: 200px;
-		padding: 0 12px;
-		color: $admin-ink-2;
-		background: $admin-surface;
-		border: 1px solid $admin-line;
-		border-radius: $admin-radius-sm;
-	}
-
-	.queue__docname {
-		font-size: 12px;
-		font-weight: $font-weight-semibold;
-		color: $admin-ink;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.queue__docsize {
-		font-size: 10.5px;
-		color: $admin-ink-3;
-		flex: none;
-	}
-
-	.queue__spin {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		width: 18px;
-		height: 18px;
-		margin: -9px 0 0 -9px;
-		border: 2px solid rgba($color-white, 0.6);
-		border-top-color: $color-white;
-		border-radius: 50%;
-		animation: queue-spin 0.7s linear infinite;
-	}
-
-	@keyframes queue-spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.queue__spin {
-			animation: none;
-		}
-	}
-
-	.queue__drop {
-		position: absolute;
-		top: -6px;
-		right: -6px;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 20px;
-		height: 20px;
-		color: $color-white;
-		background: $admin-ink;
-		border: 0;
-		border-radius: 50%;
-		cursor: pointer;
-		@include admin-focus-ring;
 	}
 
 	// ---- settings dialog -----------------------------------------------------
@@ -1921,90 +1604,6 @@
 		font-size: 11.5px;
 		line-height: 1.6;
 		color: $admin-ink-3;
-	}
-
-	// ---- model picker --------------------------------------------------------
-
-	.models {
-		list-style: none;
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.model {
-		display: flex;
-		align-items: flex-start;
-		gap: 11px;
-		padding: 13px 15px;
-		background: $admin-surface;
-		border: 1px solid $admin-field-border;
-		border-radius: $admin-radius-md;
-		cursor: pointer;
-		transition:
-			border-color $transition-fast,
-			box-shadow $transition-fast;
-
-		&:hover {
-			border-color: $admin-ink-3;
-		}
-
-		// The ring follows the radio inside, so the whole row shows focus rather
-		// than a dot the eye has to hunt for.
-		&:focus-within {
-			border-color: $admin-accent;
-			box-shadow: 0 0 0 3px rgba(32, 80, 212, 0.14);
-		}
-
-		input {
-			flex: none;
-			margin: 2px 0 0;
-			accent-color: $admin-accent;
-			// 44 px of comfortable target comes from the label wrapping the input,
-			// so the control itself only has to be visible.
-			width: 15px;
-			height: 15px;
-		}
-	}
-
-	.model--on {
-		border-color: $admin-accent;
-		background: admin-tone-bg('info');
-	}
-
-	.model__body {
-		display: flex;
-		flex-direction: column;
-		gap: 3px;
-		min-width: 0;
-	}
-
-	.model__name {
-		display: flex;
-		align-items: center;
-		flex-wrap: wrap;
-		gap: 8px;
-		font-size: 13.5px;
-		font-weight: $font-weight-semibold;
-		color: $admin-ink;
-	}
-
-	.model__tag {
-		font-size: 10px;
-		font-weight: $font-weight-semibold;
-		letter-spacing: 0.04em;
-		color: $admin-ink-3;
-		background: $admin-sunken;
-		border-radius: $admin-radius-pill;
-		padding: 3px 8px;
-	}
-
-	.model__blurb {
-		font-size: 12px;
-		line-height: 1.55;
-		color: $admin-ink-2;
 	}
 
 	.sheet__foot {
@@ -2277,10 +1876,6 @@
 	}
 
 	@media (max-width: $bp-sm) {
-		.composer__hint {
-			display: none;
-		}
-
 		.sheet__foot {
 			flex-wrap: wrap;
 		}

@@ -329,6 +329,32 @@ export async function adminListAudit(
 	return ((await res.json()) as { entries: AuditEntry[] }).entries ?? [];
 }
 
+// One numbered page of the audit log and its total, for the pagination bar.
+export async function adminAuditPage(
+	table: string,
+	page: number,
+	size: number
+): Promise<{ rows: AuditEntry[]; total: number }> {
+	const params = new URLSearchParams({ view: 'audit', page: String(page), size: String(size) });
+	if (table && table !== 'all') params.set('table', table);
+	const res = await fetch(`/api/tic-admin/activity?${params}`);
+	if (!res.ok) return { rows: [], total: 0 };
+	const body = (await res.json()) as { entries?: AuditEntry[]; total?: number | null };
+	return { rows: body.entries ?? [], total: body.total ?? 0 };
+}
+
+// One page of recent visits and the total.
+export async function adminVisitsPage(
+	page: number,
+	size: number
+): Promise<{ rows: PageViewEntry[]; total: number }> {
+	const params = new URLSearchParams({ view: 'visits', page: String(page), size: String(size) });
+	const res = await fetch(`/api/tic-admin/activity?${params}`);
+	if (!res.ok) return { rows: [], total: 0 };
+	const body = (await res.json()) as { visits?: PageViewEntry[]; total?: number };
+	return { rows: body.visits ?? [], total: body.total ?? 0 };
+}
+
 // Impressions for a window other than all-time. The initial all-time set comes
 // from the page load, so this only runs when the range picker changes.
 export async function adminGetImpressions(range: '7d' | '30d' | 'all'): Promise<Impression[]> {
@@ -378,6 +404,31 @@ export async function adminListEmailLog(
 	const res = await fetch(`/api/tic-admin/email?${params}`);
 	if (!res.ok) return [];
 	return ((await res.json()) as { entries: EmailLogEntry[] }).entries ?? [];
+}
+
+// One page of the delivery log, filtered on the server, with the tab counts.
+export async function adminEmailLogPage(options: {
+	status: string;
+	tests: boolean;
+	page: number;
+	size: number;
+}): Promise<{
+	rows: EmailLogEntry[];
+	total: number;
+	counts: { all: number; sent: number; failed: number; blocked: number };
+	testSends: number;
+}> {
+	const params = new URLSearchParams({
+		page: String(options.page),
+		size: String(options.size),
+		status: options.status,
+		tests: options.tests ? '1' : '0'
+	});
+	const res = await fetch(`/api/tic-admin/email?${params}`);
+	if (!res.ok) {
+		return { rows: [], total: 0, counts: { all: 0, sent: 0, failed: 0, blocked: 0 }, testSends: 0 };
+	}
+	return res.json();
 }
 
 export async function adminGetEmailMessage(id: string): Promise<EmailMessage | null> {

@@ -169,7 +169,10 @@
 	}
 
 	// A page at a time; back to the first page whenever the view changes.
-	const pager = new Pager(() => filtered, () => [filter]);
+	const pager = new Pager(
+		() => filtered,
+		() => [filter]
+	);
 </script>
 
 <svelte:head>
@@ -306,7 +309,7 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination pager={pager} noun="accounts" />
+			<Pagination {pager} noun="accounts" />
 		{/if}
 	</div>
 </AdminShell>

@@ -89,7 +89,10 @@
 	}
 
 	// A page at a time; back to the first page whenever the view changes.
-	const pager = new Pager(() => companies, () => []);
+	const pager = new Pager(
+		() => companies,
+		() => []
+	);
 </script>
 
 <svelte:head>
@@ -198,7 +201,7 @@
 				</li>
 			{/each}
 		</ul>
-		<Pagination pager={pager} noun="startups" />
+		<Pagination {pager} noun="startups" />
 	{/if}
 </FounderShell>
 

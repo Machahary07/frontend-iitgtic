@@ -98,7 +98,10 @@
 	}
 
 	// A page at a time; back to the first page whenever the view changes.
-	const pager = new Pager(() => members, () => []);
+	const pager = new Pager(
+		() => members,
+		() => []
+	);
 </script>
 
 <svelte:head>
@@ -218,7 +221,7 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination pager={pager} noun="team members" />
+			<Pagination {pager} noun="team members" />
 		</div>
 	{/if}
 </FounderShell>

@@ -8,6 +8,7 @@ import {
 } from '$lib/server/email';
 import { sampleVariables, templateDef } from '$lib/utils/emailTemplates';
 import { blockProblems, parseBlocks, renderBlocks } from '$lib/utils/emailBlocks';
+import { emailLogPage, readLogStatus } from '$lib/server/emailLog';
 import type { RequestHandler } from './$types';
 
 // Templates and the log. Both tables are service-role only, so this is the only
@@ -33,6 +34,22 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 		return json({ message: data });
 	}
 
+	// ?page= asks for one numbered page, filtered in the database, with totals.
+	const page = Number(url.searchParams.get('page'));
+	if (Number.isInteger(page) && page >= 1) {
+		const rawSize = Number(url.searchParams.get('size'));
+		const size = Number.isInteger(rawSize) && rawSize > 0 ? Math.min(rawSize, 100) : 25;
+		const result = await emailLogPage(ctx.db, {
+			status: readLogStatus(url.searchParams.get('status')),
+			tests: url.searchParams.get('tests') === '1',
+			page,
+			size
+		});
+		if (result.error) error(500, result.error);
+		return json(result);
+	}
+
+	// The older cursor form, kept for anything still asking for it.
 	let query = ctx.db
 		.from('email_log')
 		.select(
@@ -41,10 +58,6 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 		.order('created_at', { ascending: false })
 		.limit(PAGE_SIZE);
 
-	// No status filter here on purpose: the console filters the rows it has
-	// loaded, so paging has to walk the whole log in order. Filtering here as
-	// well would interleave a filtered page with an unfiltered one and leave
-	// gaps in the list when the tab was switched back.
 	const before = url.searchParams.get('before');
 	if (before) query = query.lt('created_at', before);
 

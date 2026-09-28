@@ -287,7 +287,8 @@ function compile(block: EmailBlock): string {
 	</td></tr>
 </table>`;
 
-		case 'image': { // width as an attribute as well as a style: Outlook reads the attribute.
+		case 'image': {
+			// width as an attribute as well as a style: Outlook reads the attribute.
 			const px = IMAGE_PX[block.width] ?? IMAGE_PX.full;
 			const img = `<img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt)}" width="${px}" style="width:100%;max-width:${px}px;height:auto;display:block;border:0;border-radius:8px;" />`;
 			const wrapped = block.href?.trim() ? `<a href="${escapeHtml(block.href)}">${img}</a>` : img;

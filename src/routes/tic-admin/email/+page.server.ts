@@ -2,13 +2,14 @@ import { adminDb } from '$lib/server/adminData';
 import { emailConfig, emailUsage, listSuppressions, resolveAllTemplates } from '$lib/server/email';
 import { describeDomain, domainStatus } from '$lib/server/resendDomains';
 import { EMAIL_LAYOUT_KEY } from '$lib/utils/emailTemplates';
+import { emailLogPage } from '$lib/server/emailLog';
 import type { PageServerLoad } from './$types';
 
 const PAGE_SIZE = 25;
 
 // Everything the Email screen needs on first paint: the meter, the last page of
 // the log, and enough of the template list to show what is customised and what
-// is switched off. Older log rows are fetched from /api/tic-admin/email.
+// is switched off. Other pages of the log are fetched from /api/tic-admin/email.
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const { admin } = await parent();
@@ -19,13 +20,9 @@ export const load: PageServerLoad = async ({ parent }) => {
 		[
 			emailUsage(config),
 			resolveAllTemplates(),
-			db
-				.from('email_log')
-				.select(
-					'id, template_key, to_email, to_name, subject, status, provider_id, error, is_test, context, created_at'
-				)
-				.order('created_at', { ascending: false })
-				.limit(PAGE_SIZE),
+			// First page of the log under the default view (every status, test sends
+			// hidden). Other pages and filters come from /api/tic-admin/email.
+			emailLogPage(db, { status: 'all', tests: false, page: 1, size: PAGE_SIZE }),
 			// Thirty days of statuses, aggregated in the page rather than in SQL: at a
 			// few thousand rows a month this is one small query, and it keeps the
 			// schema free of a view that would need migrating alongside the table.
@@ -75,8 +72,11 @@ export const load: PageServerLoad = async ({ parent }) => {
 		},
 		usage,
 		templates: templates.filter((t) => t.key !== EMAIL_LAYOUT_KEY),
-		log: log.data ?? [],
-		hasMore: (log.data?.length ?? 0) === PAGE_SIZE,
+		log: log.rows,
+		logTotal: log.total,
+		logCounts: log.counts,
+		logTestSends: log.testSends,
+		logPageSize: PAGE_SIZE,
 		trend: [...buckets].map(([day, counts]) => ({ day, ...counts })),
 		suppressions,
 		// The sentence is built here rather than in the component: resendDomains

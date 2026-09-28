@@ -63,7 +63,10 @@
 	}
 
 	// A page at a time; back to the first page whenever the view changes.
-	const pager = new Pager(() => jobs, () => []);
+	const pager = new Pager(
+		() => jobs,
+		() => []
+	);
 </script>
 
 <svelte:head>
@@ -151,7 +154,7 @@
 					</tbody>
 				</table>
 			</div>
-			<Pagination pager={pager} noun="roles" />
+			<Pagination {pager} noun="roles" />
 		</div>
 	{/if}
 </FounderShell>
