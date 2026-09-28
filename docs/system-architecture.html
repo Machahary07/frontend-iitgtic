@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IITG-TIC System Architecture</title>
+<meta name="description" content="System architecture of the IIT Guwahati TIC platform — visitor, founder and TIC admin flows, verified against the code.">
+<style>
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --surface-2:#f0f2f5; --fg:#16181d; --muted:#5d6270; --border:#dfe2e8;
+  --green:#00B451; --green-soft:#e3f7ec; --blue:#004EBC; --blue-soft:#e4edfb;
+  --amber:#b86e00; --amber-soft:#fdf1dc; --red:#c62f3a; --red-soft:#fbe6e8;
+  --violet:#6a3fc2; --violet-soft:#efe8fc; --shadow:0 1px 2px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.04);
+  --code-bg:#eef0f4;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1115; --surface:#171a20; --surface-2:#1e222a; --fg:#e8eaef; --muted:#9aa1b0; --border:#2b303a;
+    --green:#2fd27a; --green-soft:#12301f; --blue:#6aa2ff; --blue-soft:#15233d;
+    --amber:#f0a93a; --amber-soft:#35270f; --red:#ff6b76; --red-soft:#3a1519;
+    --violet:#b394ff; --violet-soft:#261d3d; --shadow:none; --code-bg:#232833;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1115; --surface:#171a20; --surface-2:#1e222a; --fg:#e8eaef; --muted:#9aa1b0; --border:#2b303a;
+  --green:#2fd27a; --green-soft:#12301f; --blue:#6aa2ff; --blue-soft:#15233d;
+  --amber:#f0a93a; --amber-soft:#35270f; --red:#ff6b76; --red-soft:#3a1519;
+  --violet:#b394ff; --violet-soft:#261d3d; --shadow:none; --code-bg:#232833;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,"Open Sans",sans-serif;overflow-x:hidden}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+code{font:12.5px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code-bg);padding:1px 5px;border-radius:4px;word-break:break-word}
+h1,h2,h3{line-height:1.2;margin:0}
+a{color:var(--blue)}
+
+/* header */
+header{padding:32px 0 20px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
+h1{font-size:clamp(26px,5vw,38px);margin:6px 0 10px;letter-spacing:-.01em}
+.lede{color:var(--muted);max-width:720px;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.chip{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--surface);border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+
+/* nav */
+nav.jump{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+nav.jump .wrap{display:flex;gap:8px;align-items:center;padding-top:8px;padding-bottom:8px}
+.navlinks{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+.navlinks::-webkit-scrollbar{display:none}
+.navlinks a{flex:none;text-decoration:none;color:var(--muted);font-size:13px;font-weight:600;padding:6px 10px;border-radius:8px}
+.navlinks a:hover{background:var(--surface-2);color:var(--fg)}
+.tools{display:flex;gap:4px;flex:none}
+button.tb{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--fg);border-radius:8px;padding:6px 9px;cursor:pointer}
+button.tb:hover{background:var(--surface-2)}
+
+section{padding:28px 0 8px}
+section>h2{font-size:22px;margin-bottom:4px}
+.sub{color:var(--muted);margin:0 0 16px;max-width:760px}
+
+/* architecture layers */
+.layers{display:grid;gap:10px}
+.layer{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px;box-shadow:var(--shadow)}
+.layer-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.layer-h b{font-size:14px}
+.layer-h span{font-size:12px;color:var(--muted)}
+.boxes{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.arrow{text-align:center;color:var(--muted);font-size:12px;line-height:1.3;padding:2px 0}
+.arrow::before{content:"";display:block;width:2px;height:14px;background:var(--border);margin:0 auto 3px}
+.arrow::after{content:"▼";display:block;font-size:10px;color:var(--border);margin-top:1px}
+
+/* dropdowns */
+details.box{border:1px solid var(--border);border-radius:10px;background:var(--surface-2);overflow:hidden}
+details.box>summary{list-style:none;cursor:pointer;padding:10px 34px 10px 12px;position:relative;font-weight:600;font-size:14px}
+details.box>summary::-webkit-details-marker{display:none}
+details.box>summary small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:1px}
+details>summary::after{content:"";position:absolute;right:13px;top:50%;width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-70%) rotate(45deg);transition:transform .15s}
+details[open]>summary::after{transform:translateY(-30%) rotate(-135deg)}
+details.box .body{padding:0 12px 12px;font-size:13.5px}
+.body p{margin:6px 0}
+.body ul{margin:6px 0;padding-left:18px}
+.body li{margin:3px 0}
+.kv{display:grid;grid-template-columns:max-content 1fr;gap:4px 10px;margin:8px 0;font-size:13px}
+.kv dt{color:var(--muted);font-weight:600}
+.kv dd{margin:0;min-width:0}
+
+.box.c-green{border-left:3px solid var(--green)}
+.box.c-blue{border-left:3px solid var(--blue)}
+.box.c-amber{border-left:3px solid var(--amber)}
+.box.c-violet{border-left:3px solid var(--violet)}
+.box.c-red{border-left:3px solid var(--red)}
+
+/* actor legend */
+.actors{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-bottom:6px}
+.actor{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.actor h3{font-size:15px;display:flex;align-items:center;gap:8px}
+.actor p{margin:6px 0 0;font-size:13.5px;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;vertical-align:1px}
+.t-visitor{background:var(--surface-2);color:var(--muted);border:1px solid var(--border)}
+.t-founder{background:var(--green-soft);color:var(--green)}
+.t-member{background:var(--amber-soft);color:var(--amber)}
+.t-admin{background:var(--blue-soft);color:var(--blue)}
+.t-system{background:var(--violet-soft);color:var(--violet)}
+
+/* flow steps */
+.flow{position:relative;display:grid;gap:10px;padding-left:22px}
+.flow::before{content:"";position:absolute;left:9px;top:14px;bottom:14px;width:2px;background:var(--border)}
+details.step{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow)}
+details.step::before{content:attr(data-n);position:absolute;left:-24px;top:11px;width:22px;height:22px;border-radius:50%;background:var(--surface);border:2px solid var(--accent,var(--green));color:var(--accent,var(--green));font-size:11px;font-weight:800;display:grid;place-items:center}
+details.step>summary{list-style:none;cursor:pointer;padding:11px 36px 11px 14px;position:relative}
+details.step>summary::-webkit-details-marker{display:none}
+.st{font-weight:700;font-size:14.5px}
+.sm{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;align-items:center}
+.sm .route{font-size:12px;color:var(--muted)}
+details.step .body{padding:0 14px 14px;font-size:13.5px;border-top:1px dashed var(--border);padding-top:10px}
+.flow.admin{--accent:var(--blue)}
+.flow.member{--accent:var(--amber)}
+.flow.visitor{--accent:var(--muted)}
+.branch{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin:8px 0}
+.branch>div{background:var(--surface-2);border-radius:8px;padding:8px 10px;font-size:13px}
+.branch b{display:block;margin-bottom:2px}
+.ok{color:var(--green)} .no{color:var(--red)} .wait{color:var(--amber)}
+
+/* state machines */
+.lifecycles{display:grid;gap:10px}
+.lc{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.lc h3{font-size:14px;margin-bottom:8px}
+.states{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.s{font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--border);background:var(--surface-2)}
+.s.g{background:var(--green-soft);color:var(--green);border-color:transparent}
+.s.r{background:var(--red-soft);color:var(--red);border-color:transparent}
+.s.a{background:var(--amber-soft);color:var(--amber);border-color:transparent}
+.s.b{background:var(--blue-soft);color:var(--blue);border-color:transparent}
+.to{color:var(--muted);font-size:12px}
+.lc .note{font-size:12.5px;color:var(--muted);margin:8px 0 0}
+
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:560px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+
+.grid2{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.callout{background:var(--amber-soft);border:1px solid color-mix(in srgb,var(--amber) 30%,transparent);border-radius:12px;padding:12px 14px;font-size:13.5px}
+.callout b{color:var(--amber)}
+footer{padding:32px 0 48px;color:var(--muted);font-size:12.5px}
+
+@media (max-width:560px){
+  body{font-size:14.5px}
+  .tools .lbl{display:none}
+  .kv{grid-template-columns:1fr}
+  .kv dt{margin-top:4px}
+  section>h2{font-size:20px}
+}
+@media print{nav.jump{display:none} details>summary::after{display:none}}
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="eyebrow">IIT Guwahati · Technology Incubation Centre</div>
+  <h1>System architecture: user &amp; admin flows</h1>
+  <p class="lede">How visitors, founders, their team members and the TIC admin team move through the platform, from the browser to the SvelteKit server on Vercel and on to Supabase. This was checked against the source (<code>src/routes</code>, <code>src/lib/server</code>, <code>supabase/migrations</code>), not only the README. Tap any card to see the details.</p>
+  <div class="chips">
+    <span class="chip">SvelteKit 2 · Svelte 5</span><span class="chip">Vercel</span><span class="chip">Supabase Postgres · Auth · Storage</span><span class="chip">16 tables · RLS on all</span><span class="chip">4 storage buckets</span><span class="chip">Cloudflare Turnstile</span><span class="chip">Resend email</span><span class="chip">Sarvam AI</span>
+  </div>
+</header>
+
+<nav class="jump" aria-label="Sections">
+  <div class="wrap">
+    <div class="navlinks">
+      <a href="#overview">Overview</a><a href="#actors">Actors</a><a href="#login">Sign-in</a><a href="#visitor">Visitor</a><a href="#founder">Founder</a><a href="#member">Team member</a><a href="#admin">Admin</a><a href="#approvals">Approvals</a><a href="#lifecycles">Statuses</a><a href="#security">Security</a><a href="#data">Data</a><a href="#email">Emails</a>
+    </div>
+    <div class="tools">
+      <button class="tb" type="button" data-act="open" title="Expand all">＋<span class="lbl"> All</span></button>
+      <button class="tb" type="button" data-act="close" title="Collapse all">－<span class="lbl"> All</span></button>
+      <button class="tb" type="button" id="theme" title="Toggle theme">◐</button>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<!-- ============ OVERVIEW ============ -->
+<section id="overview">
+  <h2>High-level architecture</h2>
+  <p class="sub">There are four layers. The browser only ever holds the publishable key, so anything it reads directly has already passed RLS. Every privileged write goes through a server route that holds the service-role key.</p>
+
+  <div class="layers">
+    <div class="layer">
+      <div class="layer-h"><b>① Clients (browser)</b><span>supabase-js with the publishable key</span></div>
+      <div class="boxes">
+        <details class="box"><summary>Anonymous visitor<small>Public pages, jobs, apply, newsletter</small></summary>
+          <div class="body"><p>No account and no cookies beyond what's strictly necessary. <code>hooks.server.ts</code> logs a page view with a throwaway id and deliberately sets no tracking cookie.</p></div></details>
+        <details class="box c-green"><summary>Founder / team member<small>Cookie <code>founder_session</code> + Supabase session</small></summary>
+          <div class="body"><p>Signs in at <code>/login</code> and lands on <code>/founder</code>. Some reads and writes, such as the incubation application, applicant inbox and profile, go straight to Supabase under RLS. Anything gated by approval goes through <code>/api/founder/*</code>.</p></div></details>
+        <details class="box c-blue"><summary>TIC admin<small>Cookie <code>tic_admin_session</code></small></summary>
+          <div class="body"><p>Signs in through the same <code>/login</code> page and lands on <code>/tic-admin</code>. Every console page is server-rendered by <code>+page.server.ts</code>, and every write goes through <code>/api/tic-admin/*</code>.</p></div></details>
+      </div>
+    </div>
+
+    <div class="arrow">HTTPS</div>
+
+    <div class="layer">
+      <div class="layer-h"><b>② Vercel · SvelteKit server</b><span>src/hooks.server.ts → layouts → routes</span></div>
+      <div class="boxes">
+        <details class="box c-violet"><summary>hooks.server.ts<small>Guard, redirects and analytics</small></summary>
+          <div class="body"><ul>
+            <li>It re-validates the session on every <code>/tic-admin/*</code> and <code>/founder/*</code> request and redirects to <code>/login?next=…</code> when the check fails.</li>
+            <li>It sends old URLs to their new homes with a 308 redirect, for example <code>/signup → /apply</code> and <code>/application → /founder/application</code>.</li>
+            <li>It writes one <code>page_views</code> row per HTML GET, using <code>waitUntil</code> so the write doesn't slow the page.</li>
+          </ul></div></details>
+        <details class="box c-violet"><summary>Layouts &amp; page loaders<small>SSR with no client-side fetch flash</small></summary>
+          <div class="body"><ul>
+            <li><code>+layout.server.ts</code> (root) loads <code>site_content</code> and caches it in-process for 60 s. An admin edit clears the cache.</li>
+            <li><code>founder/+layout.server.ts</code> checks the session, lists the founder's companies, picks the active one from a cookie and renews the session (sliding window).</li>
+            <li><code>tic-admin/+layout.server.ts</code> checks for an admin and handles the first-admin bootstrap screen.</li>
+          </ul></div></details>
+        <details class="box c-violet"><summary>API routes <code>/api/*</code><small>31 handlers</small></summary>
+          <div class="body"><ul>
+            <li><b>Public:</b> <code>job-applications</code>, <code>newsletter</code>, <code>turnstile</code>, <code>resend-webhook</code> (Svix-signed)</li>
+            <li><b>Auth / token:</b> <code>session-login</code>, <code>tic-admin-login</code>, <code>founder-welcome</code>, <code>founder-login</code>, <code>application-submitted</code>, <code>account</code></li>
+            <li><b>Founder:</b> <code>founder/companies</code>, <code>founder/jobs</code>, <code>founder/users</code>, <code>founder/profile</code></li>
+            <li><b>Admin:</b> <code>tic-admin/approvals</code>, <code>companies</code>, <code>applications</code>, <code>job-applications</code>, <code>jobs</code>, <code>users</code>, <code>activity</code>, <code>content</code>, <code>storage</code>, <code>email</code>, <code>newsletter</code>, <code>ai</code></li>
+          </ul></div></details>
+        <details class="box c-violet"><summary>Server libraries<small>src/lib/server</small></summary>
+          <div class="body"><ul>
+            <li><code>adminGuard.requireAdmin()</code> and <code>founderGuard.requireFounder()</code> each return a service-role client tagged with <code>x-actor-id</code>, so audit rows record who acted.</li>
+            <li><code>sessionValidation</code> re-reads the auth user and profile on every request, so bans, deletions and role changes take effect immediately.</li>
+            <li><code>rateLimit</code> (a Postgres RPC), <code>turnstile</code>, <code>email</code> (Resend), <code>assistantTools</code> and <code>sarvam</code> (AI).</li>
+          </ul></div></details>
+      </div>
+    </div>
+
+    <div class="arrow">service role (server) · publishable key + RLS (browser)</div>
+
+    <div class="layer">
+      <div class="layer-h"><b>③ Supabase</b><span>Postgres · Auth · Storage</span></div>
+      <div class="boxes">
+        <details class="box c-green"><summary>Postgres<small>16 tables, all with RLS</small></summary>
+          <div class="body"><p>The domain tables are <code>profiles</code>, <code>companies</code>, <code>company_profile_changes</code>, <code>jobs</code>, <code>applications</code> and <code>job_applications</code>. The rest can only be reached with the service role (see <a href="#data">Data</a>). Triggers fill in the audit log and reset a job to pending when a founder edits it.</p></div></details>
+        <details class="box c-green"><summary>Auth<small>Email + password</small></summary>
+          <div class="body"><p>The <code>on_auth_user_created</code> trigger writes the <code>profiles</code> row, so the client never inserts one. Confirmation and reset emails come from Supabase itself and land on <code>/auth/callback</code>.</p></div></details>
+        <details class="box c-green"><summary>Storage<small>2 private + 2 public buckets</small></summary>
+          <div class="body"><ul><li><b>Private:</b> <code>application-documents</code> and <code>job-applications</code> (resumes). Files are shared through 10-minute signed URLs.</li><li><b>Public:</b> <code>site-assets</code> and <code>email-assets</code>. Only admins can write to them.</li></ul></div></details>
+      </div>
+    </div>
+
+    <div class="arrow">outbound from server only</div>
+
+    <div class="layer">
+      <div class="layer-h"><b>④ External services</b><span>All secrets stay server-side</span></div>
+      <div class="boxes">
+        <details class="box c-amber"><summary>Cloudflare Turnstile<small>Bot defence</small></summary>
+          <div class="body"><p>The server re-verifies the Turnstile token on <code>/login</code>, <code>/apply</code> and every role application.</p></div></details>
+        <details class="box c-amber"><summary>Resend<small>Transactional email + webhook</small></summary>
+          <div class="body"><p><code>sendTemplateEmail()</code> never throws. It skips suppressed addresses, checks the plan quota and logs every attempt to <code>email_log</code>. Bounces and complaints come back through <code>/api/resend-webhook</code> and are written to <code>email_suppressions</code>.</p></div></details>
+        <details class="box c-amber"><summary>Sarvam AI<small>Admin assistant</small></summary>
+          <div class="body"><p>It runs a tool loop of up to 6 rounds and streams NDJSON back. It can read the whole console, but edits to content and templates and any email send need the admin's approval.</p></div></details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ACTORS ============ -->
+<section id="actors">
+  <h2>Who uses the system</h2>
+  <p class="sub">There is one sign-in page, and the server assigns one of two roles: <code>admin</code> or <code>founder</code>. A team member is a founder account with a <code>company_id</code> and a <code>member_status</code>.</p>
+  <div class="actors">
+    <div class="actor"><h3><span class="dot" style="background:var(--muted)"></span>Visitor</h3><p>Reads the public site, browses and applies for roles without an account, and subscribes to the newsletter.</p></div>
+    <div class="actor"><h3><span class="dot" style="background:var(--green)"></span>Founder (owner)</h3><p>Registers one or more startups, applies for incubation, posts roles, manages the team and requests changes to company details.</p></div>
+    <div class="actor"><h3><span class="dot" style="background:var(--amber)"></span>Team member</h3><p>Added by a founder. Can use the console for that company once TIC approves them. Cannot manage the team or company details.</p></div>
+    <div class="actor"><h3><span class="dot" style="background:var(--blue)"></span>TIC admin</h3><p>Approves or rejects everything, reviews applications, edits site content and email, manages users and uses the AI assistant.</p></div>
+  </div>
+</section>
+
+<!-- ============ LOGIN ============ -->
+<section id="login">
+  <h2>Shared sign-in flow (“one door”)</h2>
+  <p class="sub">Founders and admins use the same page. The browser never chooses its own role; the server decides which console to open.</p>
+  <div class="flow">
+    <details class="step" data-n="1"><summary><div class="st">Enter credentials + pass Turnstile</div><div class="sm"><span class="tag t-visitor">Browser</span><span class="route"><code>/login</code></span></div></summary>
+      <div class="body"><p><code>appAuth.signIn()</code> calls <code>supabase.auth.signInWithPassword()</code> and gets back an access token.</p></div></details>
+    <details class="step" data-n="2"><summary><div class="st">Server resolves the role</div><div class="sm"><span class="tag t-system">Server</span><span class="route"><code>POST /api/session-login</code></span></div></summary>
+      <div class="body"><dl class="kv">
+        <dt>Rate limit</dt><dd><code>adminLogin</code>: 10 attempts per 15 min per IP</dd>
+        <dt>Checks</dt><dd>Turnstile token, then <code>auth.getUser(token)</code>, then <code>currentAccount()</code>, which rejects banned or deleted accounts and reads <code>profiles.role</code></dd>
+        <dt>On failure</dt><dd>The client signs out of Supabase, so no half-signed-in session is left behind.</dd>
+      </dl></div></details>
+    <details class="step" data-n="3"><summary><div class="st">Issue the signed cookie and redirect</div><div class="sm"><span class="tag t-admin">admin → /tic-admin</span><span class="tag t-founder">founder → /founder</span></div></summary>
+      <div class="body">
+        <div class="branch">
+          <div><b class="ok">role = admin</b>Issues <code>tic_admin_session</code> (HMAC-signed, httpOnly, 30-day sliding window) and clears any founder cookie. Adds an audit row and sends the <code>admin-signin-alert</code> email to the ops inbox.</div>
+          <div><b class="ok">anything else = founder</b>Issues <code>founder_session</code> and clears the admin cookie. Adds an audit row. The browser then calls <code>/api/founder-login</code> for a “welcome back” email, sent at most once every 24 hours.</div>
+        </div>
+        <p>If there is a <code>?next=</code> parameter, the user goes back to the page they came from, provided it is safe.</p>
+      </div></details>
+    <details class="step" data-n="4"><summary><div class="st">Every later request is re-validated</div><div class="sm"><span class="tag t-system">hooks + layout</span></div></summary>
+      <div class="body"><p>The cookie proves who the user is, not what they're allowed to do right now. <code>validatedAdminSession()</code> and <code>validatedFounderSession()</code> re-read the auth user and profile on every request, and an admin who has been demoted is signed out immediately.</p></div></details>
+    <details class="step" data-n="5"><summary><div class="st">Sign out / password reset</div><div class="sm"><span class="route"><code>DELETE /api/session-login</code> · <code>/auth/callback</code> → <code>/auth/reset-password</code></span></div></summary>
+      <div class="body"><p>Signing out clears both cookies and the Supabase session. A reset link goes through <code>/auth/callback</code>, which handles both the implicit flow and PKCE, and then forwards to the page that sets the new password.</p></div></details>
+  </div>
+</section>
+
+<!-- ============ VISITOR ============ -->
+<section id="visitor">
+  <h2>Visitor flow</h2>
+  <p class="sub">Public and anonymous. The public writes (role applications and newsletter sign-ups) go through server routes that are rate-limited, validated and, for applications, protected by Turnstile.</p>
+  <div class="flow visitor">
+    <details class="step" data-n="1"><summary><div class="st">Browse the public site</div><div class="sm"><span class="tag t-visitor">Visitor</span><span class="route"><code>/</code>, <code>/about/*</code>, <code>/incubation</code>, <code>/events</code>, <code>/schemes</code>…</span></div></summary>
+      <div class="body"><p>Copy comes from <code>site_content</code>, falling back to the bundled <code>content.json</code>, and the server renders it. Each view adds a <code>page_views</code> row.</p></div></details>
+    <details class="step" data-n="2"><summary><div class="st">Browse opportunities</div><div class="sm"><span class="route"><code>/opportunities</code> · <code>/tic-jobs</code> · <code>/startup-jobs</code></span></div></summary>
+      <div class="body"><p>This merges the seed posts with live <code>jobs</code>. RLS only shows a job when <code>status = 'approved'</code> <b>and</b> the company is <code>verified</code>.</p></div></details>
+    <details class="step" data-n="3"><summary><div class="st">Apply for a role (no account)</div><div class="sm"><span class="route"><code>/opportunities/[id]</code> → <code>POST /api/job-applications</code></span></div></summary>
+      <div class="body"><ul>
+        <li>Rate limit <code>jobApplication</code>: 10 per hour per IP. The Turnstile token is re-verified with Cloudflare.</li>
+        <li>The server looks up the role itself (a seed post, or a job at a verified company), so the browser can't choose the slug.</li>
+        <li>Uploads the resume to the private <code>job-applications</code> bucket, then inserts the <code>job_applications</code> row.</li>
+        <li>If the same email applies to the same role twice, the unique index rejects it and the visitor sees <b>409 “already applied”</b>.</li>
+        <li>The applicant is sent the <code>job-application-received</code> email.</li>
+      </ul></div></details>
+    <details class="step" data-n="4"><summary><div class="st">Subscribe to the newsletter / unsubscribe</div><div class="sm"><span class="route"><code>POST /api/newsletter</code> · <code>/unsubscribe</code></span></div></summary>
+      <div class="body"><p>Rate-limited to 15 per hour. A repeat address still gets a plain success, so the form can't be used to find out who's on the list. The unsubscribe link in each email is signed and works with one click.</p></div></details>
+    <details class="step" data-n="5"><summary><div class="st">Become a founder</div><div class="sm"><span class="route"><code>/apply</code> → continues in <a href="#founder">Founder flow</a></span></div></summary>
+      <div class="body"><p>Sign-up creates the account. Startups are registered later, inside the console.</p></div></details>
+  </div>
+</section>
+
+<!-- ============ FOUNDER ============ -->
+<section id="founder">
+  <h2>Founder (user) flow</h2>
+  <p class="sub">Founders can register several startups. Nothing a founder writes appears publicly until a TIC admin approves it. Every <code>/api/founder/*</code> call names a <code>companyId</code>, and <code>requireFounder()</code> checks that the caller owns that company or is a member of it.</p>
+  <div class="flow">
+    <details class="step" data-n="1"><summary><div class="st">Sign up</div><div class="sm"><span class="tag t-founder">Founder</span><span class="route"><code>/apply</code></span></div></summary>
+      <div class="body"><ul>
+        <li>Turnstile runs first, then <code>supabase.auth.signUp()</code> with metadata <code>role:'founder'</code>. The trigger creates the <code>profiles</code> row.</li>
+        <li>The browser calls <code>POST /api/founder-welcome</code>, which sends the <code>founder-welcome</code> email with a signed verify link. It also sends a one-time <code>new-applicant-alert</code> to the ops inbox.</li>
+        <li>Clicking the verify link hits <code>/verify-email</code>, which checks the signed token and sets <code>profiles.email_verified = true</code>.</li>
+      </ul></div></details>
+    <details class="step" data-n="2"><summary><div class="st">Sign in → founder console</div><div class="sm"><span class="route"><code>/login</code> → <code>/founder</code></span></div></summary>
+      <div class="body"><p>See <a href="#login">Sign-in</a>. The layout loads the founder's companies, and a company switcher controls which one each page shows (<code>PUT /api/founder/companies</code> sets the active-company cookie).</p></div></details>
+    <details class="step" data-n="3"><summary><div class="st">Register a startup</div><div class="sm"><span class="route"><code>/founder/companies</code> → <code>POST /api/founder/companies</code></span><span class="tag t-member">pending</span></div></summary>
+      <div class="body"><ul>
+        <li>Name, contact person, email and phone are required. A duplicate name for the same owner returns 409.</li>
+        <li>Inserts a <code>companies</code> row with <code>status='pending'</code>, sends the <code>company-signup</code> receipt and adds an audit entry.</li>
+        <li>The company appears in the admin's <a href="#approvals">Approvals → Startups</a> queue.</li>
+      </ul></div></details>
+    <details class="step" data-n="4"><summary><div class="st">Fill in the incubation application</div><div class="sm"><span class="route"><code>/founder/application</code></span><span class="tag t-system">client → Supabase (RLS)</span></div></summary>
+      <div class="body"><ul>
+        <li>An 8-step wizard with 38 questions and 4 document uploads. A draft is kept in <code>localStorage</code> for each user and company.</li>
+        <li>On submit, the browser uploads the files to <code>application-documents</code> and inserts the <code>applications</code> row directly (RLS allows it; <code>status</code> is not in the grant).</li>
+        <li>Then it calls <code>POST /api/application-submitted</code>, which checks ownership and sends one <code>application-received</code> email per application.</li>
+      </ul></div></details>
+    <details class="step" data-n="5"><summary><div class="st">Post a job role</div><div class="sm"><span class="route"><code>/founder/jobs</code> → <code>POST|PATCH|DELETE /api/founder/jobs</code></span></div></summary>
+      <div class="body">
+        <div class="branch">
+          <div><b class="no">Company not verified</b>403: “TIC has not verified this startup yet.”</div>
+          <div><b class="ok">Company verified</b>Creates the job with <code>status='pending'</code> and adds it to the admin's Jobs queue. The apply link must use https, http or mailto.</div>
+        </div>
+        <p>Editing a live role sets it back to <code>pending</code> and clears the review note. Withdrawing a role deletes it. No email is sent; the queue itself tells TIC there's something to review.</p>
+      </div></details>
+    <details class="step" data-n="6"><summary><div class="st">Read applicants</div><div class="sm"><span class="route"><code>/founder/applicants</code></span><span class="tag t-system">client → Supabase (RLS)</span></div></summary>
+      <div class="body"><p>A verified company reads its own <code>job_applications</code> slice through a <code>my_company_ids()</code> policy. TIC's <code>review_note</code> and <code>reviewed_at</code> are hidden by a column grant. Founders see signed resume links and can export to CSV, but only TIC can change an applicant's status.</p></div></details>
+    <details class="step" data-n="7"><summary><div class="st">Add team members</div><div class="sm"><span class="route"><code>/founder/users</code> → <code>POST|DELETE /api/founder/users</code></span><span class="tag t-founder">owner only</span></div></summary>
+      <div class="body"><p><code>requireCompanyOwner()</code> applies here. The server creates the auth user through the admin API with <code>company_id</code> set and <code>member_status='pending'</code>. Removing a member deletes their login too. Owners can't remove themselves. See <a href="#member">Team member flow</a>.</p></div></details>
+    <details class="step" data-n="8"><summary><div class="st">Request a change to company details</div><div class="sm"><span class="route"><code>/founder/settings</code> → <code>POST|DELETE /api/founder/profile</code></span><span class="tag t-founder">owner only</span></div></summary>
+      <div class="body"><p>Founders can't write company details directly (the grant was revoked). Only the fields that actually changed are queued in <code>company_profile_changes</code>, and a new request replaces any pending one. The owner can withdraw a request while it's still pending.</p></div></details>
+    <details class="step" data-n="9"><summary><div class="st">Track outcomes &amp; activity</div><div class="sm"><span class="route"><code>/founder</code> · <code>/founder/activity</code> · <code>/founder/support</code></span></div></summary>
+      <div class="body"><p>The overview shows what's live, what's queued and what came back, including rejection reasons. Activity reads <code>audit_log</code>, filtered to this startup's people and TIC's decisions on it.</p></div></details>
+    <details class="step" data-n="10"><summary><div class="st">Delete a company / close the account</div><div class="sm"><span class="route"><code>DELETE /api/founder/companies</code> · <code>DELETE /api/account</code></span></div></summary>
+      <div class="body"><p>Deleting a company also deletes its jobs (cascade). Incubation applications and applicants are kept, with the company link set to null, so TIC's records survive. Closing the account deletes the auth user and clears both cookies.</p></div></details>
+  </div>
+</section>
+
+<!-- ============ MEMBER ============ -->
+<section id="member">
+  <h2>Team member flow</h2>
+  <p class="sub">A team member only has access to a company after TIC approves them. A founder can't grant console access on their own.</p>
+  <div class="flow member">
+    <details class="step" data-n="1"><summary><div class="st">Account created by the founder</div><div class="sm"><span class="tag t-founder">Founder</span><span class="tag t-member">pending</span></div></summary>
+      <div class="body"><p>The account is created with the email already confirmed and a password the founder sets. <code>profiles.company_id</code> is set and <code>member_status='pending'</code>.</p></div></details>
+    <details class="step" data-n="2"><summary><div class="st">Member signs in → waiting screen</div><div class="sm"><span class="route"><code>/login</code> → <code>/founder</code></span></div></summary>
+      <div class="body"><p>The layout returns <code>memberStatus</code>. <code>listMyCompanies()</code> only includes a membership whose status is <code>approved</code>, so until then the console shows a waiting screen.</p></div></details>
+    <details class="step" data-n="3"><summary><div class="st">TIC decides</div><div class="sm"><span class="tag t-admin">Admin</span><span class="route">Approvals → Team members</span></div></summary>
+      <div class="body"><div class="branch">
+        <div><b class="ok">Approved</b>The company appears in the member's switcher. They can post jobs, read applicants and fill in the application.</div>
+        <div><b class="no">Refused</b>The member stays locked out, and the founder can see the outcome.</div>
+      </div><p>Members still can't manage the team or company details, because those need <code>relation = 'owner'</code>.</p></div></details>
+  </div>
+</section>
+
+<!-- ============ ADMIN ============ -->
+<section id="admin">
+  <h2>TIC admin flow</h2>
+  <p class="sub">Every page is server-rendered. Every write goes through <code>requireAdmin()</code>, which returns a service-role client tagged with the admin's id, so the audit trail names the person who made the change.</p>
+  <div class="flow admin">
+    <details class="step" data-n="0"><summary><div class="st">First-run bootstrap (once)</div><div class="sm"><span class="route"><code>/tic-admin/login</code> → <code>POST /api/tic-admin-login</code></span></div></summary>
+      <div class="body"><p>This only works while there are no admins. It checks <code>TIC_ADMIN_PASSWORD</code> with a constant-time digest comparison, creates the user and promotes it with the service role. If the admin count can't be read, bootstrap is refused, so a misconfigured key can't reopen it.</p></div></details>
+    <details class="step" data-n="1"><summary><div class="st">Sign in → overview</div><div class="sm"><span class="tag t-admin">Admin</span><span class="route"><code>/login</code> → <code>/tic-admin</code></span></div></summary>
+      <div class="body"><p>The overview shows stat tiles and counts of what's waiting in each queue. The sign-in sends an <code>admin-signin-alert</code> email.</p></div></details>
+    <details class="step" data-n="2"><summary><div class="st">Work the approval queues</div><div class="sm"><span class="route"><code>/tic-admin/approvals</code> → <code>PATCH /api/tic-admin/approvals</code></span></div></summary>
+      <div class="body"><p>A single endpoint takes <code>{ kind: company | job | member | profile, id, decision: approve | reject, note }</code>. See <a href="#approvals">Approvals loop</a>.</p></div></details>
+    <details class="step" data-n="3"><summary><div class="st">Moderate companies</div><div class="sm"><span class="route"><code>/tic-admin/companies</code> → <code>PATCH|DELETE /api/tic-admin/companies</code></span></div></summary>
+      <div class="body"><p>Verify, reject with a reason, revert to pending or delete. Verifying or rejecting emails the company (<code>company-verified</code> / <code>company-rejected</code>). Reverting to pending sends nothing. Deleting a company keeps the founder's login.</p></div></details>
+    <details class="step" data-n="4"><summary><div class="st">Review incubation applications</div><div class="sm"><span class="route"><code>/tic-admin/applications/[id]</code> → <code>PATCH|DELETE /api/tic-admin/applications</code></span></div></summary>
+      <div class="body"><p>Moves an application from <code>submitted</code> to <code>under-review</code> and then to <code>accepted</code> or <code>rejected</code>. Admins can add a message for the applicant and a private review note. Documents open through 10-minute signed URLs. Deleting an application removes its files first.</p></div></details>
+    <details class="step" data-n="5"><summary><div class="st">Process role applicants</div><div class="sm"><span class="route"><code>/tic-admin/job-applications</code> → <code>GET|PATCH|POST|DELETE</code></span></div></summary>
+      <div class="body"><p>Moves an applicant from <code>new</code> to <code>shortlisted</code> or <code>forwarded</code> (sent to the company), or to <code>rejected</code>. Each change emails the applicant. <code>GET</code> returns full records for the CSV export, and <code>POST ?jobSlug=</code> clears a closed role, deleting the resumes first.</p></div></details>
+    <details class="step" data-n="6"><summary><div class="st">Manage jobs &amp; users</div><div class="sm"><span class="route"><code>/tic-admin/jobs</code> · <code>/tic-admin/users</code></span></div></summary>
+      <div class="body"><ul>
+        <li><b>Jobs:</b> take down any role that a company posted.</li>
+        <li><b>Users:</b> change a role (founder ⇄ admin), suspend (ban), send a reset email, delete, or create a new admin. The last remaining admin can't be demoted, and admins can't demote themselves.</li>
+      </ul></div></details>
+    <details class="step" data-n="7"><summary><div class="st">Edit site content &amp; media</div><div class="sm"><span class="route"><code>/tic-admin/content/[...key]</code> · <code>/tic-admin/storage</code></span></div></summary>
+      <div class="body"><p>A schema-driven editor for every section, which writes to <code>site_content</code> (<code>PUT</code> to save, <code>DELETE</code> to reset). Images upload to <code>site-assets</code>. The storage console marks each object as in use or unused and returns 409 if you try to delete a file that's still referenced.</p></div></details>
+    <details class="step" data-n="8"><summary><div class="st">Email: templates, log, suppressions, newsletter</div><div class="sm"><span class="route"><code>/tic-admin/email</code> · <code>/email/templates/[key]</code></span></div></summary>
+      <div class="body"><p>A block-based template editor with live preview, test sends, on/off toggles and reset to the default. The page also shows the delivery log with previews, plan usage, suppressed addresses (which can be lifted) and the subscriber export.</p></div></details>
+    <details class="step" data-n="9"><summary><div class="st">AI assistant</div><div class="sm"><span class="route"><code>/tic-admin/ai</code> → <code>/api/tic-admin/ai</code> · <code>/ai/apply</code> · <code>/ai/conversations</code></span></div></summary>
+      <div class="body"><ul>
+        <li>21 tools. It can <b>read</b> all console data.</li>
+        <li>It can <b>write</b> site content and email templates. These edits need approval in Review mode and run automatically in Auto mode.</li>
+        <li>It can <b>send</b> email with <code>send_email</code> and <code>send_newsletter</code>. Sending <b>always</b> needs explicit approval.</li>
+        <li>Approving a proposal runs the same tool through <code>/ai/apply</code>. Chats are saved in <code>assistant_conversations</code>.</li>
+      </ul></div></details>
+    <details class="step" data-n="10"><summary><div class="st">Audit &amp; analytics</div><div class="sm"><span class="route"><code>/tic-admin/activity</code></span></div></summary>
+      <div class="body"><p><code>audit_log</code> shows before and after diffs from both triggers and <code>logAdminAction</code> / <code>logFounderAction</code> calls, alongside page impressions for 7 days, 30 days or all time.</p></div></details>
+  </div>
+</section>
+
+<!-- ============ APPROVALS ============ -->
+<section id="approvals">
+  <h2>Founder ↔ admin approval loop</h2>
+  <p class="sub">There are four queues. Each is filled by a founder action and cleared by an admin decision in <code>PATCH /api/tic-admin/approvals</code>.</p>
+  <div class="grid2">
+    <details class="box c-green" open><summary>1 · New startups<small>companies.status</small></summary>
+      <div class="body"><p><b>Founder:</b> <code>POST /api/founder/companies</code> → <span class="s a">pending</span></p><p><b>Admin:</b> approve → <span class="s g">verified</span> · reject + reason → <span class="s r">rejected</span></p><p>This is the first gate. An unverified company can't post roles.</p></div></details>
+    <details class="box c-blue" open><summary>2 · Job postings<small>jobs.status</small></summary>
+      <div class="body"><p><b>Founder:</b> post or edit → <span class="s a">pending</span></p><p><b>Admin:</b> <span class="s g">approved</span> (public) · <span class="s r">rejected</span> + a note the founder can read</p><p>A job is public only when it is approved <b>and</b> its company is verified.</p></div></details>
+    <details class="box c-amber" open><summary>3 · Team members<small>profiles.member_status</small></summary>
+      <div class="body"><p><b>Founder:</b> <code>POST /api/founder/users</code> → <span class="s a">pending</span></p><p><b>Admin:</b> <span class="s g">approved</span> (the company unlocks) · <span class="s r">rejected</span></p></div></details>
+    <details class="box c-violet" open><summary>4 · Company detail changes<small>company_profile_changes</small></summary>
+      <div class="body"><p><b>Founder:</b> <code>POST /api/founder/profile</code> → <span class="s a">pending</span></p><p><b>Admin:</b> approving writes the changes to <code>companies</code>, and a new name is copied to every posting. Rejecting leaves the company unchanged.</p></div></details>
+  </div>
+  <p class="sub" style="margin-top:12px">Founders see each decision the next time a page loads, because the layout re-reads companies on every request. The <code>approvals</code> endpoint sends <b>no email</b>. Only the Companies screen sends the verified or rejected email.</p>
+</section>
+
+<!-- ============ LIFECYCLES ============ -->
+<section id="lifecycles">
+  <h2>Status lifecycles</h2>
+  <p class="sub">Only the server (service role) can change these columns. Moving a record back to its first state sends no email.</p>
+  <div class="lifecycles">
+    <div class="lc"><h3>Company</h3><div class="states"><span class="s a">pending</span><span class="to">→</span><span class="s g">verified</span><span class="to">/</span><span class="s r">rejected</span></div></div>
+    <div class="lc"><h3>Job posting</h3><div class="states"><span class="s a">pending</span><span class="to">→</span><span class="s g">approved</span><span class="to">/</span><span class="s r">rejected</span><span class="to">· a founder edit →</span><span class="s a">pending</span></div></div>
+    <div class="lc"><h3>Team member</h3><div class="states"><span class="s a">pending</span><span class="to">→</span><span class="s g">approved</span><span class="to">/</span><span class="s r">rejected</span></div></div>
+    <div class="lc"><h3>Incubation application</h3><div class="states"><span class="s">submitted</span><span class="to">→</span><span class="s b">under-review</span><span class="to">→</span><span class="s g">accepted</span><span class="to">/</span><span class="s r">rejected</span></div><p class="note">Every move except back to “submitted” emails the applicant.</p></div>
+    <div class="lc"><h3>Role applicant</h3><div class="states"><span class="s">new</span><span class="to">→</span><span class="s b">shortlisted</span><span class="to">→</span><span class="s g">forwarded</span><span class="to">/</span><span class="s r">rejected</span></div><p class="note">Every move except back to “new” emails the applicant.</p></div>
+  </div>
+</section>
+
+<!-- ============ SECURITY ============ -->
+<section id="security">
+  <h2>Security &amp; guards</h2>
+  <p class="sub">Several layers of protection, from the edge down to the database.</p>
+  <div class="grid2">
+    <details class="box c-red"><summary>Sessions<small>Signed cookies re-checked every request</small></summary>
+      <div class="body"><p>Cookies are HMAC-SHA256 signed, httpOnly, <code>sameSite=lax</code> and secure in production. The signature is compared in constant time. Sessions last 30 days and slide forward on each visit. Every request calls <code>currentAccount()</code>, so a ban, deletion or role change applies immediately.</p></div></details>
+    <details class="box c-red"><summary>Route guards<small>requireAdmin / requireFounder / requireCompanyOwner</small></summary>
+      <div class="body"><p>A founder's <code>companyId</code> is never trusted. It is checked against the companies they own or belong to. “Not found” and “not yours” both return the same 403, so founders can't probe for ids.</p></div></details>
+    <details class="box c-red"><summary>Row Level Security<small>All 16 tables</small></summary>
+      <div class="body"><p>The browser can only read what RLS allows. Status and moderation columns are left out of the grants. Ten tables have RLS turned on with <b>no policies at all</b>, so only the service role can reach them.</p></div></details>
+    <details class="box c-red"><summary>Bot &amp; abuse controls<small>Turnstile + Postgres rate limits</small></summary>
+      <div class="body"><ul>
+        <li><code>jobApplication</code> 10/h · <code>applicationReceipt</code> 10/h · <code>founderWelcome</code> 8/h</li>
+        <li><code>founderLogin</code> 20/h · <code>adminLogin</code> 10/15 min · <code>turnstile</code> 30/10 min · <code>newsletter</code> 15/h</li>
+      </ul></div></details>
+    <details class="box c-red"><summary>Email safety<small>Recipients come from the server</small></summary>
+      <div class="body"><p>Endpoints that send receipts read the recipient from the stored row, not the request body, so they can't be used to email arbitrary addresses. The Resend webhook checks the Svix signature with a 5-minute window before it parses the body.</p></div></details>
+    <details class="box c-red"><summary>Audit trail<small>x-actor-id → trigger</small></summary>
+      <div class="body"><p>Every service-role client sends an <code>x-actor-id</code> header, which the audit trigger reads. Readable intent (“verified Northeast Robotics”) is logged next to each row change.</p></div></details>
+  </div>
+</section>
+
+<!-- ============ DATA ============ -->
+<section id="data">
+  <h2>Data layer</h2>
+  <p class="sub">Tables from <code>supabase/migrations</code> and who can reach each one.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Table</th><th>Holds</th><th>Access</th></tr></thead>
+    <tbody>
+      <tr><td><code>profiles</code></td><td>One row per auth user: role, company_id, member_status, email_verified</td><td>Own row + team; role and status columns only by the service role</td></tr>
+      <tr><td><code>companies</code></td><td>Startups: owner_id, status, rejection_reason, contact details</td><td>Owned or member; status only by the service role</td></tr>
+      <tr><td><code>company_profile_changes</code></td><td>Queued changes to company details</td><td>Company reads; the service role writes</td></tr>
+      <tr><td><code>jobs</code></td><td>Job postings with their approval state</td><td>Public if approved and verified; every write by the service role</td></tr>
+      <tr><td><code>applications</code></td><td>Incubation applications (38 answers + documents)</td><td>Founder inserts and reads their own; status only by the service role</td></tr>
+      <tr><td><code>job_applications</code></td><td>Role applicants + resume path</td><td>The service role writes; a verified company reads its own</td></tr>
+      <tr><td><code>site_content</code></td><td>Editable copy for public pages</td><td>Service role only</td></tr>
+      <tr><td><code>audit_log</code> · <code>page_views</code></td><td>Audit trail · analytics</td><td>Service role only</td></tr>
+      <tr><td><code>email_templates</code> · <code>email_log</code> · <code>email_events</code> · <code>email_suppressions</code></td><td>Email system</td><td>Service role only</td></tr>
+      <tr><td><code>newsletter_subscribers</code> · <code>rate_limits</code> · <code>assistant_conversations</code></td><td>Newsletter · rate-limit counters · AI chats</td><td>Service role only</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ EMAIL ============ -->
+<section id="email">
+  <h2>Email triggers</h2>
+  <p class="sub">Every email goes through <code>sendTemplateEmail()</code>, which never fails the request that triggered it.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Template</th><th>Sent when</th><th>To</th></tr></thead>
+    <tbody>
+      <tr><td><code>founder-welcome</code></td><td>Sign-up, or the user asks for the link again</td><td>Founder</td></tr>
+      <tr><td><code>new-applicant-alert</code></td><td>First sign-up by an account</td><td>Ops inbox</td></tr>
+      <tr><td><code>founder-login</code></td><td>Founder signs in (at most once per 24 h)</td><td>Founder</td></tr>
+      <tr><td><code>admin-signin-alert</code></td><td>Admin signs in</td><td>Ops inbox</td></tr>
+      <tr><td><code>company-signup</code></td><td>Startup registered</td><td>Founder</td></tr>
+      <tr><td><code>company-verified</code> / <code>-rejected</code></td><td>Companies screen decision</td><td>Company contact</td></tr>
+      <tr><td><code>application-received</code></td><td>Incubation application submitted</td><td>Applicant</td></tr>
+      <tr><td><code>application-under-review</code> / <code>-accepted</code> / <code>-rejected</code></td><td>Admin moves the application</td><td>Applicant</td></tr>
+      <tr><td><code>job-application-received</code></td><td>Role application submitted</td><td>Applicant</td></tr>
+      <tr><td><code>job-applicant-shortlisted</code> / <code>-forwarded</code> / <code>-rejected</code></td><td>Admin moves the applicant</td><td>Applicant</td></tr>
+      <tr><td>Newsletter / one-off</td><td>Sent by the AI assistant (after approval)</td><td>Subscribers / chosen people</td></tr>
+    </tbody>
+  </table></div>
+
+  <div style="margin-top:14px">
+    <details class="box c-amber"><summary>Where the README is out of date<small>Found while checking the code</small></summary>
+      <div class="body"><ul>
+        <li>The README lists <code>/api/company-account</code>, which doesn't exist. The real routes are <code>/api/account</code> (DELETE), <code>/api/founder-*</code>, <code>/api/application-submitted</code> and <code>/api/tic-admin/approvals</code>, and none of them are in the API table.</li>
+        <li>It says the admin cookie lasts 8 hours. In the code it lasts <b>30 days</b> and slides forward on each visit.</li>
+        <li>Its diagram says <code>hooks.server.ts</code> sets a “visitor cookie”. The code sets <b>no</b> tracking cookie.</li>
+        <li>It says the AI assistant only writes content. It also has <code>send_email</code> and <code>send_newsletter</code>, both of which need approval.</li>
+        <li>It counts 14 or 15 tables. The migrations define <b>16</b>, including <code>assistant_conversations</code>.</li>
+        <li>The Permissions section still describes a separate “Company” role. In the code, every non-admin account is a founder.</li>
+      </ul></div></details>
+  </div>
+</section>
+
+</main>
+
+<footer class="wrap">Generated from the <code>frontend-iitgtic</code> source tree · September 2026.</footer>
+
+<script>
+document.querySelectorAll('[data-act]').forEach(function(b){
+  b.addEventListener('click',function(){
+    var open=b.getAttribute('data-act')==='open';
+    document.querySelectorAll('main details').forEach(function(d){d.open=open;});
+  });
+});
+(function(){
+  var root=document.documentElement, key='arch-theme';
+  try{var saved=localStorage.getItem(key); if(saved) root.setAttribute('data-theme',saved);}catch(e){}
+  document.getElementById('theme').addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    var next=cur==='dark'?'light':'dark';
+    root.setAttribute('data-theme',next);
+    try{localStorage.setItem(key,next);}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>
