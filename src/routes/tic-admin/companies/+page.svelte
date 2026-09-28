@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Pager } from '$lib/utils/pager.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
@@ -87,6 +89,12 @@
 			year: 'numeric'
 		});
 	}
+
+	// A page at a time; back to the first page whenever the view changes.
+	const pager = new Pager(
+		() => filtered,
+		() => [filter]
+	);
 </script>
 
 <svelte:head>
@@ -146,7 +154,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each filtered as company (company.id)}
+						{#each pager.rows as company (company.id)}
 							<tr>
 								<td>
 									<p class="cell__name">{company.companyName}</p>
@@ -213,6 +221,7 @@
 					</tbody>
 				</table>
 			</div>
+			<Pagination {pager} noun="companies" />
 		{/if}
 	</div>
 </AdminShell>

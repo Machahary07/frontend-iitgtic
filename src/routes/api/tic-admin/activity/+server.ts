@@ -6,6 +6,18 @@ import type { RequestHandler } from './$types';
 // policies, so this service-role route is the only way to see them.
 
 const PAGE_SIZE = 100;
+const MAX_PAGE_SIZE = 100;
+
+// ?page=&size= asks for one numbered page and the total, for the console's
+// pagination bar. Without them the older cursor form (?before=) still works.
+function pageOf(url: URL): { from: number; to: number } | null {
+	const page = Number(url.searchParams.get('page'));
+	if (!Number.isInteger(page) || page < 1) return null;
+	const raw = Number(url.searchParams.get('size'));
+	const size = Number.isInteger(raw) && raw > 0 ? Math.min(raw, MAX_PAGE_SIZE) : 25;
+	const from = (page - 1) * size;
+	return { from, to: from + size - 1 };
+}
 
 export const GET: RequestHandler = async ({ cookies, url }) => {
 	const ctx = await requireAdmin(cookies);
@@ -13,21 +25,43 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 	const view = url.searchParams.get('view') ?? 'audit';
 	const before = url.searchParams.get('before');
 
+	const paged = pageOf(url);
+
 	if (view === 'audit') {
 		let query = ctx.db
 			.from('audit_log')
-			.select('id, occurred_at, source, actor_id, actor_label, action, table_name, record_id, before, after')
-			.order('id', { ascending: false })
-			.limit(PAGE_SIZE);
+			.select(
+				'id, occurred_at, source, actor_id, actor_label, action, table_name, record_id, before, after',
+				paged ? { count: 'exact' } : undefined
+			)
+			.order('id', { ascending: false });
 
-		if (before) query = query.lt('id', Number(before));
+		query = paged ? query.range(paged.from, paged.to) : query.limit(PAGE_SIZE);
+		if (before && !paged) query = query.lt('id', Number(before));
 
 		const table = url.searchParams.get('table');
 		if (table && table !== 'all') query = query.eq('table_name', table);
 
-		const { data, error: dbError } = await query;
+		const { data, error: dbError, count } = await query;
 		if (dbError) error(500, dbError.message);
-		return json({ entries: data ?? [] });
+		return json({ entries: data ?? [], total: count ?? null });
+	}
+
+	if (view === 'visits') {
+		const range = paged ?? { from: 0, to: 24 };
+		const {
+			data,
+			error: dbError,
+			count
+		} = await ctx.db
+			.from('page_views')
+			.select('id, occurred_at, path, visitor_id, actor_label, is_admin, referrer, status', {
+				count: 'exact'
+			})
+			.order('id', { ascending: false })
+			.range(range.from, range.to);
+		if (dbError) error(500, dbError.message);
+		return json({ visits: data ?? [], total: count ?? 0 });
 	}
 
 	if (view === 'impressions') {

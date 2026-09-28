@@ -2,8 +2,8 @@ import { error } from '@sveltejs/kit';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
-import { type AdminSession } from '$lib/server/ticAdminSession';
-import { validatedAdminSession } from '$lib/server/sessionValidation';
+import { validatedAdminSession, type ConsoleSession } from '$lib/server/sessionValidation';
+import { roleLabel } from '$lib/utils/roles';
 import type { Cookies } from '@sveltejs/kit';
 
 // Every admin route starts here: it proves the caller is a signed-in admin and
@@ -13,9 +13,21 @@ import type { Cookies } from '@sveltejs/kit';
 // the person who clicked, not to "service role".
 
 export type AdminContext = {
-	admin: AdminSession;
+	admin: ConsoleSession;
 	db: SupabaseClient;
 };
+
+// While a developer views as someone, the change is still theirs: the audit
+// trail names the person at the keyboard, not the account on screen.
+export function actorId(admin: Pick<ConsoleSession, 'userId' | 'actor'>): string {
+	return admin.actor?.userId ?? admin.userId;
+}
+
+export function actorLabel(admin: ConsoleSession): string {
+	const who = `${admin.name || admin.email} (${roleLabel(admin.role)})`;
+	if (!admin.actor) return who;
+	return `${admin.actor.name || admin.actor.email} (${roleLabel(admin.actor.role)}, viewing as ${who})`;
+}
 
 export async function requireAdmin(cookies: Cookies): Promise<AdminContext> {
 	const admin = await validatedAdminSession(cookies);
@@ -23,7 +35,7 @@ export async function requireAdmin(cookies: Cookies): Promise<AdminContext> {
 
 	const db: SupabaseClient = createClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 		auth: { autoRefreshToken: false, persistSession: false },
-		global: { headers: { 'x-actor-id': admin.userId } }
+		global: { headers: { 'x-actor-id': actorId(admin) } }
 	});
 
 	return { admin, db };
@@ -38,8 +50,8 @@ export async function logAdminAction(
 ): Promise<void> {
 	await ctx.db.from('audit_log').insert({
 		source: 'app',
-		actor_id: ctx.admin.userId,
-		actor_label: `${ctx.admin.name || ctx.admin.email} (admin)`,
+		actor_id: actorId(ctx.admin),
+		actor_label: actorLabel(ctx.admin),
 		action,
 		table_name: details.table ?? null,
 		record_id: details.recordId ?? null,

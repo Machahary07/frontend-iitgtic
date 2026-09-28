@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { phoneInput } from '$lib/utils/phone';
 	import { page } from '$app/state';
 	import { getContent } from '$lib/content';
 	import { getJob, type AnyJob } from '$lib/utils/jobPostings';
@@ -265,7 +266,7 @@
 								<span class="field__label">
 									<span class="field__name">Phone <span class="opt">(optional)</span></span>
 								</span>
-								<input type="tel" bind:value={phone} autocomplete="tel" />
+								<input type="tel" bind:value={phone} autocomplete="tel" use:phoneInput />
 							</label>
 
 							<label class="field" class:has-error={errors.currentRole}>

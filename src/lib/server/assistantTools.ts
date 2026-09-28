@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { ACCOUNT_ROLES, canOpen, type ConsoleSection } from '$lib/utils/roles';
 import { getSection, getSiteContent, invalidateSiteContent } from '$lib/server/siteContent';
 import { logAdminAction, type AdminContext } from '$lib/server/adminGuard';
 import {
@@ -40,8 +41,7 @@ import fallback from '$lib/data/content.json';
  *  an email, `html` is the rendered message the admin sees instead of the raw
  *  before/after — reviewing markup is no way to approve a mail. */
 export type ToolPreview =
-	| { summary: string; before: unknown; after: unknown; html?: string }
-	| { error: string };
+	{ summary: string; before: unknown; after: unknown; html?: string } | { error: string };
 
 export type ToolDef = {
 	name: string;
@@ -51,11 +51,7 @@ export type ToolDef = {
 	label: (args: Record<string, unknown>) => string;
 	// ctx is the acting admin, needed by the write tools to stamp updated_by and
 	// log the action. Read tools ignore it and use only db.
-	run: (
-		db: SupabaseClient,
-		args: Record<string, unknown>,
-		ctx: AdminContext
-	) => Promise<unknown>;
+	run: (db: SupabaseClient, args: Record<string, unknown>, ctx: AdminContext) => Promise<unknown>;
 	/** True for tools that change data. In manual-approval mode these are not run
 	 *  in the loop — they are previewed and applied only once the admin approves. */
 	write?: boolean;
@@ -146,7 +142,8 @@ async function resolveEmailEdit(args: Record<string, unknown>): Promise<EmailEdi
 	if (!def) return { error: `No template with key "${key}". Call list_email_templates first.` };
 	if (key === EMAIL_LAYOUT_KEY) {
 		return {
-			error: 'The shared email layout is structural — it is edited by hand in the Email screen, not here.'
+			error:
+				'The shared email layout is structural — it is edited by hand in the Email screen, not here.'
 		};
 	}
 
@@ -482,22 +479,25 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 	{
 		name: 'list_users',
 		description:
-			'Account profiles. Role is founder, company or admin. Use it for questions about who has access to what.',
+			'Account profiles. Role is founder, or one of the TIC staff roles: developer, admin, tic_admin, tic_ceo, tic_chairman, tic_coordinator, tic_head, tic_president. Use it for questions about who has access to what.',
 		parameters: {
 			type: 'object',
 			properties: {
-				role: { type: 'string', enum: ['founder', 'company', 'admin'] },
+				role: { type: 'string', enum: ACCOUNT_ROLES },
 				search: { type: 'string', description: 'Matches name or email.' },
 				limit: { type: 'integer', description: 'Default 25, maximum 200.' }
 			}
 		},
 		label: () => 'Reading user accounts',
-		run: async (db, args) => {
+		run: async (db, args, ctx) => {
 			let query = db
 				.from('profiles')
 				.select('id, role, full_name, email, created_at')
 				.order('created_at', { ascending: false })
 				.limit(limitOf(args));
+
+			// Developer accounts are only visible to developers, here as on screen.
+			if (ctx.admin.role !== 'developer') query = query.neq('role', 'developer');
 
 			const role = textOf(args, 'role');
 			if (role) query = query.eq('role', role);
@@ -900,7 +900,7 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 	{
 		name: 'update_email_template',
 		description:
-			"Edit one transactional email template — its subject line, its content blocks, or whether it is switched on. Read it first with get_email_template to see the current blocks and the {{variables}} it uses. To change the wording, send back the whole blocks list with your edits, keeping every {{variable}} the template needs. Takes effect on future sends; audited and reversible from Activity. The shared layout is not editable here.",
+			'Edit one transactional email template — its subject line, its content blocks, or whether it is switched on. Read it first with get_email_template to see the current blocks and the {{variables}} it uses. To change the wording, send back the whole blocks list with your edits, keeping every {{variable}} the template needs. Takes effect on future sends; audited and reversible from Activity. The shared layout is not editable here.',
 		parameters: {
 			type: 'object',
 			properties: {
@@ -1024,7 +1024,11 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 		write: true,
 		confirmAlways: true,
 		preview: async (db, args) => {
-			const edit = await resolveEmailEdit({ key: 'newsletter', subject: args.subject, blocks: args.blocks });
+			const edit = await resolveEmailEdit({
+				key: 'newsletter',
+				subject: args.subject,
+				blocks: args.blocks
+			});
 			if ('error' in edit) return edit;
 
 			const { count } = await db
@@ -1041,7 +1045,11 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			};
 		},
 		run: async (db, args, ctx) => {
-			const edit = await resolveEmailEdit({ key: 'newsletter', subject: args.subject, blocks: args.blocks });
+			const edit = await resolveEmailEdit({
+				key: 'newsletter',
+				subject: args.subject,
+				blocks: args.blocks
+			});
 			if ('error' in edit) return edit;
 
 			// The blast sends the saved newsletter template, so store the composed
@@ -1091,9 +1099,13 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 				else failed += 1;
 			}
 
-			await logAdminAction(ctx, `sent the newsletter to ${sent} of ${recipients.length} subscriber(s)`, {
-				table: 'newsletter_subscribers'
-			});
+			await logAdminAction(
+				ctx,
+				`sent the newsletter to ${sent} of ${recipients.length} subscriber(s)`,
+				{
+					table: 'newsletter_subscribers'
+				}
+			);
 
 			return { ok: true, recipients: recipients.length, sent, blocked, failed };
 		}
@@ -1126,12 +1138,20 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 		confirmAlways: true,
 		preview: async (_db, args) => {
 			const recipients = recipientsOf(args.to);
-			if (recipients.length === 0) return { error: 'At least one valid recipient email is required.' };
+			if (recipients.length === 0)
+				return { error: 'At least one valid recipient email is required.' };
 			if (recipients.length > 100) {
-				return { error: 'Too many recipients for a direct email (max 100). Use send_newsletter for the whole list.' };
+				return {
+					error:
+						'Too many recipients for a direct email (max 100). Use send_newsletter for the whole list.'
+				};
 			}
 
-			const edit = await resolveEmailEdit({ key: 'direct-message', subject: args.subject, blocks: args.blocks });
+			const edit = await resolveEmailEdit({
+				key: 'direct-message',
+				subject: args.subject,
+				blocks: args.blocks
+			});
 			if ('error' in edit) return edit;
 
 			return {
@@ -1146,12 +1166,20 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 		},
 		run: async (db, args, ctx) => {
 			const recipients = recipientsOf(args.to);
-			if (recipients.length === 0) return { error: 'At least one valid recipient email is required.' };
+			if (recipients.length === 0)
+				return { error: 'At least one valid recipient email is required.' };
 			if (recipients.length > 100) {
-				return { error: 'Too many recipients for a direct email (max 100). Use send_newsletter for the whole list.' };
+				return {
+					error:
+						'Too many recipients for a direct email (max 100). Use send_newsletter for the whole list.'
+				};
 			}
 
-			const edit = await resolveEmailEdit({ key: 'direct-message', subject: args.subject, blocks: args.blocks });
+			const edit = await resolveEmailEdit({
+				key: 'direct-message',
+				subject: args.subject,
+				blocks: args.blocks
+			});
 			if ('error' in edit) return edit;
 
 			// Stage the composed message on the direct-message template so the send
@@ -1187,9 +1215,13 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 				else failed += 1;
 			}
 
-			await logAdminAction(ctx, `sent a direct email to ${sent} of ${recipients.length} recipient(s)`, {
-				table: 'email_log'
-			});
+			await logAdminAction(
+				ctx,
+				`sent a direct email to ${sent} of ${recipients.length} recipient(s)`,
+				{
+					table: 'email_log'
+				}
+			);
 
 			return { ok: true, recipients: recipients.length, sent, blocked, failed };
 		}
@@ -1207,4 +1239,42 @@ export const TOOL_SCHEMAS = ASSISTANT_TOOLS.map((tool) => ({
 
 export function findTool(name: string): ToolDef | undefined {
 	return ASSISTANT_TOOLS.find((tool) => tool.name === name);
+}
+
+// The console section whose data each tool reads or writes. A role only gets
+// the tools for sections it can open, so the assistant cannot become a way
+// round the sidebar — a CEO's assistant cannot read the user list any more than
+// the CEO can.
+const TOOL_SECTION: Record<string, ConsoleSection> = {
+	console_overview: 'overview',
+	list_companies: 'companies',
+	list_incubation_applications: 'applications',
+	get_incubation_application: 'applications',
+	list_jobs: 'jobs',
+	list_role_applicants: 'job-applications',
+	list_users: 'users',
+	recent_activity: 'activity',
+	traffic_summary: 'activity',
+	list_email_templates: 'email',
+	get_email_template: 'email',
+	recent_emails: 'email',
+	newsletter_subscribers: 'email',
+	list_site_sections: 'content',
+	read_site_section: 'content',
+	update_site_section: 'content',
+	reset_site_section: 'content',
+	update_email_template: 'email',
+	reset_email_template: 'email',
+	send_newsletter: 'email',
+	send_email: 'email'
+};
+
+/** Whether this role may have the assistant run the named tool. */
+export function toolAllowed(role: string, name: string): boolean {
+	const section = TOOL_SECTION[name];
+	return Boolean(section) && canOpen(role, section);
+}
+
+export function toolSchemasFor(role: string) {
+	return TOOL_SCHEMAS.filter((schema) => toolAllowed(role, schema.function.name));
 }

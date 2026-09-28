@@ -1,4 +1,7 @@
 <script lang="ts">
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Pager } from '$lib/utils/pager.svelte';
+	import { phoneInput } from '$lib/utils/phone';
 	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -84,6 +87,12 @@
 		showToast('Deleted.', 'ok');
 		await invalidateAll();
 	}
+
+	// A page at a time; back to the first page whenever the view changes.
+	const pager = new Pager(
+		() => companies,
+		() => []
+	);
 </script>
 
 <svelte:head>
@@ -136,7 +145,7 @@
 			</label>
 			<label class="field">
 				<span>Phone</span>
-				<input type="tel" bind:value={phone} required />
+				<input type="tel" bind:value={phone} required use:phoneInput />
 			</label>
 
 			{#if formError}
@@ -158,7 +167,7 @@
 		</div>
 	{:else}
 		<ul class="list">
-			{#each companies as company (company.id)}
+			{#each pager.rows as company (company.id)}
 				<li class="item" class:item--active={company.id === data.activeCompanyId}>
 					<div class="item__body">
 						<p class="item__name">
@@ -192,6 +201,7 @@
 				</li>
 			{/each}
 		</ul>
+		<Pagination {pager} noun="startups" />
 	{/if}
 </FounderShell>
 

@@ -7,6 +7,8 @@ import { LIMITS, retryMinutes, withinLimit } from '$lib/server/rateLimit';
 import type { RequestHandler } from './$types';
 import { currentAccount } from '$lib/server/sessionValidation';
 import { verifyTurnstile } from '$lib/server/turnstile';
+import { stopViewAs } from '$lib/server/viewAs';
+import { isStaffRole, roleLabel } from '$lib/utils/roles';
 
 // The one door. /login authenticates the credentials with supabase-js and hands
 // the resulting access token here; this route reads the profile, decides which
@@ -26,8 +28,12 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 		);
 	}
 
-	const body = (await request.json().catch(() => ({}))) as { accessToken?: string; captchaToken?: string };
-	if (!(await verifyTurnstile(body.captchaToken, getClientAddress()))) error(400, 'Verification failed. Please try again.');
+	const body = (await request.json().catch(() => ({}))) as {
+		accessToken?: string;
+		captchaToken?: string;
+	};
+	if (!(await verifyTurnstile(body.captchaToken, getClientAddress())))
+		error(400, 'Verification failed. Please try again.');
 	if (!body.accessToken) error(400, 'Missing access token.');
 
 	const { data, error: authError } = await supabaseAdmin.auth.getUser(body.accessToken);
@@ -40,7 +46,10 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 	const { name, email } = profile;
 
 	// --- TIC team ------------------------------------------------------------
-	if (profile?.role === 'admin') {
+	// A fresh sign-in is never still viewing as someone.
+	stopViewAs(cookies);
+
+	if (isStaffRole(profile.role)) {
 		const session = { userId: data.user.id, email, name };
 		issueTicAdminSession(cookies, session);
 		// An admin who also runs a startup would otherwise carry a stale founder
@@ -50,7 +59,7 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 		await supabaseAdmin.from('audit_log').insert({
 			source: 'app',
 			actor_id: session.userId,
-			actor_label: `${name || email} (admin)`,
+			actor_label: `${name || email} (${roleLabel(profile.role)})`,
 			action: 'signed in to the admin console'
 		});
 
@@ -83,6 +92,7 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 };
 
 export const DELETE: RequestHandler = async ({ cookies }) => {
+	stopViewAs(cookies);
 	clearTicAdminSession(cookies);
 	clearFounderSession(cookies);
 	return json({ ok: true });

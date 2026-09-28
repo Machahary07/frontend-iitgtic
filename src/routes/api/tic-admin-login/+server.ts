@@ -11,6 +11,7 @@ import {
 import { LIMITS, retryMinutes, withinLimit } from '$lib/server/rateLimit';
 import type { RequestHandler } from './$types';
 import { currentAccount, validatedAdminSession } from '$lib/server/sessionValidation';
+import { FULL_ADMIN_ROLES, isStaffRole } from '$lib/utils/roles';
 import { verifyTurnstile } from '$lib/server/turnstile';
 
 // GET     current session, plus whether the console still needs its first admin
@@ -34,7 +35,7 @@ async function adminCount(): Promise<number> {
 	const { count, error: countError } = await supabaseAdmin
 		.from('profiles')
 		.select('id', { count: 'exact', head: true })
-		.eq('role', 'admin');
+		.in('role', FULL_ADMIN_ROLES);
 	if (countError) {
 		console.error('[tic-admin] admin lookup failed:', countError);
 		error(503, 'Could not reach the database to check for existing admins.');
@@ -75,7 +76,8 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 		fullName?: string;
 		captchaToken?: string;
 	};
-	if (!(await verifyTurnstile(body.captchaToken, getClientAddress()))) error(400, 'Verification failed. Please try again.');
+	if (!(await verifyTurnstile(body.captchaToken, getClientAddress())))
+		error(400, 'Verification failed. Please try again.');
 
 	// --- bootstrap: only while the console has no admin at all ---------------
 	if (body.bootstrapPassword !== undefined) {
@@ -130,7 +132,7 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 
 	const profile = await currentAccount(data.user.id);
 
-	if (profile?.role !== 'admin') {
+	if (!profile || !isStaffRole(profile.role)) {
 		return json({ ok: false, error: 'This account does not have admin access.' }, { status: 403 });
 	}
 

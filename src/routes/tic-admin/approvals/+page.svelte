@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Pager } from '$lib/utils/pager.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
@@ -120,6 +122,30 @@
 			year: 'numeric'
 		});
 	}
+
+	// A page at a time; back to the first page whenever the view changes.
+	const companyPager = new Pager(
+		() => newCompanies,
+		() => []
+	);
+
+	// A page at a time; back to the first page whenever the view changes.
+	const jobPager = new Pager(
+		() => jobs,
+		() => []
+	);
+
+	// A page at a time; back to the first page whenever the view changes.
+	const memberPager = new Pager(
+		() => members,
+		() => []
+	);
+
+	// A page at a time; back to the first page whenever the view changes.
+	const changePager = new Pager(
+		() => changes,
+		() => []
+	);
 </script>
 
 <svelte:head>
@@ -149,7 +175,7 @@
 			<h2 class="group__title">
 				New startups <span class="group__count">{newCompanies.length}</span>
 			</h2>
-			{#each newCompanies as startup (startup.id)}
+			{#each companyPager.rows as startup (startup.id)}
 				<article class="item">
 					<div class="item__head">
 						<div class="item__text">
@@ -188,13 +214,14 @@
 					</div>
 				</article>
 			{/each}
+			<Pagination pager={companyPager} noun="startups" />
 		</section>
 	{/if}
 
 	{#if jobs.length > 0}
 		<section class="group">
 			<h2 class="group__title">Job postings <span class="group__count">{jobs.length}</span></h2>
-			{#each jobs as job (job.id)}
+			{#each jobPager.rows as job (job.id)}
 				<article class="item">
 					<div class="item__head">
 						<div class="item__text">
@@ -251,13 +278,14 @@
 					</div>
 				</article>
 			{/each}
+			<Pagination pager={jobPager} noun="postings" />
 		</section>
 	{/if}
 
 	{#if members.length > 0}
 		<section class="group">
 			<h2 class="group__title">Team members <span class="group__count">{members.length}</span></h2>
-			{#each members as member (member.id)}
+			{#each memberPager.rows as member (member.id)}
 				<article class="item">
 					<div class="item__head">
 						<div class="item__text">
@@ -294,6 +322,7 @@
 					</div>
 				</article>
 			{/each}
+			<Pagination pager={memberPager} noun="members" />
 		</section>
 	{/if}
 
@@ -302,7 +331,7 @@
 			<h2 class="group__title">
 				Company details <span class="group__count">{changes.length}</span>
 			</h2>
-			{#each changes as change (change.id)}
+			{#each changePager.rows as change (change.id)}
 				<article class="item">
 					<div class="item__head">
 						<div class="item__text">
@@ -350,6 +379,7 @@
 					</div>
 				</article>
 			{/each}
+			<Pagination pager={changePager} noun="changes" />
 		</section>
 	{/if}
 </AdminShell>

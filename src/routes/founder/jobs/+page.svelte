@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Pager } from '$lib/utils/pager.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import FounderShell from '$lib/components/FounderShell.svelte';
@@ -59,6 +61,12 @@
 			year: 'numeric'
 		});
 	}
+
+	// A page at a time; back to the first page whenever the view changes.
+	const pager = new Pager(
+		() => jobs,
+		() => []
+	);
 </script>
 
 <svelte:head>
@@ -108,7 +116,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each jobs as job (job.id)}
+						{#each pager.rows as job (job.id)}
 							<tr>
 								<td>
 									<p class="cell__name">{job.role}</p>
@@ -146,6 +154,7 @@
 					</tbody>
 				</table>
 			</div>
+			<Pagination {pager} noun="roles" />
 		</div>
 	{/if}
 </FounderShell>

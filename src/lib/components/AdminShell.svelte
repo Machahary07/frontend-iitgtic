@@ -8,14 +8,18 @@
 	import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import Scanner from '$lib/components/Scanner.svelte';
+	import ViewAsControl from '$lib/components/ViewAsControl.svelte';
 	import { images } from '$lib/data/images';
+	import { assistantPanel } from '$lib/utils/assistantPanel.svelte';
+	import { sectionForPage } from '$lib/utils/roles';
 	import type { NavItem, NavLink } from '$lib/utils/adminNavTypes';
 
 	interface Props {
 		brand: string;
 		brandSub?: string;
-		/** Where the sparkle beside the logo goes. Opt-in: the console that has an
-		 *  assistant passes it, and the shell stays unchanged everywhere else. */
+		/** Opts the console into the assistant sparkle beside the logo. It opens
+		 *  the docked side panel when the layout has mounted one, and is a plain
+		 *  link to this address otherwise. */
 		assistantHref?: string;
 		navItems: NavItem[];
 		title: string;
@@ -30,7 +34,7 @@
 		brand,
 		brandSub = '',
 		assistantHref = '',
-		navItems,
+		navItems: allNavItems,
 		title,
 		eyebrow = '',
 		user = null,
@@ -40,6 +44,27 @@
 	}: Props = $props();
 
 	let mobileOpen = $state(false);
+
+	// The sections this person's role may open, sent by the /tic-admin layout.
+	// Absent (the founder console), every item shows. Separators that would end
+	// up leading, trailing or doubled once items drop out go with them.
+	const navItems = $derived.by(() => {
+		const access = page.data.access as string[] | undefined;
+		if (!access) return allNavItems;
+		const kept = allNavItems.filter((item) => {
+			if ('separator' in item) return true;
+			const section = sectionForPage(item.href);
+			return !section || access.includes(section);
+		});
+		return kept.filter((item, i) => {
+			if (!('separator' in item)) return true;
+			const prev = kept[i - 1];
+			return Boolean(prev) && !('separator' in prev) && i < kept.length - 1;
+		});
+	});
+
+	// The sparkle toggles the side panel wherever the layout provides one.
+	const panelSpark = $derived(Boolean(assistantHref) && assistantPanel.available);
 
 	// Two separate things: below the sidebar breakpoint the sidebar is a drawer
 	// that slides over the page (`mobileOpen`), and above it the sidebar is a
@@ -59,6 +84,9 @@
 	}
 
 	let collapsed = $state(readCollapsed());
+	// The panel borrows the sidebar's width on a screen too narrow for both,
+	// without touching the saved preference — closing it puts the sidebar back.
+	const railCollapsed = $derived(collapsed || assistantPanel.borrowsRail);
 
 	function toggleCollapsed() {
 		collapsed = !collapsed;
@@ -108,6 +136,40 @@
 		}
 		trail.push({ label: title });
 		return trail;
+	});
+
+	// Moving to another page. SvelteKit keeps the old page on screen until the
+	// new one's data has arrived, which reads as the click not having landed. So
+	// the new page's title and a skeleton go up at once, and its real content
+	// replaces them the moment it is ready. A short grace period first, so a
+	// page that was already preloaded on hover never flashes a skeleton.
+	const pendingPath = $derived.by(() => {
+		const to = navigating.to?.url;
+		if (!to || to.pathname === page.url.pathname) return null;
+		return to.pathname;
+	});
+
+	let showSkeleton = $state(false);
+	$effect(() => {
+		if (!pendingPath) {
+			showSkeleton = false;
+			return;
+		}
+		const timer = setTimeout(() => (showSkeleton = true), 90);
+		return () => clearTimeout(timer);
+	});
+
+	// The nav entry that owns the page being opened, for the skeleton's title.
+	const pendingTitle = $derived.by(() => {
+		if (!pendingPath) return '';
+		let best: NavLink | null = null;
+		for (const item of allNavItems) {
+			if ('separator' in item) continue;
+			if (pendingPath === item.href || pendingPath.startsWith(item.href + '/')) {
+				if (!best || item.href.length > best.href.length) best = item;
+			}
+		}
+		return best?.label ?? '';
 	});
 
 	const userInitial = $derived((user ?? '').trim().charAt(0).toUpperCase() || '?');
@@ -244,7 +306,7 @@
 	}
 </script>
 
-<div class="shell" class:shell--collapsed={collapsed}>
+<div class="shell" class:shell--collapsed={railCollapsed}>
 	<!-- Animated ground. Fixed and inert, so it stays put while the page scrolls
 	     and never takes a click; the gradient on .shell shows through if WebGL is
 	     unavailable, so the admin is never left on a bare white page. -->
@@ -289,7 +351,23 @@
 				<span class="brand__role">{brand}</span>
 			</div>
 			{#if brandSub}<span class="brand__tag">{brandSub}</span>{/if}
-			{#if assistantHref}
+			{#if panelSpark}
+				<button
+					type="button"
+					class="spark"
+					class:spark--active={assistantPanel.open}
+					aria-label={assistantPanel.open ? 'Close the assistant' : 'Open the assistant'}
+					aria-expanded={assistantPanel.open}
+					aria-controls="console-assistant"
+					title="Assistant"
+					onclick={() => {
+						mobileOpen = false;
+						assistantPanel.toggle();
+					}}
+				>
+					<Sparkles size={16} strokeWidth={1.9} />
+				</button>
+			{:else if assistantHref}
 				<a
 					href={assistantHref}
 					class="spark"
@@ -316,7 +394,7 @@
 						class:nav__link--active={activeHref === item.href}
 						style={toneVars(item)}
 						aria-current={activeHref === item.href ? 'page' : undefined}
-						title={collapsed ? item.label : undefined}
+						title={railCollapsed ? item.label : undefined}
 						onclick={() => (mobileOpen = false)}
 					>
 						<span class="nav__icon">
@@ -329,7 +407,7 @@
 		</nav>
 
 		<div class="sidebar__foot">
-			<a href="/" class="foot-link" title={collapsed ? 'Back to public site' : undefined}>
+			<a href="/" class="foot-link" title={railCollapsed ? 'Back to public site' : undefined}>
 				<ArrowLeft size={14} strokeWidth={2} />
 				<span class="foot-link__label">Back to public site</span>
 			</a>
@@ -382,6 +460,8 @@
 				{/each}
 			</nav>
 
+			<ViewAsControl />
+
 			{#if user}
 				{#if greeting}
 					<p class="greeting">
@@ -413,21 +493,55 @@
 		{/if}
 
 		<div class="content">
-			<div class="pagehead">
-				<div class="pagehead__text">
-					{#if eyebrow}<p class="pagehead__eyebrow">{eyebrow}</p>{/if}
-					<h1>{title}</h1>
+			{#if showSkeleton}
+				<div
+					class="skeleton"
+					role="status"
+					aria-live="polite"
+					aria-label="Loading {pendingTitle || 'page'}"
+				>
+					<div class="pagehead">
+						<div class="pagehead__text">
+							<p class="pagehead__eyebrow skeleton__bar skeleton__bar--eyebrow"></p>
+							<h1>{pendingTitle}</h1>
+						</div>
+					</div>
+					<div class="skeleton__tabs">
+						<span class="skeleton__bar skeleton__bar--tab"></span>
+						<span class="skeleton__bar skeleton__bar--tab"></span>
+						<span class="skeleton__bar skeleton__bar--tab"></span>
+					</div>
+					<div class="skeleton__panel">
+						{#each [0, 1, 2, 3, 4, 5] as row (row)}
+							<div class="skeleton__row">
+								<span class="skeleton__bar skeleton__bar--avatar"></span>
+								<span class="skeleton__lines">
+									<span class="skeleton__bar skeleton__bar--line"></span>
+									<span class="skeleton__bar skeleton__bar--short"></span>
+								</span>
+								<span class="skeleton__bar skeleton__bar--pill"></span>
+							</div>
+						{/each}
+					</div>
 				</div>
-				{#if actions}
-					<div class="pagehead__actions">{@render actions()}</div>
-				{/if}
-			</div>
+			{/if}
+			<div class="content__page" class:content__page--hidden={showSkeleton}>
+				<div class="pagehead">
+					<div class="pagehead__text">
+						{#if eyebrow}<p class="pagehead__eyebrow">{eyebrow}</p>{/if}
+						<h1>{title}</h1>
+					</div>
+					{#if actions}
+						<div class="pagehead__actions">{@render actions()}</div>
+					{/if}
+				</div>
 
-			{#key page.url.pathname}
-				<div class="content__inner">
-					{@render children()}
-				</div>
-			{/key}
+				{#key page.url.pathname}
+					<div class="content__inner">
+						{@render children()}
+					</div>
+				{/key}
+			</div>
 		</div>
 	</div>
 
@@ -648,6 +762,9 @@
 	// whole of it.
 	.spark {
 		margin-left: auto;
+		padding: 0;
+		border: 0;
+		cursor: pointer;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -1050,6 +1167,95 @@
 		animation: content-in 0.18s ease-out;
 	}
 
+	// Hidden, not removed: the page stays mounted underneath so its state is
+	// intact if the navigation is cancelled.
+	.content__page--hidden {
+		display: none;
+	}
+
+	.skeleton {
+		animation: content-in 0.12s ease-out;
+	}
+
+	.skeleton__tabs {
+		display: flex;
+		gap: 8px;
+		margin-bottom: 18px;
+	}
+
+	.skeleton__panel {
+		@include admin-panel;
+		padding: 8px 22px;
+	}
+
+	.skeleton__row {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		padding: 16px 0;
+
+		& + & {
+			border-top: 1px solid $admin-line-soft;
+		}
+	}
+
+	.skeleton__lines {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		flex: 1;
+	}
+
+	.skeleton__bar {
+		display: block;
+		border-radius: $admin-radius-pill;
+		background: linear-gradient(90deg, #eef0f4 0%, #f7f8fa 45%, #eef0f4 90%);
+		background-size: 200% 100%;
+		animation: shimmer 1.1s linear infinite;
+
+		&--eyebrow {
+			width: 90px;
+			height: 10px;
+			margin-bottom: 10px;
+		}
+
+		&--tab {
+			width: 96px;
+			height: 36px;
+		}
+
+		&--avatar {
+			width: 34px;
+			height: 34px;
+			flex: none;
+		}
+
+		&--line {
+			width: min(320px, 60%);
+			height: 11px;
+		}
+
+		&--short {
+			width: min(180px, 35%);
+			height: 9px;
+		}
+
+		&--pill {
+			width: 88px;
+			height: 28px;
+			flex: none;
+		}
+	}
+
+	@keyframes shimmer {
+		from {
+			background-position: 200% 0;
+		}
+		to {
+			background-position: -200% 0;
+		}
+	}
+
 	@keyframes content-in {
 		from {
 			opacity: 0;
@@ -1073,7 +1279,9 @@
 			opacity: 0.35;
 		}
 
-		.content__inner {
+		.content__inner,
+		.skeleton,
+		.skeleton__bar {
 			animation: none;
 		}
 

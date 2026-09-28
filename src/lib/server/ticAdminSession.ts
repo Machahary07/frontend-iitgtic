@@ -37,9 +37,7 @@ function decode(value: string): string {
 }
 
 export function issueTicAdminSession(cookies: Cookies, session: AdminSession): void {
-	const payload = encode(
-		JSON.stringify({ ...session, exp: Date.now() + MAX_AGE_SECONDS * 1000 })
-	);
+	const payload = encode(JSON.stringify({ ...session, exp: Date.now() + MAX_AGE_SECONDS * 1000 }));
 	cookies.set(COOKIE, `${payload}.${sign(payload)}`, {
 		path: '/',
 		httpOnly: true,

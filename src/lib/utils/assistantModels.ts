@@ -1,4 +1,8 @@
-// The models the assistant can be pointed at, and what each one can actually do.
+// The model the assistant runs on. Sarvam 105B only: the open-weight models
+// Sarvam hosts are gated per key, and attachments — the one thing a vision model
+// added — are no longer part of the assistant.
+//
+// Kept as a list so the request builder still reads the path from the entry.
 //
 // Shared by the settings dialog and the server route on purpose: the dropdown
 // and the request builder must agree about which endpoint a model lives on and
@@ -28,14 +32,6 @@ export const ASSISTANT_MODELS: AssistantModel[] = [
 		path: '/v1/chat/completions',
 		images: false,
 		contextLabel: '128K context'
-	},
-	{
-		id: 'gemma4',
-		label: 'Gemma 4 31B',
-		blurb: 'Reads images as well as text. Slightly lighter on reasoning.',
-		path: '/v2/chat/completions',
-		images: true,
-		contextLabel: '128K context · images'
 	}
 ];
 

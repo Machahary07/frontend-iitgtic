@@ -71,8 +71,38 @@ function friendlyError(status: number, detail: string, modelLabel: string): stri
 	return detail;
 }
 
+/** Sampling settings, from the deployment's SARVAM_* variables. */
+export type Tuning = {
+	temperature: number;
+	topP: number;
+	maxTokens: number;
+	/** sarvam-* models only; the open-weight ones reject the field. */
+	reasoningEffort: 'low' | 'medium' | 'high' | null;
+};
+
+function number(raw: string | undefined, fallback: number, min: number, max: number): number {
+	const value = Number(raw);
+	return raw?.trim() && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
+}
+
+// Read once per request rather than at import, so changing a variable on the
+// host takes effect on the next question without a rebuild.
+export function tuningFromEnv(env: Record<string, string | undefined>): Tuning {
+	const effort = env.SARVAM_REASONING_EFFORT?.trim().toLowerCase();
+	return {
+		temperature: number(env.SARVAM_TEMPERATURE, 0.2, 0, 2),
+		topP: number(env.SARVAM_TOP_P, 1, 0, 1),
+		// sarvam-105b reasons before it answers and the reasoning is billed and
+		// budgeted out of the same allowance, so a limit sized for the answer
+		// alone gets spent thinking and returns nothing.
+		maxTokens: Math.round(number(env.SARVAM_MAX_TOKENS, 4096, 256, 32768)),
+		reasoningEffort: effort === 'low' || effort === 'medium' || effort === 'high' ? effort : null
+	};
+}
+
 type CallOptions = {
 	apiKey: string;
+	tuning?: Tuning;
 	modelId: string;
 	messages: ChatMessage[];
 	tools?: unknown[];
@@ -92,6 +122,8 @@ type CallOptions = {
 export async function runTurn(options: CallOptions): Promise<Turn> {
 	const model = findModel(options.modelId);
 	const wantsStream = Boolean(options.onText);
+	const tuning = options.tuning ?? tuningFromEnv({});
+	const sarvamModel = model.id.startsWith('sarvam-');
 
 	const response = await fetch(`${BASE_URL}${model.path}`, {
 		method: 'POST',
@@ -103,11 +135,12 @@ export async function runTurn(options: CallOptions): Promise<Turn> {
 		body: JSON.stringify({
 			model: model.id,
 			messages: options.messages,
-			temperature: 0.2,
-			// sarvam-105b reasons before it answers and the reasoning is billed and
-			// budgeted out of the same allowance, so a limit sized for the answer
-			// alone gets spent thinking and returns nothing.
-			max_tokens: 4096,
+			temperature: tuning.temperature,
+			top_p: tuning.topP,
+			max_tokens: tuning.maxTokens,
+			...(sarvamModel && tuning.reasoningEffort
+				? { reasoning_effort: tuning.reasoningEffort }
+				: {}),
 			stream: wantsStream,
 			...(options.tools?.length ? { tools: options.tools, tool_choice: 'auto' } : {})
 		})

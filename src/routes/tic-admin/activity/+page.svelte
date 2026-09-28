@@ -4,9 +4,12 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Pager, RemotePager } from '$lib/utils/pager.svelte';
 	import {
+		adminAuditPage,
 		adminGetImpressions,
-		adminListAudit,
+		adminVisitsPage,
 		type AuditEntry,
 		type Impression,
 		type PageViewEntry
@@ -28,40 +31,30 @@
 	let view = $state<View>('audit');
 
 	// --- audit ---------------------------------------------------------------
-	let extraEntries = $state<AuditEntry[]>([]);
 	let auditTable = $state('all');
-	let filteredEntries = $state<AuditEntry[] | null>(null);
-	let loadingMore = $state(false);
-	let exhausted = $state(false);
 	let expanded = $state<number | null>(null);
 	let showAbout = $state(false);
 
-	const entries = $derived(filteredEntries ?? [...(data.entries as AuditEntry[]), ...extraEntries]);
+	// The log grows without end, so it is paged on the server: the load brings
+	// the first page and the total, the bar fetches any other.
+	const auditPager = new RemotePager<AuditEntry>({
+		initial: () => ({
+			rows: data.entries as AuditEntry[],
+			total: data.auditTotal,
+			size: data.firstPageSize
+		}),
+		fetch: (page, size) => adminAuditPage(auditTable, page, size),
+		isDefault: () => auditTable === 'all'
+	});
+
+	const entries = $derived(auditPager.rows);
 
 	const TABLES = ['all', 'companies', 'jobs', 'applications', 'profiles'];
 
-	async function reloadAudit(table: string) {
+	function reloadAudit(table: string) {
 		auditTable = table;
-		exhausted = false;
 		expanded = null;
-		extraEntries = [];
-		filteredEntries = table === 'all' ? null : await adminListAudit({ table });
-	}
-
-	async function loadMore() {
-		if (loadingMore || entries.length === 0) return;
-		loadingMore = true;
-		const older = await adminListAudit({
-			table: auditTable,
-			before: entries[entries.length - 1].id
-		});
-		loadingMore = false;
-		if (older.length === 0) {
-			exhausted = true;
-			return;
-		}
-		if (filteredEntries) filteredEntries = [...filteredEntries, ...older];
-		else extraEntries = [...extraEntries, ...older];
+		auditPager.restart();
 	}
 
 	// --- impressions ---------------------------------------------------------
@@ -70,7 +63,22 @@
 	let loadingRange = $state(false);
 
 	const impressions = $derived(rangeImpressions ?? (data.impressions as Impression[]));
-	const recent = $derived(data.recent as PageViewEntry[]);
+	// One card per page of the site — finite, so paged in the browser.
+	const impressionPager = new Pager(
+		() => impressions,
+		() => [range]
+	);
+
+	// Every visit ever recorded — paged on the server like the audit log.
+	const visitPager = new RemotePager<PageViewEntry>({
+		initial: () => ({
+			rows: data.recent as PageViewEntry[],
+			total: data.recentTotal,
+			size: data.firstPageSize
+		}),
+		fetch: adminVisitsPage
+	});
+	const recent = $derived(visitPager.rows);
 
 	// Views and bots are hit counts, so they add up across pages. Visitors do not:
 	// one person reading five pages is a distinct visitor on each of them, and
@@ -369,14 +377,9 @@
 						{/each}
 					</ul>
 				{/each}
+				<Pagination pager={auditPager} noun="entries" />
 			{/if}
 		</div>
-
-		{#if entries.length > 0 && !exhausted}
-			<button class="btn load-more" onclick={loadMore} disabled={loadingMore}>
-				{loadingMore ? 'Loading…' : 'Load older entries'}
-			</button>
-		{/if}
 	{:else}
 		<div class="impressions__head">
 			<div>
@@ -420,7 +423,7 @@
 			</div>
 		{:else}
 			<div class="cards">
-				{#each impressions as row (row.path)}
+				{#each impressionPager.rows as row (row.path)}
 					<article class="metric" class:metric--admin={row.is_admin}>
 						<header class="metric__head">
 							<h3 class="metric__title" title={row.path}>{pageTitle(row.path)}</h3>
@@ -455,6 +458,9 @@
 					</article>
 				{/each}
 			</div>
+			<div class="pager-wrap">
+				<Pagination pager={impressionPager} noun="pages" />
+			</div>
 		{/if}
 
 		<section class="card recent">
@@ -479,6 +485,7 @@
 						</li>
 					{/each}
 				</ul>
+				<Pagination pager={visitPager} noun="visits" />
 			{/if}
 		</section>
 	{/if}
@@ -496,6 +503,11 @@
 	}
 	.panel {
 		@include admin-panel;
+	}
+
+	.pager-wrap {
+		@include admin-panel;
+		margin-top: 14px;
 	}
 	.empty {
 		@include admin-empty;
@@ -746,10 +758,6 @@
 
 	.diff__to {
 		color: #0e6b2c;
-	}
-
-	.load-more {
-		margin-top: 14px;
 	}
 
 	.card {

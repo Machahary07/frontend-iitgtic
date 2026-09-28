@@ -3,6 +3,9 @@ import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { issueTicAdminSession } from '$lib/server/ticAdminSession';
 import { validatedAdminSession } from '$lib/server/sessionValidation';
+import { env } from '$env/dynamic/private';
+import { FULL_ADMIN_ROLES, ROLE_INFO } from '$lib/utils/roles';
+import { findModel } from '$lib/utils/assistantModels';
 import type { LayoutServerLoad } from './$types';
 
 // Validate current account permissions before rendering or renewing a cookie.
@@ -26,7 +29,7 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 			const res = await supabaseAdmin
 				.from('profiles')
 				.select('id', { count: 'exact', head: true })
-				.eq('role', 'admin');
+				.in('role', FULL_ADMIN_ROLES);
 			if (res.error) {
 				dbError =
 					res.error.message ||
@@ -50,14 +53,35 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 			redirect(303, admin ? '/tic-admin' : '/login?next=/tic-admin');
 		}
 
-		return { admin, needsBootstrap, dbError };
+		return { admin, needsBootstrap, dbError, ...consoleExtras(null) };
 	}
 
 	if (!admin) redirect(303, '/login?next=/tic-admin');
 
 	// Sliding session: renew the cookie on each visit so an active admin is never
 	// logged out on their own — only an explicit logout or ~30 days away ends it.
-	issueTicAdminSession(cookies, admin);
+	// Always the real person's cookie — renewing it with the account being viewed
+	// as would quietly sign the developer in as them.
+	const real = admin.actor ?? admin;
+	issueTicAdminSession(cookies, { userId: real.userId, name: real.name, email: real.email });
 
-	return { admin, needsBootstrap: false, dbError: null };
+	return { admin, needsBootstrap: false, dbError: null, ...consoleExtras(admin) };
 };
+
+// What every console page needs beyond who is signed in: which sections this
+// role may open (the sidebar filters on it), whether view-as is on offer, and
+// how the assistant is set up on this deployment.
+function consoleExtras(admin: Awaited<ReturnType<typeof validatedAdminSession>>) {
+	const real = admin?.actor ?? admin;
+	return {
+		access: admin ? ROLE_INFO[admin.role].sections : [],
+		canViewAs: Boolean(real && ROLE_INFO[real.role].viewAs),
+		viewAs: admin?.viewing ?? null,
+		assistant: {
+			// Only whether a shared key is configured, never the key itself.
+			hasServerKey: Boolean(env.SARVAM_API_KEY?.trim()),
+			// The deployment's chosen model, used until someone picks another.
+			defaultModel: findModel(env.SARVAM_MODEL_ID?.trim()).id
+		}
+	};
+}

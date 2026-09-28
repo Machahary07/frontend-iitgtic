@@ -1,23 +1,29 @@
 <script lang="ts">
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Pager } from '$lib/utils/pager.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
-	import Select from '$lib/components/Select.svelte';
+	import UserFormDialog from '$lib/components/UserFormDialog.svelte';
+	import Pencil from '@lucide/svelte/icons/pencil';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import {
-		adminCreateAdmin,
-		adminDeleteUser,
-		adminSetUserBanned,
-		adminSetUserRole,
-		type ManagedUser,
-		type UserRole
-	} from '$lib/utils/ticAdmin';
+	import { adminDeleteUser, adminSetUserBanned, type ManagedUser } from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 	import { showToast } from '$lib/utils/toast.svelte';
+	import {
+		ACCOUNT_ROLES,
+		canGrant,
+		canManage,
+		canSetPassword,
+		isStaffRole,
+		ROLE_INFO,
+		roleLabel
+	} from '$lib/utils/roles';
+	import { viewAs } from '$lib/utils/viewAs';
 
-	type Filter = 'all' | UserRole | 'never' | 'suspended';
+	type Filter = 'all' | 'staff' | 'founder' | 'never' | 'deactivated';
 
 	let { data }: { data: PageData } = $props();
 
@@ -25,30 +31,62 @@
 	const users = $derived(data.users as ManagedUser[]);
 	const currentAdminId = $derived(data.currentAdminId);
 
+	// What the real person may do — while viewing as someone, the rank that
+	// counts is still the developer's own, the same rule the server applies.
+	const actingRole = $derived(data.admin?.actor?.role ?? data.admin?.role ?? null);
+	const isDeveloper = $derived(Boolean(data.canViewAs));
+
 	let filter = $state<Filter>('all');
 	let busyId = $state<string | null>(null);
 
-	let showInvite = $state(false);
-	let newName = $state('');
-	let newEmail = $state('');
-	let newPassword = $state('');
+	// The account open in the popup: null with formOpen adds a new one.
+	let formOpen = $state(false);
+	// By id, so the popup follows the live record — after Deactivate, or a
+	// refresh, it shows the account as it now is.
+	let selectedId = $state<string | null>(null);
+	const selected = $derived(users.find((u) => u.id === selectedId) ?? null);
+	let startEditing = $state(false);
 
-	const refresh = () => invalidateAll();
+	// Only the roles this person may hand out; a founder is never created here.
+	const grantable = $derived(
+		ACCOUNT_ROLES.filter((role) => canGrant(actingRole, role)).map((role) => ({
+			value: role,
+			label: ROLE_INFO[role].label,
+			hint: ROLE_INFO[role].hint
+		}))
+	);
+	const staffGrantable = $derived(grantable.filter((option) => option.value !== 'founder'));
 
 	const counts = $derived({
 		all: users.length,
-		admin: users.filter((u) => u.role === 'admin').length,
+		staff: users.filter((u) => isStaffRole(u.role)).length,
 		founder: users.filter((u) => u.role === 'founder').length,
 		never: users.filter((u) => !u.lastSignInAt).length,
-		suspended: users.filter((u) => u.banned).length
+		deactivated: users.filter((u) => u.banned).length
 	});
 
 	const filtered = $derived.by(() => {
 		if (filter === 'all') return users;
 		if (filter === 'never') return users.filter((u) => !u.lastSignInAt);
-		if (filter === 'suspended') return users.filter((u) => u.banned);
+		if (filter === 'deactivated') return users.filter((u) => u.banned);
+		if (filter === 'staff') return users.filter((u) => isStaffRole(u.role));
 		return users.filter((u) => u.role === filter);
 	});
+
+	const manages = (user: ManagedUser) =>
+		user.id !== currentAdminId && canManage(actingRole, user.role);
+
+	function openAdd() {
+		selectedId = null;
+		startEditing = false;
+		formOpen = true;
+	}
+
+	function openUser(user: ManagedUser, edit = false) {
+		selectedId = user.id;
+		startEditing = edit;
+		formOpen = true;
+	}
 
 	async function run(
 		id: string,
@@ -60,32 +98,22 @@
 		busyId = null;
 		if (!result.ok) {
 			showToast(result.error, 'err');
-			return;
+			return false;
 		}
 		showToast(okText);
-		await refresh();
+		await invalidateAll();
+		return true;
 	}
 
-	async function changeRole(user: ManagedUser, role: UserRole) {
-		if (role === user.role) return;
-		if (role === 'admin') {
-			const ok = await askConfirm({
-				title: `Give ${user.email} full admin access?`,
-				body: 'They will be able to read every application and manage other admins.',
-				confirmLabel: 'Make admin'
-			});
-			if (!ok) return;
-		}
-		run(user.id, () => adminSetUserRole(user.id, role), `${user.email} is now ${role}.`);
-	}
-
-	async function toggleBan(user: ManagedUser) {
+	// Reversible: a deactivated account cannot sign in, but nothing is removed,
+	// and Activate lets them straight back in.
+	async function toggleActive(user: ManagedUser) {
 		const next = !user.banned;
 		if (next) {
 			const ok = await askConfirm({
-				title: `Suspend ${user.email}?`,
-				body: 'They will not be able to sign in until you restore the account.',
-				confirmLabel: 'Suspend',
+				title: `Deactivate ${user.email}?`,
+				body: 'They will not be able to sign in until you activate the account again. Nothing is deleted.',
+				confirmLabel: 'Deactivate',
 				tone: 'danger'
 			});
 			if (!ok) return;
@@ -93,44 +121,28 @@
 		run(
 			user.id,
 			() => adminSetUserBanned(user.id, next),
-			next ? `${user.email} suspended.` : `${user.email} restored.`
+			next ? `${user.email} deactivated.` : `${user.email} activated.`
 		);
 	}
 
 	async function remove(user: ManagedUser) {
 		const ok = await askConfirm({
 			title: `Permanently delete ${user.email}?`,
-			body: 'Everything they own goes with the account. This cannot be undone.',
+			body: 'Everything they own goes with the account. This cannot be undone — deactivate it instead if you may want it back.',
 			confirmLabel: 'Delete user',
 			tone: 'danger'
 		});
-		if (!ok) return;
-		run(user.id, () => adminDeleteUser(user.id), `${user.email} deleted.`);
+		if (!ok) return false;
+		return run(user.id, () => adminDeleteUser(user.id), `${user.email} deleted.`);
 	}
 
-	async function createAdmin(e: Event) {
-		e.preventDefault();
-		if (newPassword.length < 8) {
-			showToast('Password must be at least 8 characters.', 'err');
-			return;
-		}
-		busyId = 'new';
-		const result = await adminCreateAdmin({
-			email: newEmail,
-			password: newPassword,
-			fullName: newName
-		});
-		busyId = null;
+	async function openAs(user: ManagedUser) {
+		busyId = user.id;
+		const result = await viewAs(user.id);
 		if (!result.ok) {
+			busyId = null;
 			showToast(result.error, 'err');
-			return;
 		}
-		showToast(`Admin account created for ${newEmail}.`);
-		newName = '';
-		newEmail = '';
-		newPassword = '';
-		showInvite = false;
-		await refresh();
 	}
 
 	async function handleLogout() {
@@ -155,6 +167,12 @@
 		if (days < 30) return `${days} days ago`;
 		return fmtDate(iso) ?? 'never';
 	}
+
+	// A page at a time; back to the first page whenever the view changes.
+	const pager = new Pager(
+		() => filtered,
+		() => [filter]
+	);
 </script>
 
 <svelte:head>
@@ -171,44 +189,17 @@
 	onLogout={handleLogout}
 >
 	{#snippet actions()}
-		<button class="btn btn--primary" onclick={() => (showInvite = !showInvite)}>
-			{showInvite ? 'Cancel' : '+ New admin'}
-		</button>
+		{#if staffGrantable.length}
+			<button class="btn btn--primary" onclick={openAdd}>+ Add</button>
+		{/if}
 	{/snippet}
-
-	{#if showInvite}
-		<form class="invite" onsubmit={createAdmin}>
-			<h2>Create an admin account</h2>
-			<p class="invite__sub">
-				They sign in with this email and password, and can change the password themselves
-				afterwards. Founders and companies sign themselves up — only admins are created here.
-			</p>
-			<div class="invite__grid">
-				<label class="field">
-					<span>Name</span>
-					<input type="text" bind:value={newName} autocomplete="off" />
-				</label>
-				<label class="field">
-					<span>Email</span>
-					<input type="email" bind:value={newEmail} autocomplete="off" required />
-				</label>
-				<label class="field">
-					<span>Temporary password</span>
-					<input type="text" bind:value={newPassword} autocomplete="off" required />
-				</label>
-			</div>
-			<button class="btn btn--primary" type="submit" disabled={busyId === 'new'}>
-				{busyId === 'new' ? 'Creating…' : 'Create admin'}
-			</button>
-		</form>
-	{/if}
 
 	<div class="tabs">
 		<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
 			All <span class="tab__count">{counts.all}</span>
 		</button>
-		<button class="tab" class:tab--active={filter === 'admin'} onclick={() => (filter = 'admin')}>
-			Admins <span class="tab__count">{counts.admin}</span>
+		<button class="tab" class:tab--active={filter === 'staff'} onclick={() => (filter = 'staff')}>
+			TIC staff <span class="tab__count">{counts.staff}</span>
 		</button>
 		<button
 			class="tab"
@@ -222,10 +213,10 @@
 		</button>
 		<button
 			class="tab"
-			class:tab--active={filter === 'suspended'}
-			onclick={() => (filter = 'suspended')}
+			class:tab--active={filter === 'deactivated'}
+			onclick={() => (filter = 'deactivated')}
 		>
-			Suspended <span class="tab__count">{counts.suspended}</span>
+			Deactivated <span class="tab__count">{counts.deactivated}</span>
 		</button>
 	</div>
 
@@ -245,8 +236,19 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each filtered as user (user.id)}
-							<tr class:row--busy={busyId === user.id}>
+						{#each pager.rows as user (user.id)}
+							<!-- The whole row opens the account; the buttons in it stop the
+							     click so they still do only their own thing. -->
+							<tr
+								class="row"
+								class:row--busy={busyId === user.id}
+								onclick={() => openUser(user)}
+								onkeydown={(event) => {
+									if (event.key === 'Enter' && event.target === event.currentTarget) openUser(user);
+								}}
+								tabindex="0"
+								aria-label="Open {user.fullName || user.email}"
+							>
 								<td>
 									<p class="cell__name">
 										{user.fullName || user.email}
@@ -255,6 +257,7 @@
 										{/if}
 									</p>
 									<p class="cell__sub">{user.email}</p>
+									{#if user.phone}<p class="cell__meta">{user.phone}</p>{/if}
 									{#each user.companies as company (company.name)}
 										<p class="cell__sub">
 											{company.name} ·
@@ -263,22 +266,14 @@
 									{/each}
 								</td>
 								<td>
-									<div class="role">
-										<Select
-											id="role-{user.id}"
-											value={user.role}
-											options={[
-												{ value: 'founder', label: 'Founder', hint: 'Runs startups' },
-												{ value: 'admin', label: 'Admin', hint: 'Runs this console' }
-											]}
-											size="sm"
-											disabled={user.id === currentAdminId || busyId === user.id}
-											ariaLabel="Role for {user.email}"
-											onchange={(value) => changeRole(user, value as UserRole)}
-										/>
-									</div>
+									<p class="cell__name">{roleLabel(user.role)}</p>
+									{#if user.department || user.responsibility}
+										<p class="cell__sub">
+											{[user.department, user.responsibility].filter(Boolean).join(' · ')}
+										</p>
+									{/if}
 									<div class="flags">
-										{#if user.banned}<span class="badge badge--bad">suspended</span>{/if}
+										{#if user.banned}<span class="badge badge--bad">deactivated</span>{/if}
 										{#if !user.emailConfirmed}
 											<span class="badge badge--warn">unconfirmed</span>
 										{/if}
@@ -294,31 +289,65 @@
 								</td>
 								<td><p class="cell__sub">{fmtDate(user.createdAt)}</p></td>
 								<td class="actions-col">
-									<div class="actions">
-										{#if user.id !== currentAdminId}
-											<button
-												class="btn"
-												disabled={busyId === user.id}
-												onclick={() => toggleBan(user)}
-											>
-												{user.banned ? 'Restore' : 'Suspend'}
-											</button>
-											<button
-												class="btn btn--danger"
-												disabled={busyId === user.id}
-												onclick={() => remove(user)}>Delete</button
-											>
-										{/if}
-									</div>
+									<!-- Opens the same popup as the row, straight into editing. View
+									     as, Deactivate and Delete live in the popup. -->
+									<button
+										type="button"
+										class="pencil"
+										title="Edit {user.fullName || user.email}"
+										aria-label="Edit {user.fullName || user.email}"
+										onclick={(event) => {
+											event.stopPropagation();
+											openUser(user, true);
+										}}
+									>
+										<Pencil size={15} strokeWidth={2} />
+									</button>
 								</td>
 							</tr>
 						{/each}
 					</tbody>
 				</table>
 			</div>
+			<Pagination {pager} noun="accounts" />
 		{/if}
 	</div>
 </AdminShell>
+
+<UserFormDialog
+	open={formOpen}
+	user={selected}
+	roleOptions={selected
+		? canGrant(actingRole, selected.role)
+			? selected.role === 'founder'
+				? grantable
+				: staffGrantable
+			: [{ value: selected.role, label: roleLabel(selected.role) }]
+		: staffGrantable}
+	canEdit={selected ? selected.id === currentAdminId || canManage(actingRole, selected.role) : true}
+	canSetPassword={selected
+		? selected.id === currentAdminId || canSetPassword(actingRole, selected.role)
+		: true}
+	canChangeRole={selected
+		? selected.id !== currentAdminId && canGrant(actingRole, selected.role)
+		: true}
+	{startEditing}
+	busy={busyId !== null}
+	onclose={() => (formOpen = false)}
+	onsaved={() => invalidateAll()}
+	onviewas={selected &&
+	isDeveloper &&
+	selected.role !== 'developer' &&
+	selected.id !== currentAdminId
+		? () => openAs(selected!)
+		: undefined}
+	ontoggleactive={selected && manages(selected) ? () => toggleActive(selected!) : undefined}
+	ondelete={selected && manages(selected)
+		? async () => {
+				if (await remove(selected!)) formOpen = false;
+			}
+		: undefined}
+/>
 
 <style lang="scss">
 	@use '$styles/variables' as *;
@@ -446,43 +475,36 @@
 		@include admin-btn-small;
 	}
 
-	.invite {
-		@include admin-card;
-		margin-bottom: 16px;
-		align-items: flex-start;
+	.row {
+		cursor: pointer;
 
-		h2 {
-			@include admin-section-title;
-			font-size: 15px;
+		&:hover td {
+			background: rgba(17, 20, 24, 0.018);
 		}
 	}
 
-	.invite__sub {
-		margin: 0;
-		font-size: 13px;
+	.pencil {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 34px;
+		height: 34px;
+		padding: 0;
 		color: $admin-ink-2;
-		max-width: 60ch;
+		background: $admin-surface;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-pill;
+		cursor: pointer;
+		@include admin-focus-ring;
+
+		&:hover {
+			color: $admin-ink;
+			background: $admin-sunken;
+		}
 	}
 
-	.invite__grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-		gap: 12px;
-		width: 100%;
-	}
-
-	.field {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-
-		> span {
-			@include admin-field-label;
-		}
-
-		input {
-			@include admin-input;
-			font-size: 13px;
-		}
+	.cell__meta {
+		@include admin-cell-sub;
+		color: $admin-ink-3;
 	}
 </style>

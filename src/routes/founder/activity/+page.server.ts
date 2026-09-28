@@ -7,6 +7,9 @@ import type { PageServerLoad } from './$types';
 // built from the company's own member ids and its own record ids, never from
 // anything the browser sends.
 
+// Paged in the browser, so it can hold a good deal more than one screen.
+const LIMIT = 500;
+
 export const load: PageServerLoad = async ({ parent }) => {
 	const { founder, activeCompanyId } = await parent();
 	if (!activeCompanyId) return { entries: [] };
@@ -30,22 +33,26 @@ export const load: PageServerLoad = async ({ parent }) => {
 		...((jobs.data ?? []) as { id: string }[]).map((j) => j.id)
 	];
 
+	// audit_log's timestamp is occurred_at; it is read back as created_at, the
+	// name this page has always used. (Asking for created_at itself failed both
+	// queries, which is why this feed used to say "Nothing recorded yet".)
+	//
 	// Two reads rather than one `or`: PostgREST's or() takes the filter as a
 	// string, and a list of uuids spliced into one would be a needless place for
 	// quoting to go wrong.
 	const [byUs, aboutUs] = await Promise.all([
 		db
 			.from('audit_log')
-			.select('id, created_at, actor_label, action, table_name, record_id')
+			.select('id, created_at:occurred_at, actor_label, action, table_name, record_id')
 			.in('actor_id', memberIds)
-			.order('created_at', { ascending: false })
-			.limit(100),
+			.order('occurred_at', { ascending: false })
+			.limit(LIMIT),
 		db
 			.from('audit_log')
-			.select('id, created_at, actor_label, action, table_name, record_id')
+			.select('id, created_at:occurred_at, actor_label, action, table_name, record_id')
 			.in('record_id', recordIds)
-			.order('created_at', { ascending: false })
-			.limit(100)
+			.order('occurred_at', { ascending: false })
+			.limit(LIMIT)
 	]);
 
 	type Entry = {
@@ -61,7 +68,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 	const entries = [...((byUs.data ?? []) as Entry[]), ...((aboutUs.data ?? []) as Entry[])]
 		.filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)))
 		.sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
-		.slice(0, 100);
+		.slice(0, LIMIT);
 
 	return { entries };
 };

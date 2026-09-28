@@ -38,11 +38,20 @@ class AssistantSettings {
 	// change and wait for the admin to approve it.
 	autoApprove = $state(false);
 
+	// Whether this browser has picked a model. Until it has, the deployment's
+	// SARVAM_MODEL_ID decides.
+	private chosen = false;
+
 	constructor() {
 		const stored = read();
 		this.apiKey = stored.apiKey ?? '';
 		this.modelId = findModel(stored.model).id;
+		this.chosen = Boolean(stored.model);
 		this.autoApprove = stored.autoApprove ?? false;
+	}
+
+	useDefaultModel(id: string): void {
+		if (!this.chosen) this.modelId = findModel(id).id;
 	}
 
 	get model() {
@@ -64,6 +73,7 @@ class AssistantSettings {
 	save(apiKey: string, modelId: string): void {
 		this.apiKey = apiKey.trim();
 		this.modelId = findModel(modelId).id;
+		this.chosen = true;
 		this.persist();
 	}
 

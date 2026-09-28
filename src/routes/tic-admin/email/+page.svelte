@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Pager, RemotePager } from '$lib/utils/pager.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
@@ -7,7 +9,7 @@
 	import {
 		adminGetEmailMessage,
 		adminLiftSuppression,
-		adminListEmailLog,
+		adminEmailLogPage,
 		adminListNewsletter,
 		type EmailLogEntry,
 		type EmailMessage,
@@ -22,13 +24,8 @@
 	const config = $derived(data.config);
 	const usage = $derived(data.usage);
 
-	// The log is paged, so it lives in state seeded from the load rather than
-	// being read straight off `data` — "Load more" appends to it.
-	let entries = $state<EmailLogEntry[]>([]);
-	let hasMore = $state(false);
 	let statusFilter = $state<EmailStatus | 'all'>('all');
 	let showTests = $state(false);
-	let loadingMore = $state(false);
 	let lifting = $state('');
 	let exportingList = $state(false);
 
@@ -65,29 +62,47 @@
 		}
 	}
 
-	// A fresh server load (a filter change navigates, a save invalidates) replaces
-	// the page rather than appending to it.
-	$effect(() => {
-		entries = data.log as EmailLogEntry[];
-		hasMore = data.hasMore;
+	// The log is paged and filtered on the server: the load brings the first page
+	// of the default view (every status, test sends hidden) with its counts, and
+	// the bar fetches everything else.
+	let fetchedCounts = $state<typeof data.logCounts | null>(null);
+
+	const logPager = new RemotePager<EmailLogEntry>({
+		initial: () => ({
+			rows: data.log as EmailLogEntry[],
+			total: data.logTotal,
+			size: data.logPageSize
+		}),
+		fetch: async (page, size) => {
+			const result = await adminEmailLogPage({
+				status: statusFilter,
+				tests: showTests,
+				page,
+				size
+			});
+			fetchedCounts = result.counts;
+			return result;
+		},
+		isDefault: () => statusFilter === 'all' && !showTests
 	});
 
-	const visible = $derived(
-		entries.filter(
-			(e) => (statusFilter === 'all' || e.status === statusFilter) && (showTests || !e.is_test)
-		)
-	);
+	const visible = $derived(logPager.rows);
 
-	const counts = $derived({
-		all: entries.filter((e) => showTests || !e.is_test).length,
-		sent: entries.filter((e) => e.status === 'sent' && (showTests || !e.is_test)).length,
-		failed: entries.filter((e) => e.status === 'failed' && (showTests || !e.is_test)).length,
-		blocked: entries.filter((e) => e.status === 'blocked' && (showTests || !e.is_test)).length
-	});
+	const suppressionPager = new Pager(() => data.suppressions);
+
+	// The tabs count the whole log, not a page of it. They only change with the
+	// test-send toggle, so the load's counts serve until that is ticked.
+	const counts = $derived(showTests ? (fetchedCounts ?? data.logCounts) : data.logCounts);
 
 	// Tests are hidden by default, so an all-test log would otherwise read as an
 	// empty one — worth saying which it is.
-	const hiddenTests = $derived(showTests ? 0 : entries.filter((e) => e.is_test).length);
+	const hiddenTests = $derived(showTests ? 0 : data.logTestSends);
+	const nothingSent = $derived(data.logTotal === 0 && data.logTestSends === 0);
+
+	function setStatus(next: EmailStatus | 'all') {
+		statusFilter = next;
+		logPager.restart();
+	}
 
 	const customised = $derived(data.templates.filter((t) => t.customised).length);
 	const disabled = $derived(data.templates.filter((t) => !t.enabled).length);
@@ -95,17 +110,6 @@
 	// The trend chart is scaled to its own busiest day, so a quiet month still
 	// shows shape instead of a flat line at the bottom of the box.
 	const trendPeak = $derived(Math.max(1, ...data.trend.map((d) => d.sent + d.failed + d.blocked)));
-
-	async function loadMore() {
-		const oldest = entries.at(-1)?.created_at;
-		if (!oldest || loadingMore) return;
-
-		loadingMore = true;
-		const next = await adminListEmailLog({ before: oldest });
-		entries = [...entries, ...next];
-		hasMore = next.length === 25;
-		loadingMore = false;
-	}
 
 	// --- preview -------------------------------------------------------------
 
@@ -379,7 +383,7 @@
 				</p>
 			</header>
 			<ul class="suppressions">
-				{#each data.suppressions as item (item.email)}
+				{#each suppressionPager.rows as item (item.email)}
 					<li>
 						<div>
 							<p class="suppressions__email">{item.email}</p>
@@ -398,55 +402,52 @@
 					</li>
 				{/each}
 			</ul>
+			<Pagination pager={suppressionPager} noun="addresses" />
 		</section>
 	{/if}
 
 	<div class="tabs">
-		<button
-			class="tab"
-			class:tab--active={statusFilter === 'all'}
-			onclick={() => (statusFilter = 'all')}
-		>
+		<button class="tab" class:tab--active={statusFilter === 'all'} onclick={() => setStatus('all')}>
 			All <span class="tab__count">{counts.all}</span>
 		</button>
 		<button
 			class="tab"
 			class:tab--active={statusFilter === 'sent'}
-			onclick={() => (statusFilter = 'sent')}
+			onclick={() => setStatus('sent')}
 		>
 			Sent <span class="tab__count">{counts.sent}</span>
 		</button>
 		<button
 			class="tab"
 			class:tab--active={statusFilter === 'failed'}
-			onclick={() => (statusFilter = 'failed')}
+			onclick={() => setStatus('failed')}
 		>
 			Failed <span class="tab__count">{counts.failed}</span>
 		</button>
 		<button
 			class="tab"
 			class:tab--active={statusFilter === 'blocked'}
-			onclick={() => (statusFilter = 'blocked')}
+			onclick={() => setStatus('blocked')}
 		>
 			Blocked <span class="tab__count">{counts.blocked}</span>
 		</button>
 		<label class="toggle">
-			<input type="checkbox" bind:checked={showTests} />
+			<input
+				type="checkbox"
+				checked={showTests}
+				onchange={(event) => {
+					showTests = event.currentTarget.checked;
+					logPager.restart();
+				}}
+			/>
 			Include test sends
 		</label>
 	</div>
 
-	<p class="scope">
-		{entries.length === 1
-			? 'Filtering the most recent message.'
-			: `Filtering the ${entries.length} most recent messages.`}
-		{#if hasMore}Load older ones below to widen it.{/if}
-	</p>
-
 	<div class="panel">
 		{#if visible.length === 0}
 			<p class="empty">
-				{#if entries.length === 0}
+				{#if nothingSent}
 					Nothing has been sent yet. Verifying a company or moving an applicant along will put the
 					first message here.
 				{:else if hiddenTests > 0}
@@ -501,13 +502,7 @@
 				</table>
 			</div>
 
-			{#if hasMore}
-				<div class="more">
-					<button class="btn" onclick={loadMore} disabled={loadingMore}>
-						{loadingMore ? 'Loading…' : 'Load older messages'}
-					</button>
-				</div>
-			{/if}
+			<Pagination pager={logPager} noun="messages" />
 		{/if}
 	</div>
 </AdminShell>
@@ -902,12 +897,6 @@
 		@include admin-tab-count;
 	}
 
-	.scope {
-		margin: -6px 0 12px;
-		font-size: 11px;
-		color: #999;
-	}
-
 	.toggle {
 		display: inline-flex;
 		align-items: center;
@@ -1101,12 +1090,6 @@
 
 	.btn {
 		@include admin-btn-small;
-	}
-
-	.more {
-		padding: 14px 18px;
-		border-top: 1px solid $admin-line-soft;
-		text-align: center;
 	}
 
 	// --- preview modal --------------------------------------------------------

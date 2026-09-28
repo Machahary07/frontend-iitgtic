@@ -18,7 +18,11 @@ export type SignInResult =
 	| { ok: true; role: SignedInAs; redirect: string; name: string; email: string }
 	| { ok: false; error: string };
 
-export async function signIn(email: string, password: string, captchaToken: string): Promise<SignInResult> {
+export async function signIn(
+	email: string,
+	password: string,
+	captchaToken: string
+): Promise<SignInResult> {
 	const { data, error } = await supabase.auth.signInWithPassword({
 		email: email.trim().toLowerCase(),
 		password

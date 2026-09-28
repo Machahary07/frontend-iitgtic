@@ -16,6 +16,7 @@ import Mail from '@lucide/svelte/icons/mail';
 import HardDrive from '@lucide/svelte/icons/hard-drive';
 import LifeBuoy from '@lucide/svelte/icons/life-buoy';
 import ShieldCheck from '@lucide/svelte/icons/shield-check';
+import KeyRound from '@lucide/svelte/icons/key-round';
 
 import type { NavItem } from '$lib/utils/adminNavTypes';
 
@@ -35,6 +36,7 @@ export const TIC_ADMIN_NAV: NavItem[] = [
 	},
 	{ separator: true as const },
 	{ label: 'Users', href: '/tic-admin/users', icon: Users, tone: 'info' },
+	{ label: 'Roles', href: '/tic-admin/roles', icon: KeyRound, tone: 'violet' },
 	{ label: 'Activity', href: '/tic-admin/activity', icon: Activity, tone: 'warn' },
 	{ separator: true as const },
 	{ label: 'Content', href: '/tic-admin/content', icon: FilePen, tone: 'violet' },
