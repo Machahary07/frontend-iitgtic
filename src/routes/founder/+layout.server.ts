@@ -34,8 +34,10 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 		email: (profile?.email as string) || session.email
 	};
 
-	// Sliding session: an active founder is never signed out on their own.
-	issueFounderSession(cookies, current);
+	// Sliding session: an active founder is never signed out on their own. Not
+	// while a developer is viewing as them — that would hand the developer a
+	// real founder cookie that outlives the view.
+	if (!session.actor) issueFounderSession(cookies, current);
 
 	const companies = await listMyCompanies(db, session.userId);
 
@@ -58,6 +60,11 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 		: null;
 
 	return {
+		// Read by AdminShell's view-as control, the same fields /tic-admin sends.
+		canViewAs: Boolean(session.actor),
+		viewAs: session.actor
+			? { userId: current.userId, name: current.name, email: current.email, role: 'founder' }
+			: null,
 		founder: {
 			...current,
 			// Set only for someone who was added to a company rather than creating

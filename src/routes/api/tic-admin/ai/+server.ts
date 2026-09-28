@@ -2,10 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { requireAdmin, type AdminContext } from '$lib/server/adminGuard';
-import { findTool, TOOL_SCHEMAS } from '$lib/server/assistantTools';
-import { runTurn, SarvamError, type ChatMessage, type ToolCall } from '$lib/server/sarvam';
+import { findTool, toolAllowed, toolSchemasFor } from '$lib/server/assistantTools';
+import { runTurn, SarvamError, tuningFromEnv, type ChatMessage, type ToolCall } from '$lib/server/sarvam';
 import { findModel } from '$lib/utils/assistantModels';
 import { CONTENT_SECTIONS } from '$lib/content';
+import { roleLabel } from '$lib/utils/roles';
 import type { RequestHandler } from './$types';
 
 // The assistant's back end.
@@ -28,11 +29,14 @@ const MAX_TOOL_ROUNDS = 6;
 // Sent to the model on every request. Describing the shape of the console up
 // front is what stops it guessing at tables that do not exist, and what lets it
 // pick the right tool on the first try rather than probing.
-function systemPrompt(adminName: string): string {
+function systemPrompt(adminName: string, role: string, identity: string): string {
 	const sections = CONTENT_SECTIONS.map((section) => section.key).join(', ');
 	const today = new Date().toISOString().slice(0, 10);
 
-	return `You are the assistant built into the TIC Team Admin console for the IIT Guwahati Technology Incubation Centre (TIC). You are talking to ${adminName}, a signed-in TIC administrator. Today is ${today}.
+	return `${identity ? `${identity}\n\n` : ''}You are the assistant built into the TIC Team Admin console for the IIT Guwahati Technology Incubation Centre (TIC). You are talking to ${adminName}, signed in as ${roleLabel(role)}. Today is ${today}.
+
+ACCESS
+Your tools cover only the parts of the console the ${roleLabel(role)} role can open. If a question needs data or a change outside them, say in one line that their role does not include it, and do not guess at the answer.
 
 WHAT THIS ORGANISATION DOES
 IIT Guwahati TIC incubates startups. Founders apply to be incubated. Separately, companies register accounts so they can post job openings on the public site, and job seekers apply to those postings. The public site also carries editable pages: about, team, governing body, mentors, FAQ, blog, incubation, incubated startups, events, partners, opportunities, apply, contact, privacy and terms.
@@ -148,7 +152,7 @@ function toApiMessages(messages: IncomingMessage[], acceptsImages: boolean): Cha
 
 async function runTool(ctx: AdminContext, call: ToolCall): Promise<string> {
 	const tool = findTool(call.function.name);
-	if (!tool) {
+	if (!tool || !toolAllowed(ctx.admin.role, tool.name)) {
 		return JSON.stringify({ error: `No tool named "${call.function.name}".` });
 	}
 
@@ -192,10 +196,19 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 	const history = (body.messages ?? []).filter((message) => message?.content || message?.images);
 	if (history.length === 0) error(400, 'Nothing to send.');
 
-	const model = findModel(body.model);
+	const model = findModel(body.model || env.SARVAM_MODEL_ID);
+	const tuning = tuningFromEnv(env);
+	const tools = toolSchemasFor(ctx.admin.role);
 
 	const messages: ChatMessage[] = [
-		{ role: 'system', content: systemPrompt(ctx.admin.name || ctx.admin.email) },
+		{
+			role: 'system',
+			content: systemPrompt(
+				ctx.admin.name || ctx.admin.email,
+				ctx.admin.role,
+				env.SARVAM_SYSTEM_MESSAGE?.trim() ?? ''
+			)
+		},
 		...toApiMessages(history, model.images)
 	];
 
@@ -219,9 +232,10 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 
 					const turn = await runTurn({
 						apiKey,
+						tuning,
 						modelId: model.id,
 						messages,
-						tools: exhausted ? undefined : TOOL_SCHEMAS,
+						tools: exhausted ? undefined : tools,
 						signal: request.signal,
 						onText: (delta) => emit({ type: 'text', delta }),
 						onReasoning: (delta) => emit({ type: 'reasoning', delta })
@@ -262,7 +276,8 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 					// Independent lookups, so they run together rather than in sequence.
 					const results = await Promise.all(
 						turn.toolCalls.map(async (call) => {
-							const tool = findTool(call.function.name);
+							const found = findTool(call.function.name);
+							const tool = found && toolAllowed(ctx.admin.role, found.name) ? found : undefined;
 							let args: Record<string, unknown> = {};
 							if (tool) {
 								try {

@@ -3,6 +3,7 @@
 // admin is not a Supabase Auth user and so cannot satisfy RLS directly.
 
 import type { CompanyStatus } from '$lib/utils/companies';
+import type { AccountRole } from '$lib/utils/roles';
 
 export async function adminSetCompanyStatus(
 	id: string,
@@ -190,9 +191,10 @@ export async function adminListNewsletter(): Promise<NewsletterSubscriber[]> {
 
 // --- users -----------------------------------------------------------------
 
-// Two roles. 'company' is gone: an account is a person, and a company is
-// something a founder creates — possibly several.
-export type UserRole = 'founder' | 'admin';
+// A founder, or one of the TIC staff roles in $lib/utils/roles. 'company' is
+// gone: an account is a person, and a company is something a founder creates —
+// possibly several.
+export type UserRole = AccountRole;
 
 export type ManagedUser = {
 	id: string;
@@ -262,6 +264,7 @@ export async function adminCreateAdmin(input: {
 	email: string;
 	password: string;
 	fullName: string;
+	role?: UserRole;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
 	const res = await fetch('/api/tic-admin/users', {
 		method: 'POST',

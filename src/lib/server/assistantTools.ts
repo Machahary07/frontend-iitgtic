@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { ACCOUNT_ROLES, canOpen, type ConsoleSection } from '$lib/utils/roles';
 import { getSection, getSiteContent, invalidateSiteContent } from '$lib/server/siteContent';
 import { logAdminAction, type AdminContext } from '$lib/server/adminGuard';
 import {
@@ -482,11 +483,11 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 	{
 		name: 'list_users',
 		description:
-			'Account profiles. Role is founder, company or admin. Use it for questions about who has access to what.',
+			'Account profiles. Role is founder, or one of the TIC staff roles: developer, admin, tic_admin, tic_ceo, tic_chairman, tic_coordinator, tic_head, tic_president. Use it for questions about who has access to what.',
 		parameters: {
 			type: 'object',
 			properties: {
-				role: { type: 'string', enum: ['founder', 'company', 'admin'] },
+				role: { type: 'string', enum: ACCOUNT_ROLES },
 				search: { type: 'string', description: 'Matches name or email.' },
 				limit: { type: 'integer', description: 'Default 25, maximum 200.' }
 			}
@@ -1207,4 +1208,42 @@ export const TOOL_SCHEMAS = ASSISTANT_TOOLS.map((tool) => ({
 
 export function findTool(name: string): ToolDef | undefined {
 	return ASSISTANT_TOOLS.find((tool) => tool.name === name);
+}
+
+// The console section whose data each tool reads or writes. A role only gets
+// the tools for sections it can open, so the assistant cannot become a way
+// round the sidebar — a CEO's assistant cannot read the user list any more than
+// the CEO can.
+const TOOL_SECTION: Record<string, ConsoleSection> = {
+	console_overview: 'overview',
+	list_companies: 'companies',
+	list_incubation_applications: 'applications',
+	get_incubation_application: 'applications',
+	list_jobs: 'jobs',
+	list_role_applicants: 'job-applications',
+	list_users: 'users',
+	recent_activity: 'activity',
+	traffic_summary: 'activity',
+	list_email_templates: 'email',
+	get_email_template: 'email',
+	recent_emails: 'email',
+	newsletter_subscribers: 'email',
+	list_site_sections: 'content',
+	read_site_section: 'content',
+	update_site_section: 'content',
+	reset_site_section: 'content',
+	update_email_template: 'email',
+	reset_email_template: 'email',
+	send_newsletter: 'email',
+	send_email: 'email'
+};
+
+/** Whether this role may have the assistant run the named tool. */
+export function toolAllowed(role: string, name: string): boolean {
+	const section = TOOL_SECTION[name];
+	return Boolean(section) && canOpen(role, section);
+}
+
+export function toolSchemasFor(role: string) {
+	return TOOL_SCHEMAS.filter((schema) => toolAllowed(role, schema.function.name));
 }

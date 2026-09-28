@@ -1,5 +1,13 @@
 import { error, json } from '@sveltejs/kit';
-import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
+import { logAdminAction, requireAdmin, type AdminContext } from '$lib/server/adminGuard';
+import {
+	ACCOUNT_ROLES,
+	FULL_ADMIN_ROLES,
+	ROLE_INFO,
+	roleLabel,
+	type AccountRole,
+	type StaffRole
+} from '$lib/utils/roles';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { removeApplicationDocuments } from '$lib/server/storageCleanup';
 import { AFTER_PASSWORD_RESET, AUTH_CALLBACK_PATH } from '$lib/utils/authRedirect';
@@ -8,8 +16,17 @@ import type { RequestHandler } from './$types';
 // Account management. Roles, sign-in state and password resets all live here;
 // every mutation is attributed to the acting admin through the guard's client.
 
-const ROLES = ['founder', 'admin'] as const;
-type Role = (typeof ROLES)[number];
+const isFullAdmin = (role: unknown) => FULL_ADMIN_ROLES.includes(role as StaffRole);
+
+// Counts the accounts that can still run the whole console, so the last one is
+// never demoted or deleted and nobody is left locked out.
+async function fullAdminCount(ctx: AdminContext): Promise<number> {
+	const { count } = await ctx.db
+		.from('profiles')
+		.select('id', { count: 'exact', head: true })
+		.in('role', FULL_ADMIN_ROLES);
+	return count ?? 0;
+}
 
 export const PATCH: RequestHandler = async ({ cookies, request }) => {
 	const ctx = await requireAdmin(cookies);
@@ -21,28 +38,31 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 	if (!body.id) error(400, 'Missing user id.');
 
 	if (body.role !== undefined) {
-		if (!ROLES.includes(body.role as Role)) error(400, 'Unknown role.');
+		if (!ACCOUNT_ROLES.includes(body.role as AccountRole)) error(400, 'Unknown role.');
 
-		// Removing your own admin rights would lock you out mid-session.
-		if (body.id === ctx.admin.userId && body.role !== 'admin') {
-			error(400, 'You cannot remove your own admin role.');
+		// Removing your own rights would lock you out mid-session.
+		if (body.id === ctx.admin.userId && body.role !== ctx.admin.role) {
+			error(400, 'You cannot change your own role.');
 		}
 
-		// Never leave the console with no way back in. This only bites when the
-		// account being changed is itself an admin — demoting a founder must not
-		// be blocked just because one admin happens to exist.
 		const { data: target } = await ctx.db
 			.from('profiles')
 			.select('role')
 			.eq('id', body.id)
 			.maybeSingle();
 
-		if (target?.role === 'admin' && body.role !== 'admin') {
-			const { count } = await ctx.db
-				.from('profiles')
-				.select('id', { count: 'exact', head: true })
-				.eq('role', 'admin');
-			if ((count ?? 0) <= 1) error(400, 'This is the last admin account.');
+		// Developer is the one role that can view as anyone, so only a developer
+		// may hand it out or take it away.
+		const actingRole = ctx.admin.actor?.role ?? ctx.admin.role;
+		if ((body.role === 'developer' || target?.role === 'developer') && !ROLE_INFO[actingRole].viewAs) {
+			error(403, 'Only a developer can grant or remove the Developer role.');
+		}
+
+		// Never leave the console with no way back in. This only bites when the
+		// account being changed is itself a full admin — demoting a founder must
+		// not be blocked just because one admin happens to exist.
+		if (isFullAdmin(target?.role) && !isFullAdmin(body.role)) {
+			if ((await fullAdminCount(ctx)) <= 1) error(400, 'This is the last admin account.');
 		}
 
 		const { error: roleError } = await ctx.db
@@ -50,7 +70,7 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 			.update({ role: body.role })
 			.eq('id', body.id);
 		if (roleError) error(500, roleError.message);
-		await logAdminAction(ctx, `changed role to ${body.role}`, {
+		await logAdminAction(ctx, `changed role to ${roleLabel(body.role)}`, {
 			table: 'profiles',
 			recordId: body.id
 		});
@@ -108,12 +128,11 @@ export const DELETE: RequestHandler = async ({ cookies, url }) => {
 		.eq('id', id)
 		.maybeSingle();
 
-	if (profile?.role === 'admin') {
-		const { count } = await ctx.db
-			.from('profiles')
-			.select('id', { count: 'exact', head: true })
-			.eq('role', 'admin');
-		if ((count ?? 0) <= 1) error(400, 'This is the last admin account.');
+	if (isFullAdmin(profile?.role) && (await fullAdminCount(ctx)) <= 1) {
+		error(400, 'This is the last admin account.');
+	}
+	if (profile?.role === 'developer' && !ROLE_INFO[ctx.admin.actor?.role ?? ctx.admin.role].viewAs) {
+		error(403, 'Only a developer can delete a developer account.');
 	}
 
 	await logAdminAction(ctx, `deleted the account ${profile?.email ?? id}`, {
@@ -138,14 +157,20 @@ export const DELETE: RequestHandler = async ({ cookies, url }) => {
 	return json({ ok: true });
 };
 
-// Creates another admin. Ordinary founders and companies sign themselves up.
+// Creates a member of TIC staff. Founders sign themselves up.
 export const POST: RequestHandler = async ({ cookies, request }) => {
 	const ctx = await requireAdmin(cookies);
 	const body = (await request.json().catch(() => ({}))) as {
 		email?: string;
 		password?: string;
 		fullName?: string;
+		role?: string;
 	};
+	const role = (body.role ?? 'admin') as AccountRole;
+	if (role === 'founder' || !ACCOUNT_ROLES.includes(role)) error(400, 'Unknown staff role.');
+	if (role === 'developer' && !ROLE_INFO[ctx.admin.actor?.role ?? ctx.admin.role].viewAs) {
+		error(403, 'Only a developer can create a developer account.');
+	}
 	const email = body.email?.trim().toLowerCase();
 	if (!email || !body.password || body.password.length < 8) {
 		error(400, 'Email and a password of at least 8 characters are required.');
@@ -155,17 +180,17 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 		email,
 		password: body.password,
 		email_confirm: true,
-		user_metadata: { role: 'admin', full_name: body.fullName?.trim() ?? '' }
+		user_metadata: { role, full_name: body.fullName?.trim() ?? '' }
 	});
 	if (createError || !data.user) error(400, createError?.message ?? 'Could not create account.');
 
 	const { error: roleError } = await ctx.db
 		.from('profiles')
-		.update({ role: 'admin', full_name: body.fullName?.trim() ?? '', email })
+		.update({ role, full_name: body.fullName?.trim() ?? '', email })
 		.eq('id', data.user.id);
 	if (roleError) error(500, roleError.message);
 
-	await logAdminAction(ctx, `created the admin account ${email}`, {
+	await logAdminAction(ctx, `created the ${roleLabel(role)} account ${email}`, {
 		table: 'profiles',
 		recordId: data.user.id
 	});

@@ -2,8 +2,9 @@ import { randomUUID } from 'node:crypto';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { readTicAdminSession } from '$lib/server/ticAdminSession';
 import { readFounderSession } from '$lib/server/founderSession';
-import { redirect, type Handle } from '@sveltejs/kit';
+import { error, redirect, type Handle } from '@sveltejs/kit';
 import { validatedAdminSession, validatedFounderSession } from '$lib/server/sessionValidation';
+import { canOpen, sectionForApi, sectionForPage, roleLabel } from '$lib/utils/roles';
 
 // Records one row per page view, admin routes included. Only HTML responses to
 // GET requests are counted, so assets, API calls and the sitemap never land here.
@@ -43,8 +44,28 @@ export const handle: Handle = async ({ event, resolve }) => {
 		(routePath === '/tic-admin' || routePath.startsWith('/tic-admin/')) &&
 		routePath !== '/tic-admin/login'
 	) {
-		if (!(await validatedAdminSession(event.cookies))) {
+		const admin = await validatedAdminSession(event.cookies);
+		if (!admin) {
 			redirect(303, '/login?next=/tic-admin');
+		}
+		// Each role opens only its own sections. A page outside them sends the
+		// person back to the overview rather than to an error, because the usual
+		// way to arrive is an old link, not an attempt.
+		const section = sectionForPage(event.url.pathname);
+		if (section && section !== 'overview' && !canOpen(admin.role, section)) {
+			redirect(303, '/tic-admin');
+		}
+	}
+
+	// The API behind each section is held to the same table as its page, so
+	// hiding a link is never the only thing standing in the way. Routes outside
+	// any section (view-as) do their own checks. No session is left for the
+	// route itself to answer with its usual 401.
+	const apiSection = sectionForApi(event.url.pathname);
+	if (apiSection) {
+		const admin = await validatedAdminSession(event.cookies);
+		if (admin && !canOpen(admin.role, apiSection)) {
+			error(403, `${roleLabel(admin.role)} does not have access to this part of the console.`);
 		}
 	}
 	if (routePath && (routePath === '/founder' || routePath.startsWith('/founder/'))) {

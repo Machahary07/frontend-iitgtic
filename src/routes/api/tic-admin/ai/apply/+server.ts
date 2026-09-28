@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { requireAdmin } from '$lib/server/adminGuard';
-import { findTool } from '$lib/server/assistantTools';
+import { findTool, toolAllowed } from '$lib/server/assistantTools';
 import type { RequestHandler } from './$types';
 
 // Applies a change the assistant proposed and the admin approved.
@@ -22,6 +22,7 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 	const tool = body.tool ? findTool(body.tool) : undefined;
 	// Only write tools are approvable, and nothing else may be driven from here.
 	if (!tool?.write) error(400, 'That is not an approvable change.');
+	if (!toolAllowed(ctx.admin.role, tool.name)) error(403, 'Your role cannot make this change.');
 
 	const result = (await tool.run(ctx.db, body.args ?? {}, ctx)) as Record<string, unknown>;
 	if (result && typeof result === 'object' && 'error' in result) {
