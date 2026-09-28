@@ -1,6 +1,6 @@
 import { adminDb } from '$lib/server/adminData';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
-import type { AccountRole } from '$lib/utils/roles';
+import { ROLE_INFO, type AccountRole } from '$lib/utils/roles';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
@@ -49,6 +49,12 @@ export const load: PageServerLoad = async ({ parent }) => {
 		};
 	});
 
-	users.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-	return { users, currentAdminId: admin!.userId };
+	// Developer accounts are invisible to everyone but developers — the role,
+	// and who holds it, is not something the rest of the console manages.
+	const visible = ROLE_INFO[admin!.role].viewAs
+		? users
+		: users.filter((u) => u.role !== 'developer');
+
+	visible.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+	return { users: visible, currentAdminId: admin!.userId };
 };

@@ -489,12 +489,15 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			}
 		},
 		label: () => 'Reading user accounts',
-		run: async (db, args) => {
+		run: async (db, args, ctx) => {
 			let query = db
 				.from('profiles')
 				.select('id, role, full_name, email, created_at')
 				.order('created_at', { ascending: false })
 				.limit(limitOf(args));
+
+			// Developer accounts are only visible to developers, here as on screen.
+			if (ctx.admin.role !== 'developer') query = query.neq('role', 'developer');
 
 			const role = textOf(args, 'role');
 			if (role) query = query.eq('role', role);

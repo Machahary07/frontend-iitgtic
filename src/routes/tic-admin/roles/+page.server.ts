@@ -1,6 +1,6 @@
 import { adminDb } from '$lib/server/adminData';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
-import { STAFF_ROLES, type AccountRole } from '$lib/utils/roles';
+import { ROLE_INFO, STAFF_ROLES, type AccountRole } from '$lib/utils/roles';
 import type { PageServerLoad } from './$types';
 
 // Who holds each staff role. Founders are only counted: they have their own
@@ -13,7 +13,11 @@ export const load: PageServerLoad = async ({ parent }) => {
 		db
 			.from('profiles')
 			.select('id, role, full_name, email, phone, responsibility, department, created_at')
-			.in('role', STAFF_ROLES as unknown as string[])
+			.in(
+				'role',
+				// Developers are only listed to developers; see the Users loader.
+				STAFF_ROLES.filter((role) => role !== 'developer' || ROLE_INFO[admin!.role].viewAs)
+			)
 			.order('full_name', { ascending: true }),
 		db.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'founder'),
 		supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })

@@ -33,6 +33,9 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 		.from('profiles')
 		.select('id, role, full_name, email')
 		.neq('id', real.userId)
+		// Nobody views as a developer: it would lend them nothing a developer
+		// lacks, and it is the one account kind hidden from the rest of staff.
+		.neq('role', 'developer')
 		.order('full_name', { ascending: true })
 		.limit(40);
 
@@ -66,7 +69,8 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 	if (body.userId === real.userId) error(400, 'That is you.');
 
 	const target = await currentAccount(body.userId);
-	if (!target) error(404, 'That account is unavailable — deleted or suspended.');
+	if (!target) error(404, 'That account is unavailable — deleted or deactivated.');
+	if (target.role === 'developer') error(400, 'You cannot view as another developer.');
 
 	startViewAs(cookies, { targetUserId: target.userId, by: real.userId });
 

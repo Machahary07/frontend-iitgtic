@@ -16,7 +16,11 @@
 </script>
 
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import Pencil from '@lucide/svelte/icons/pencil';
+	import Power from '@lucide/svelte/icons/power';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import UserCog from '@lucide/svelte/icons/user-cog';
 	import X from '@lucide/svelte/icons/x';
 	import Eye from '@lucide/svelte/icons/eye';
 	import EyeOff from '@lucide/svelte/icons/eye-off';
@@ -43,12 +47,33 @@
 		canSetPassword: boolean;
 		/** …and may change its role (never your own). */
 		canChangeRole: boolean;
+		/** Open straight into the form rather than the read view (the pencil). */
+		startEditing?: boolean;
 		onclose: () => void;
 		onsaved: () => void;
+		/** The account's own actions, shown in the read view. Each is left out
+		 *  when the person may not do it. */
+		onviewas?: () => void;
+		ontoggleactive?: () => void;
+		ondelete?: () => void;
+		busy?: boolean;
 	}
 
-	let { user, open, roleOptions, canEdit, canSetPassword, canChangeRole, onclose, onsaved }: Props =
-		$props();
+	let {
+		user,
+		open,
+		roleOptions,
+		canEdit,
+		canSetPassword,
+		canChangeRole,
+		startEditing = false,
+		onclose,
+		onsaved,
+		onviewas,
+		ontoggleactive,
+		ondelete,
+		busy = false
+	}: Props = $props();
 
 	const creating = $derived(user === null);
 
@@ -65,11 +90,18 @@
 	let responsibility = $state('');
 	let department = $state('');
 
-	// Reset from the record each time the dialog opens, so a cancelled edit
-	// never leaks into the next one.
+	// Reset from the record each time the dialog opens on an account, so a
+	// cancelled edit never leaks into the next one. Keyed on the id alone: the
+	// record is refreshed underneath (after Deactivate, say) and that must not
+	// throw away what is being typed.
 	$effect(() => {
 		if (!open) return;
-		editing = user === null;
+		void user?.id;
+		untrack(reset);
+	});
+
+	function reset() {
+		editing = user === null || (startEditing && canEdit);
 		saving = false;
 		showPassword = false;
 		errors = {};
@@ -77,10 +109,15 @@
 		email = user?.email ?? '';
 		password = '';
 		phone = user?.phone ?? '';
-		role = user?.role ?? roleOptions[0]?.value ?? 'admin';
+		// A new account starts as an Admin, never a Developer, whatever the list
+		// happens to lead with.
+		role =
+			user?.role ??
+			(roleOptions.find((option) => option.value === 'admin') ?? roleOptions[0])?.value ??
+			'admin';
 		responsibility = user?.responsibility ?? '';
 		department = user?.department ?? '';
-	});
+	}
 
 	let dialog = $state<HTMLDialogElement | null>(null);
 	$effect(() => {
@@ -247,6 +284,48 @@
 						<dd>{user.banned ? 'Deactivated' : 'Active'}</dd>
 					</div>
 				</dl>
+
+				{#if onviewas || ontoggleactive || ondelete}
+					<footer class="acts">
+						{#if onviewas}
+							<button
+								type="button"
+								class="act"
+								onclick={onviewas}
+								disabled={busy || user.banned}
+								title="Open the console as {user.fullName || user.email}"
+							>
+								<UserCog size={15} strokeWidth={2} aria-hidden="true" /> View as
+							</button>
+						{/if}
+						{#if ontoggleactive}
+							<button
+								type="button"
+								class="act"
+								class:act--good={user.banned}
+								onclick={ontoggleactive}
+								disabled={busy}
+								title={user.banned
+									? 'Let them sign in again'
+									: 'Stop them signing in — reversible, nothing is deleted'}
+							>
+								<Power size={15} strokeWidth={2} aria-hidden="true" />
+								{user.banned ? 'Activate' : 'Deactivate'}
+							</button>
+						{/if}
+						{#if ondelete}
+							<button
+								type="button"
+								class="act act--danger"
+								onclick={ondelete}
+								disabled={busy}
+								title="Delete the account for good"
+							>
+								<Trash2 size={15} strokeWidth={2} aria-hidden="true" /> Delete
+							</button>
+						{/if}
+					</footer>
+				{/if}
 			{:else}
 				<div class="grid">
 					<label class="field" class:field--err={errors.fullName}>
@@ -551,6 +630,54 @@
 		border-radius: $admin-radius-sm;
 		cursor: pointer;
 		@include admin-focus-ring;
+	}
+
+	.acts {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin-top: 20px;
+		padding-top: 16px;
+		border-top: 1px solid $admin-line-soft;
+	}
+
+	.act {
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		height: 36px;
+		padding: 0 14px;
+		font: inherit;
+		font-size: 12.5px;
+		font-weight: $font-weight-semibold;
+		color: $admin-ink;
+		background: $admin-surface;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-pill;
+		cursor: pointer;
+		@include admin-focus-ring;
+
+		&:hover:not(:disabled) {
+			background: $admin-sunken;
+		}
+
+		&:disabled {
+			opacity: 0.45;
+			cursor: not-allowed;
+		}
+
+		&--good {
+			color: admin-tone-fg('good');
+			background: admin-tone-bg('good');
+			border-color: transparent;
+		}
+
+		&--danger {
+			margin-left: auto;
+			color: admin-tone-fg('bad');
+			background: admin-tone-bg('bad');
+			border-color: transparent;
+		}
 	}
 
 	.sheet__foot {

@@ -21,6 +21,8 @@
 	} from '$lib/utils/roles';
 	import { viewAs } from '$lib/utils/viewAs';
 	import { showToast } from '$lib/utils/toast.svelte';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
+	import { adminDeleteUser, adminSetUserBanned } from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
 
 	// Every kind of account there is, who holds each one, and what each can open.
@@ -37,6 +39,12 @@
 	// popup still opens, read-only.
 	const managesUsers = $derived(canOpen(actingRole, 'users'));
 
+	// The Developer role is shown to developers only — its card, its column and
+	// the view-as row with it. Judged on the account on screen, so viewing as an
+	// admin shows exactly what that admin sees.
+	const seesDevelopers = $derived(Boolean(data.admin && ROLE_INFO[data.admin.role].viewAs));
+	const shownRoles = $derived(STAFF_ROLES.filter((role) => role !== 'developer' || seesDevelopers));
+
 	const byRole = $derived.by(() => {
 		const groups = Object.fromEntries(STAFF_ROLES.map((role) => [role, [] as UserRecord[]]));
 		for (const member of data.members) groups[member.role]?.push(member);
@@ -44,11 +52,56 @@
 	});
 
 	let formOpen = $state(false);
-	let selected = $state<UserRecord | null>(null);
+	let selectedId = $state<string | null>(null);
+	const selected = $derived(
+		(data.members as UserRecord[]).find((member) => member.id === selectedId) ?? null
+	);
+	let busy = $state(false);
 
 	function open(member: UserRecord) {
-		selected = member;
+		selectedId = member.id;
 		formOpen = true;
+	}
+
+	const manages = (member: UserRecord) =>
+		managesUsers && member.id !== selfId && canManage(actingRole, member.role);
+
+	async function toggleActive(member: UserRecord) {
+		const next = !member.banned;
+		if (
+			next &&
+			!(await askConfirm({
+				title: `Deactivate ${member.email}?`,
+				body: 'They will not be able to sign in until you activate the account again. Nothing is deleted.',
+				confirmLabel: 'Deactivate',
+				tone: 'danger'
+			}))
+		) {
+			return;
+		}
+		busy = true;
+		const result = await adminSetUserBanned(member.id, next);
+		busy = false;
+		if (!result.ok) return showToast(result.error, 'err');
+		showToast(next ? `${member.email} deactivated.` : `${member.email} activated.`);
+		await invalidateAll();
+	}
+
+	async function remove(member: UserRecord) {
+		const ok = await askConfirm({
+			title: `Permanently delete ${member.email}?`,
+			body: 'Everything they own goes with the account. This cannot be undone — deactivate it instead if you may want it back.',
+			confirmLabel: 'Delete user',
+			tone: 'danger'
+		});
+		if (!ok) return;
+		busy = true;
+		const result = await adminDeleteUser(member.id);
+		busy = false;
+		if (!result.ok) return showToast(result.error, 'err');
+		showToast(`${member.email} deleted.`);
+		formOpen = false;
+		await invalidateAll();
 	}
 
 	const staffOptions = $derived(
@@ -82,7 +135,7 @@
 	onLogout={handleLogout}
 >
 	<div class="cards">
-		{#each STAFF_ROLES as role (role)}
+		{#each shownRoles as role (role)}
 			{@const members = byRole[role] ?? []}
 			<section class="card">
 				<header class="card__head">
@@ -124,7 +177,7 @@
 												· deactivated{/if}
 										</span>
 									</span>
-									{#if isDeveloper && member.id !== selfId}
+									{#if isDeveloper && member.role !== 'developer'}
 										<button
 											type="button"
 											class="member__view"
@@ -172,7 +225,7 @@
 				<thead>
 					<tr>
 						<th>Section</th>
-						{#each STAFF_ROLES as role (role)}
+						{#each shownRoles as role (role)}
 							<th>{roleLabel(role)}</th>
 						{/each}
 					</tr>
@@ -181,7 +234,7 @@
 					{#each CONSOLE_SECTIONS as section (section.key)}
 						<tr>
 							<td class="matrix__section">{section.label}</td>
-							{#each STAFF_ROLES as role (role)}
+							{#each shownRoles as role (role)}
 								<td>
 									{#if ROLE_INFO[role].sections.includes(section.key)}
 										<span class="yes" aria-label="Yes"><Check size={13} strokeWidth={2.6} /></span>
@@ -194,7 +247,7 @@
 					{/each}
 					<tr>
 						<td class="matrix__section">Set passwords</td>
-						{#each STAFF_ROLES as role (role)}
+						{#each shownRoles as role (role)}
 							<td>
 								{#if ROLE_INFO[role].setsPasswords}
 									<span class="yes" aria-label="Yes"><Check size={13} strokeWidth={2.6} /></span>
@@ -204,18 +257,20 @@
 							</td>
 						{/each}
 					</tr>
-					<tr>
-						<td class="matrix__section">View as</td>
-						{#each STAFF_ROLES as role (role)}
-							<td>
-								{#if ROLE_INFO[role].viewAs}
-									<span class="yes" aria-label="Yes"><Check size={13} strokeWidth={2.6} /></span>
-								{:else}
-									<span class="no" aria-label="No">—</span>
-								{/if}
-							</td>
-						{/each}
-					</tr>
+					{#if seesDevelopers}
+						<tr>
+							<td class="matrix__section">View as</td>
+							{#each shownRoles as role (role)}
+								<td>
+									{#if ROLE_INFO[role].viewAs}
+										<span class="yes" aria-label="Yes"><Check size={13} strokeWidth={2.6} /></span>
+									{:else}
+										<span class="no" aria-label="No">—</span>
+									{/if}
+								</td>
+							{/each}
+						</tr>
+					{/if}
 				</tbody>
 			</table>
 		</div>
@@ -235,8 +290,14 @@
 		selected && (selected.id === selfId || canSetPassword(actingRole, selected.role))
 	)}
 	canChangeRole={Boolean(selected && selected.id !== selfId && canGrant(actingRole, selected.role))}
+	{busy}
 	onclose={() => (formOpen = false)}
 	onsaved={() => invalidateAll()}
+	onviewas={selected && isDeveloper && selected.role !== 'developer'
+		? () => openAs(selected!)
+		: undefined}
+	ontoggleactive={selected && manages(selected) ? () => toggleActive(selected!) : undefined}
+	ondelete={selected && manages(selected) ? () => remove(selected!) : undefined}
 />
 
 <style lang="scss">

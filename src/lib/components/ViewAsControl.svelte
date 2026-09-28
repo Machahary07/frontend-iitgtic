@@ -157,7 +157,7 @@
 						class:chip--on={roleFilter === null}
 						onclick={() => (roleFilter = null)}>All</button
 					>
-					{#each ACCOUNT_ROLES as role (role)}
+					{#each ACCOUNT_ROLES.filter((r) => r !== 'developer') as role (role)}
 						<button
 							type="button"
 							class="chip"
@@ -256,6 +256,7 @@
 	}
 
 	.pill__role {
+		margin-left: 4px;
 		opacity: 0.7;
 		font-weight: $font-weight-medium;
 	}

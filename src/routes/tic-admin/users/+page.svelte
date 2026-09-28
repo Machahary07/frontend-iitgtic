@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import UserFormDialog from '$lib/components/UserFormDialog.svelte';
+	import Pencil from '@lucide/svelte/icons/pencil';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import { adminDeleteUser, adminSetUserBanned, type ManagedUser } from '$lib/utils/ticAdmin';
@@ -38,7 +39,11 @@
 
 	// The account open in the popup: null with formOpen adds a new one.
 	let formOpen = $state(false);
-	let selected = $state<ManagedUser | null>(null);
+	// By id, so the popup follows the live record — after Deactivate, or a
+	// refresh, it shows the account as it now is.
+	let selectedId = $state<string | null>(null);
+	const selected = $derived(users.find((u) => u.id === selectedId) ?? null);
+	let startEditing = $state(false);
 
 	// Only the roles this person may hand out; a founder is never created here.
 	const grantable = $derived(
@@ -70,12 +75,14 @@
 		user.id !== currentAdminId && canManage(actingRole, user.role);
 
 	function openAdd() {
-		selected = null;
+		selectedId = null;
+		startEditing = false;
 		formOpen = true;
 	}
 
-	function openUser(user: ManagedUser) {
-		selected = user;
+	function openUser(user: ManagedUser, edit = false) {
+		selectedId = user.id;
+		startEditing = edit;
 		formOpen = true;
 	}
 
@@ -89,10 +96,11 @@
 		busyId = null;
 		if (!result.ok) {
 			showToast(result.error, 'err');
-			return;
+			return false;
 		}
 		showToast(okText);
 		await invalidateAll();
+		return true;
 	}
 
 	// Reversible: a deactivated account cannot sign in, but nothing is removed,
@@ -122,8 +130,8 @@
 			confirmLabel: 'Delete user',
 			tone: 'danger'
 		});
-		if (!ok) return;
-		run(user.id, () => adminDeleteUser(user.id), `${user.email} deleted.`);
+		if (!ok) return false;
+		return run(user.id, () => adminDeleteUser(user.id), `${user.email} deleted.`);
 	}
 
 	async function openAs(user: ManagedUser) {
@@ -273,33 +281,20 @@
 								</td>
 								<td><p class="cell__sub">{fmtDate(user.createdAt)}</p></td>
 								<td class="actions-col">
-									<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-									<div class="actions" onclick={(event) => event.stopPropagation()}>
-										{#if isDeveloper && user.id !== currentAdminId}
-											<button
-												class="btn"
-												disabled={busyId === user.id || user.banned}
-												title="Open the console as {user.fullName || user.email}"
-												onclick={() => openAs(user)}
-											>
-												View as
-											</button>
-										{/if}
-										{#if manages(user)}
-											<button
-												class="btn"
-												disabled={busyId === user.id}
-												onclick={() => toggleActive(user)}
-											>
-												{user.banned ? 'Activate' : 'Deactivate'}
-											</button>
-											<button
-												class="btn btn--danger"
-												disabled={busyId === user.id}
-												onclick={() => remove(user)}>Delete</button
-											>
-										{/if}
-									</div>
+									<!-- Opens the same popup as the row, straight into editing. View
+									     as, Deactivate and Delete live in the popup. -->
+									<button
+										type="button"
+										class="pencil"
+										title="Edit {user.fullName || user.email}"
+										aria-label="Edit {user.fullName || user.email}"
+										onclick={(event) => {
+											event.stopPropagation();
+											openUser(user, true);
+										}}
+									>
+										<Pencil size={15} strokeWidth={2} />
+									</button>
 								</td>
 							</tr>
 						{/each}
@@ -327,8 +322,22 @@
 	canChangeRole={selected
 		? selected.id !== currentAdminId && canGrant(actingRole, selected.role)
 		: true}
+	{startEditing}
+	busy={busyId !== null}
 	onclose={() => (formOpen = false)}
 	onsaved={() => invalidateAll()}
+	onviewas={selected &&
+	isDeveloper &&
+	selected.role !== 'developer' &&
+	selected.id !== currentAdminId
+		? () => openAs(selected!)
+		: undefined}
+	ontoggleactive={selected && manages(selected) ? () => toggleActive(selected!) : undefined}
+	ondelete={selected && manages(selected)
+		? async () => {
+				if (await remove(selected!)) formOpen = false;
+			}
+		: undefined}
 />
 
 <style lang="scss">
@@ -462,6 +471,26 @@
 
 		&:hover td {
 			background: rgba(17, 20, 24, 0.018);
+		}
+	}
+
+	.pencil {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 34px;
+		height: 34px;
+		padding: 0;
+		color: $admin-ink-2;
+		background: $admin-surface;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-pill;
+		cursor: pointer;
+		@include admin-focus-ring;
+
+		&:hover {
+			color: $admin-ink;
+			background: $admin-sunken;
 		}
 	}
 
