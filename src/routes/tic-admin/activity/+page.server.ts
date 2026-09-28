@@ -1,4 +1,6 @@
+import { withoutDeveloperActivity } from '$lib/server/auditFilter';
 import { adminDb } from '$lib/server/adminData';
+import { FULL_ADMIN_ROLES } from '$lib/utils/roles';
 import type { PageServerLoad } from './$types';
 
 // The first page of each list, sized to the pagination bar's default. A reader
@@ -10,12 +12,14 @@ export const load: PageServerLoad = async ({ parent }) => {
 	const db = adminDb(admin!);
 
 	const [audit, impressions, recent] = await Promise.all([
-		db
-			.from('audit_log')
-			.select(
-				'id, occurred_at, source, actor_id, actor_label, action, table_name, record_id, before, after',
-				{ count: 'exact' }
-			)
+		withoutDeveloperActivity(
+			db
+				.from('audit_log')
+				.select(
+					'id, occurred_at, source, actor_id, actor_label, action, table_name, record_id, before, after',
+					{ count: 'exact' }
+				)
+		)
 			.order('id', { ascending: false })
 			.range(0, FIRST_PAGE_SIZE - 1),
 		db.rpc('page_impressions', { since: null }),
@@ -34,6 +38,8 @@ export const load: PageServerLoad = async ({ parent }) => {
 		impressions: impressions.data ?? [],
 		recent: recent.data ?? [],
 		recentTotal: recent.count ?? 0,
-		firstPageSize: FIRST_PAGE_SIZE
+		firstPageSize: FIRST_PAGE_SIZE,
+		// Clearing is for the full admins, judged on the real person.
+		canClear: FULL_ADMIN_ROLES.includes(admin!.actor?.role ?? admin!.role)
 	};
 };

@@ -1,5 +1,8 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
+	import Eraser from '@lucide/svelte/icons/eraser';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
+	import { showToast } from '$lib/utils/toast.svelte';
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
@@ -152,6 +155,42 @@
 		return String(value);
 	}
 
+	let clearing = $state(false);
+
+	// Clears whichever log is on screen, after saying exactly what will go.
+	async function clearLog() {
+		const audit = view === 'audit';
+		const ok = await askConfirm({
+			title: audit ? 'Clear the audit log?' : 'Clear page impressions?',
+			body: audit
+				? `Every audit entry (${data.auditTotal}) will be deleted for good. This cannot be undone — changes made before now will no longer be traceable.`
+				: `Every recorded page view (${data.recentTotal}) will be deleted for good, and the impression counts start again from zero. This cannot be undone.`,
+			confirmLabel: audit ? 'Clear audit log' : 'Clear impressions',
+			tone: 'danger'
+		});
+		if (!ok) return;
+
+		clearing = true;
+		try {
+			const res = await fetch(`/api/tic-admin/activity?view=${audit ? 'audit' : 'impressions'}`, {
+				method: 'DELETE'
+			});
+			const body = (await res.json().catch(() => ({}))) as { cleared?: number; message?: string };
+			if (!res.ok) {
+				showToast(body.message ?? 'Could not clear the log.', 'err');
+				return;
+			}
+			showToast(`Cleared ${body.cleared ?? 0} ${audit ? 'entries' : 'page views'}.`);
+			rangeImpressions = null;
+			range = 'all';
+			await invalidateAll();
+			auditPager.restart();
+			visitPager.restart();
+		} finally {
+			clearing = false;
+		}
+	}
+
 	async function handleLogout() {
 		await logoutTicAdmin();
 		goto(resolve('/login'));
@@ -248,6 +287,15 @@
 	user={adminName}
 	onLogout={handleLogout}
 >
+	{#snippet actions()}
+		{#if data.canClear}
+			<button class="clear" onclick={clearLog} disabled={clearing}>
+				<Eraser size={14} strokeWidth={2} aria-hidden="true" />
+				{clearing ? 'Clearing…' : view === 'audit' ? 'Clear audit log' : 'Clear impressions'}
+			</button>
+		{/if}
+	{/snippet}
+
 	<div class="tabs">
 		<button class="tab" class:tab--active={view === 'audit'} onclick={() => (view = 'audit')}>
 			Audit log
@@ -503,6 +551,16 @@
 	}
 	.panel {
 		@include admin-panel;
+	}
+
+	.clear {
+		@include admin-btn-base;
+		display: inline-flex;
+		align-items: center;
+		gap: 7px;
+		color: admin-tone-fg('bad');
+		background: admin-tone-bg('bad');
+		border-color: transparent;
 	}
 
 	.pager-wrap {

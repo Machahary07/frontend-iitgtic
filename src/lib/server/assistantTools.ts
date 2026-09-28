@@ -1,3 +1,4 @@
+import { withoutDeveloperActivity } from '$lib/server/auditFilter';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ACCOUNT_ROLES, canOpen, type ConsoleSection } from '$lib/utils/roles';
 import { getSection, getSiteContent, invalidateSiteContent } from '$lib/server/siteContent';
@@ -530,9 +531,11 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 		label: (args) =>
 			args.table ? `Reading activity on ${String(args.table)}` : 'Reading the activity log',
 		run: async (db, args) => {
-			let query = db
-				.from('audit_log')
-				.select('id, occurred_at, source, actor_label, action, table_name, record_id')
+			let query = withoutDeveloperActivity(
+				db
+					.from('audit_log')
+					.select('id, occurred_at, source, actor_label, action, table_name, record_id')
+			)
 				.order('id', { ascending: false })
 				.limit(limitOf(args, 40));
 

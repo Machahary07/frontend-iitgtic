@@ -1,5 +1,7 @@
+import { withoutDeveloperActivity } from '$lib/server/auditFilter';
 import { error, json } from '@sveltejs/kit';
-import { requireAdmin } from '$lib/server/adminGuard';
+import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
+import { FULL_ADMIN_ROLES } from '$lib/utils/roles';
 import type { RequestHandler } from './$types';
 
 // Reads the audit trail and the traffic log. Both tables have RLS on with no
@@ -28,13 +30,14 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 	const paged = pageOf(url);
 
 	if (view === 'audit') {
-		let query = ctx.db
-			.from('audit_log')
-			.select(
-				'id, occurred_at, source, actor_id, actor_label, action, table_name, record_id, before, after',
-				paged ? { count: 'exact' } : undefined
-			)
-			.order('id', { ascending: false });
+		let query = withoutDeveloperActivity(
+			ctx.db
+				.from('audit_log')
+				.select(
+					'id, occurred_at, source, actor_id, actor_label, action, table_name, record_id, before, after',
+					paged ? { count: 'exact' } : undefined
+				)
+		).order('id', { ascending: false });
 
 		query = paged ? query.range(paged.from, paged.to) : query.limit(PAGE_SIZE);
 		if (before && !paged) query = query.lt('id', Number(before));
@@ -75,4 +78,36 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 	}
 
 	error(400, 'Unknown view.');
+};
+
+// Clears one of the two logs. Only the full admins (Developer, Admin) may, and
+// judged on the real person, so viewing as an admin lends nothing. It cannot be
+// undone: the rows are deleted, not hidden.
+//
+// DELETE ?view=audit        every audit entry, then one entry saying who cleared it
+// DELETE ?view=impressions  every recorded page view
+export const DELETE: RequestHandler = async ({ cookies, url }) => {
+	const ctx = await requireAdmin(cookies);
+	const actingRole = ctx.admin.actor?.role ?? ctx.admin.role;
+	if (!FULL_ADMIN_ROLES.includes(actingRole)) {
+		error(403, 'Only a Developer or an Admin can clear the logs.');
+	}
+
+	const view = url.searchParams.get('view');
+	const table = view === 'audit' ? 'audit_log' : view === 'impressions' ? 'page_views' : null;
+	if (!table) error(400, 'Unknown log.');
+
+	// A delete needs a filter; every identity id is positive, so this is all rows.
+	const { error: dbError, count } = await ctx.db.from(table).delete({ count: 'exact' }).gt('id', 0);
+	if (dbError) error(500, dbError.message);
+
+	// Written after the delete, so a cleared log still says who cleared it.
+	await logAdminAction(
+		ctx,
+		view === 'audit'
+			? `cleared the audit log (${count ?? 0} entries)`
+			: `cleared page impressions (${count ?? 0} page views)`
+	);
+
+	return json({ ok: true, cleared: count ?? 0 });
 };
