@@ -19,7 +19,6 @@
 
 		<div class="citation">
 			<p>{intro.citation}</p>
-			<span class="author">{intro.attribution}</span>
 		</div>
 	</div>
 
@@ -109,15 +108,6 @@
 		font-size: $font-size-md;
 		line-height: $line-height-base;
 		opacity: 0.8;
-
-		p {
-			margin-bottom: $space-4;
-		}
-
-		.author {
-			display: block;
-			text-align: right;
-		}
 	}
 
 	.scroll-indicator {
@@ -168,14 +158,6 @@
 			max-width: 300px;
 			font-size: $font-size-base;
 			padding: 0;
-
-			p {
-				margin-bottom: $space-3;
-			}
-		}
-
-		.citation .author {
-			text-align: center;
 		}
 
 		:global(.cta) {
