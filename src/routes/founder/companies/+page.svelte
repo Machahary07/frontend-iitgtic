@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { phoneInput } from '$lib/utils/phone';
 	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -136,7 +137,7 @@
 			</label>
 			<label class="field">
 				<span>Phone</span>
-				<input type="tel" bind:value={phone} required />
+				<input type="tel" bind:value={phone} required use:phoneInput />
 			</label>
 
 			{#if formError}

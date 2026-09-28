@@ -28,8 +28,12 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 		);
 	}
 
-	const body = (await request.json().catch(() => ({}))) as { accessToken?: string; captchaToken?: string };
-	if (!(await verifyTurnstile(body.captchaToken, getClientAddress()))) error(400, 'Verification failed. Please try again.');
+	const body = (await request.json().catch(() => ({}))) as {
+		accessToken?: string;
+		captchaToken?: string;
+	};
+	if (!(await verifyTurnstile(body.captchaToken, getClientAddress())))
+		error(400, 'Verification failed. Please try again.');
 	if (!body.accessToken) error(400, 'Missing access token.');
 
 	const { data, error: authError } = await supabaseAdmin.auth.getUser(body.accessToken);

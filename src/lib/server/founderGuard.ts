@@ -55,17 +55,21 @@ export async function listMyCompanies(
 		db.from('profiles').select('company_id, member_status').eq('id', userId).maybeSingle()
 	]);
 
-	const list: CompanyStanding[] = ((owned.data ?? []) as { id: string; company_name: string; status: string }[]).map(
-		(row) => ({
-			id: row.id,
-			name: row.company_name,
-			status: row.status as CompanyStanding['status'],
-			relation: 'owner' as const
-		})
-	);
+	const list: CompanyStanding[] = (
+		(owned.data ?? []) as { id: string; company_name: string; status: string }[]
+	).map((row) => ({
+		id: row.id,
+		name: row.company_name,
+		status: row.status as CompanyStanding['status'],
+		relation: 'owner' as const
+	}));
 
 	const memberOf = membership.data?.company_id as string | null | undefined;
-	if (memberOf && membership.data?.member_status === 'approved' && !list.some((c) => c.id === memberOf)) {
+	if (
+		memberOf &&
+		membership.data?.member_status === 'approved' &&
+		!list.some((c) => c.id === memberOf)
+	) {
 		const { data } = await db
 			.from('companies')
 			.select('id, company_name, status')

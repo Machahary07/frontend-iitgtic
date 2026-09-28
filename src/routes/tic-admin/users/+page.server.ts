@@ -1,5 +1,6 @@
 import { adminDb } from '$lib/server/adminData';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import type { AccountRole } from '$lib/utils/roles';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
@@ -8,7 +9,9 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 	const [authResult, profileResult, companyResult] = await Promise.all([
 		supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-		db.from('profiles').select('id, role, full_name, email, phone, created_at'),
+		db
+			.from('profiles')
+			.select('id, role, full_name, email, phone, responsibility, department, created_at'),
 		db.from('companies').select('id, owner_id, company_name, status')
 	]);
 
@@ -33,9 +36,11 @@ export const load: PageServerLoad = async ({ parent }) => {
 		return {
 			id: u.id,
 			email: u.email ?? '',
-			role: (profile?.role as 'founder' | 'admin') ?? 'founder',
+			role: (profile?.role as AccountRole) ?? 'founder',
 			fullName: (profile?.full_name as string) ?? '',
 			phone: (profile?.phone as string) ?? '',
+			responsibility: (profile?.responsibility as string) ?? '',
+			department: (profile?.department as string) ?? '',
 			createdAt: u.created_at,
 			lastSignInAt: u.last_sign_in_at ?? null,
 			emailConfirmed: Boolean(u.email_confirmed_at),

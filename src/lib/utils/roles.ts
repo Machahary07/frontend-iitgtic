@@ -73,57 +73,73 @@ const PIPELINE: ConsoleSection[] = [
 
 export type RoleInfo = {
 	label: string;
+	/** A few words, for the role picker. */
+	hint: string;
 	blurb: string;
 	/** Empty for a founder: they have their own console, not a slice of this one. */
 	sections: ConsoleSection[];
 	/** May open the console as another account. */
 	viewAs?: boolean;
+	/** May set another account's password from the Users form. */
+	setsPasswords?: boolean;
 };
 
 export const ROLE_INFO: Record<AccountRole, RoleInfo> = {
 	developer: {
 		label: 'Developer',
+		hint: 'Everything, plus view as',
 		blurb: 'Builds and maintains the console. Everything, plus viewing as any account.',
 		sections: ALL,
-		viewAs: true
+		viewAs: true,
+		setsPasswords: true
 	},
 	admin: {
 		label: 'Admin',
+		hint: 'Runs this console',
 		blurb: 'Runs this console end to end, including accounts and roles.',
-		sections: ALL
+		sections: ALL,
+		setsPasswords: true
 	},
 	tic_admin: {
 		label: 'TIC Admin',
-		blurb: 'Day-to-day operations — every queue, the website, email and storage.',
-		sections: ALL.filter((key) => key !== 'users')
+		hint: 'Operations and accounts',
+		blurb: 'Day-to-day operations — every queue, staff accounts, the website, email and storage.',
+		sections: ALL,
+		setsPasswords: true
 	},
 	tic_ceo: {
 		label: 'TIC CEO',
+		hint: 'Pipeline and activity',
 		blurb: 'Leads the incubator. Sees the pipeline and the activity behind it.',
 		sections: [...PIPELINE, 'activity']
 	},
 	tic_chairman: {
 		label: 'TIC Chairman',
+		hint: 'Pipeline and activity',
 		blurb: 'Chairs the governing body. Sees the pipeline and the activity behind it.',
 		sections: [...PIPELINE, 'activity']
 	},
 	tic_president: {
 		label: 'TIC President',
+		hint: 'Pipeline and activity',
 		blurb: 'Oversees the incubator. Sees the pipeline and the activity behind it.',
 		sections: [...PIPELINE, 'activity']
 	},
 	tic_head: {
 		label: 'TIC Head',
+		hint: 'Pipeline and activity',
 		blurb: 'Heads a TIC function. Works the pipeline and reads the activity trail.',
 		sections: [...PIPELINE, 'activity']
 	},
 	tic_coordinator: {
 		label: 'TIC Coordinator',
+		hint: 'Pipeline, website, email',
 		blurb: 'Coordinates programmes. Works the pipeline and keeps the website and emails current.',
 		sections: [...PIPELINE, 'content', 'email']
 	},
 	founder: {
 		label: 'Founder',
+		hint: 'Runs startups',
 		blurb: 'Runs a startup. Uses the founder console, not this one.',
 		sections: []
 	}
@@ -144,6 +160,41 @@ export function canOpen(role: string | null | undefined, section: ConsoleSection
 
 /** Roles with the run of the console — the ones "last admin" protection counts. */
 export const FULL_ADMIN_ROLES: StaffRole[] = ['developer', 'admin'];
+
+// Who outranks whom when managing an account. A developer manages anyone; an
+// admin anyone but a developer; a TIC Admin other TIC Admins and everyone
+// below. So nobody can take over an account ranked above their own — by
+// resetting its password, say, or by demoting it.
+function rank(role: string | null | undefined): number {
+	if (role === 'developer') return 3;
+	if (role === 'admin') return 2;
+	if (role === 'tic_admin') return 1;
+	return 0;
+}
+
+export function canManage(
+	actor: string | null | undefined,
+	target: string | null | undefined
+): boolean {
+	const mine = rank(actor);
+	if (mine === 0) return false;
+	return mine === 3 || rank(target) <= mine;
+}
+
+/** Whether `actor` may hand out (or take away) `role`. */
+export function canGrant(
+	actor: string | null | undefined,
+	role: string | null | undefined
+): boolean {
+	return canManage(actor, role);
+}
+
+export function canSetPassword(
+	actor: string | null | undefined,
+	target: string | null | undefined
+): boolean {
+	return Boolean(ROLE_INFO[actor as AccountRole]?.setsPasswords) && canManage(actor, target);
+}
 
 // ---- paths ------------------------------------------------------------------
 

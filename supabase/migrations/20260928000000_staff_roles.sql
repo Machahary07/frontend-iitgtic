@@ -46,3 +46,9 @@ set search_path = public
 as $$
   select count(*)::integer from public.profiles where role in ('admin', 'developer');
 $$;
+
+-- What a member of staff is responsible for, and where they sit. Written only by
+-- the console's Users screen (service role), like role itself.
+alter table public.profiles
+  add column if not exists responsibility text not null default '',
+  add column if not exists department     text not null default '';

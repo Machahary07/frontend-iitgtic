@@ -1,9 +1,8 @@
-import { env } from '$env/dynamic/private';
+import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
+// The assistant is a side panel on every console page now, not a page of its
+// own. Old bookmarks and links land on the overview with the panel open.
 export const load: PageServerLoad = async () => {
-	// Only whether a shared key is configured, never the key itself. The console
-	// uses it to decide whether to insist on a personal key or to offer the
-	// deployment's own as the default.
-	return { hasServerKey: Boolean(env.SARVAM_API_KEY?.trim()) };
+	redirect(303, '/tic-admin?assistant=open');
 };

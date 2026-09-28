@@ -202,6 +202,8 @@ export type ManagedUser = {
 	role: UserRole;
 	fullName: string;
 	phone: string;
+	responsibility: string;
+	department: string;
 	createdAt: string;
 	lastSignInAt: string | null;
 	emailConfirmed: boolean;

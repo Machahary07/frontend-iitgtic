@@ -8,7 +8,12 @@ import { isStaffRole, ROLE_INFO, type StaffRole } from '$lib/utils/roles';
 // Signed cookies establish identity, not current permission. Never cache this
 // lookup across requests: bans, deletions and role changes must apply immediately.
 export async function currentAccount(userId: string) {
-	const { data, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId);
+	// Both lookups at once: they are independent, and run one after the other
+	// they doubled the wait on every console request.
+	const [{ data, error: authError }, { data: profile, error: profileError }] = await Promise.all([
+		supabaseAdmin.auth.admin.getUserById(userId),
+		supabaseAdmin.from('profiles').select('role, full_name, email').eq('id', userId).maybeSingle()
+	]);
 	if (authError) {
 		if (authError.status === 404 || authError.code === 'user_not_found') return null;
 		error(503, 'Unable to verify account status. Please try again.');
@@ -17,12 +22,8 @@ export async function currentAccount(userId: string) {
 		!data.user ||
 		data.user.deleted_at ||
 		(data.user.banned_until && Date.parse(data.user.banned_until) > Date.now())
-	) return null;
-	const { data: profile, error: profileError } = await supabaseAdmin
-		.from('profiles')
-		.select('role, full_name, email')
-		.eq('id', userId)
-		.maybeSingle();
+	)
+		return null;
 	if (profileError) error(503, 'Unable to verify account permissions. Please try again.');
 	if (!profile) return null;
 	return {
@@ -60,7 +61,32 @@ async function viewAsTarget(cookies: Cookies, real: Account): Promise<Account | 
 	return currentAccount(view.targetUserId);
 }
 
-export async function validatedAdminSession(cookies: Cookies): Promise<ConsoleSession | null> {
+// One request asks who is signed in several times over — the hook, the layout,
+// the route's own guard. `cookies` is a fresh object per request, so keying on
+// it answers each request once without ever carrying an answer into the next
+// one (which is what would let a ban or a role change lag behind).
+const adminMemo = new WeakMap<Cookies, Promise<ConsoleSession | null>>();
+const founderMemo = new WeakMap<Cookies, ReturnType<typeof resolveFounderSession>>();
+
+export function validatedAdminSession(cookies: Cookies): Promise<ConsoleSession | null> {
+	let pending = adminMemo.get(cookies);
+	if (!pending) {
+		pending = resolveAdminSession(cookies);
+		adminMemo.set(cookies, pending);
+	}
+	return pending;
+}
+
+export function validatedFounderSession(cookies: Cookies) {
+	let pending = founderMemo.get(cookies);
+	if (!pending) {
+		pending = resolveFounderSession(cookies);
+		founderMemo.set(cookies, pending);
+	}
+	return pending;
+}
+
+async function resolveAdminSession(cookies: Cookies): Promise<ConsoleSession | null> {
 	const session = readTicAdminSession(cookies);
 	if (!session) return null;
 	const account = await currentAccount(session.userId);
@@ -89,7 +115,7 @@ export async function validatedAdminSession(cookies: Cookies): Promise<ConsoleSe
 	return { ...real, actor: null, viewing };
 }
 
-export async function validatedFounderSession(cookies: Cookies) {
+async function resolveFounderSession(cookies: Cookies) {
 	// A developer viewing as a founder is shown that founder's console. Their own
 	// admin session is what vouches for it; there is no founder cookie involved.
 	const admin = readTicAdminSession(cookies);

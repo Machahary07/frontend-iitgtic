@@ -1,8 +1,5 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import AdminShell from '$lib/components/AdminShell.svelte';
 	import Sparkles from '@lucide/svelte/icons/sparkles';
 	import ArrowUp from '@lucide/svelte/icons/arrow-up';
 	import Paperclip from '@lucide/svelte/icons/paperclip';
@@ -16,23 +13,36 @@
 	import ShieldCheck from '@lucide/svelte/icons/shield-check';
 	import Zap from '@lucide/svelte/icons/zap';
 	import FileText from '@lucide/svelte/icons/file-text';
-	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
-	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import { ASSISTANT_MODELS } from '$lib/utils/assistantModels';
+	import { assistantPanel } from '$lib/utils/assistantPanel.svelte';
 	import { assistantSettings } from '$lib/utils/assistantSettings.svelte';
 	import { renderMarkdown } from '$lib/utils/assistantMarkdown';
 	import { showToast } from '$lib/utils/toast.svelte';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
-	import type { PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	// The assistant, as a panel docked beside whichever console page is open. It
+	// is mounted once by the /tic-admin layout and only hidden when closed, so a
+	// conversation carries on across pages and survives the panel being shut.
 
-	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
+	interface Props {
+		adminName: string;
+		/** The deployment has SARVAM_API_KEY set, so nobody has to paste one. */
+		hasServerKey: boolean;
+		/** SARVAM_MODEL_ID, used until the admin picks a model themselves. */
+		defaultModel: string;
+	}
+
+	let { adminName, hasServerKey, defaultModel }: Props = $props();
+
 	const firstName = $derived(adminName.trim().split(/\s+/)[0]);
 
-	// Either the admin pasted a key into settings, or the deployment carries a
-	// shared one. Without either there is nothing to send a request with.
-	const configured = $derived(Boolean(assistantSettings.apiKey) || data.hasServerKey);
+	$effect(() => {
+		assistantSettings.useDefaultModel(defaultModel);
+	});
+
+	// Either the deployment carries a shared key, or the admin pasted their own
+	// into settings. Without either there is nothing to send a request with.
+	const configured = $derived(Boolean(assistantSettings.apiKey) || hasServerKey);
 	const model = $derived(assistantSettings.model);
 
 	// A content edit the assistant wants to make, waiting on the admin. Only ever
@@ -126,6 +136,14 @@
 	let keyVisible = $state(false);
 
 	let historyEl = $state<HTMLDialogElement | null>(null);
+
+	// Opening the panel is a request to type, so the composer takes focus — after
+	// the slide-in has started, or the browser scrolls the page to reach it.
+	$effect(() => {
+		if (!assistantPanel.open) return;
+		const timer = setTimeout(() => box?.focus({ preventScroll: true }), 60);
+		return () => clearTimeout(timer);
+	});
 
 	// <dialog> is what gives the focus trap, the inert background and Esc to
 	// dismiss, the same as the app's confirm dialog.
@@ -655,333 +673,330 @@
 			send(draft);
 		}
 	}
-
-	async function handleLogout() {
-		await logoutTicAdmin();
-		goto(resolve('/login'));
-	}
 </script>
 
-<svelte:head>
-	<title>TIC Admin · Assistant</title>
-</svelte:head>
-
-<AdminShell
-	brand="TIC Team Admin"
-	navItems={TIC_ADMIN_NAV}
-	assistantHref="/tic-admin/ai"
-	title="Assistant"
-	eyebrow="Ask"
-	user={adminName}
-	onLogout={handleLogout}
->
-	{#snippet actions()}
-		<span class="status" class:status--off={!configured}>
-			{#if configured}{model.label}{:else}Not connected{/if}
+<div class="chat">
+	<header class="head">
+		<span class="head__mark" aria-hidden="true">
+			<Sparkles size={15} strokeWidth={1.9} />
 		</span>
-		<button
-			type="button"
-			class="mode"
-			class:mode--auto={assistantSettings.autoApprove}
-			onclick={toggleApprove}
-			title={assistantSettings.autoApprove
-				? 'Edits apply automatically — click to require your approval'
-				: 'Edits wait for your approval — click to apply them automatically'}
-		>
-			{#if assistantSettings.autoApprove}
-				<Zap size={13} strokeWidth={2} aria-hidden="true" /> Auto
-			{:else}
-				<ShieldCheck size={13} strokeWidth={2} aria-hidden="true" /> Review
-			{/if}
-		</button>
-		<button
-			type="button"
-			class="gear"
-			onclick={openHistory}
-			title="Chat history"
-			aria-label="Chat history"
-		>
-			<History size={16} strokeWidth={1.9} />
-		</button>
-		<button
-			type="button"
-			class="gear"
-			onclick={newChat}
-			disabled={empty && !busy}
-			title="New chat"
-			aria-label="New chat"
-		>
-			<SquarePen size={16} strokeWidth={1.9} />
-		</button>
-		<button type="button" class="gear" onclick={openSettings} aria-label="Assistant settings">
-			<Settings size={16} strokeWidth={1.9} />
-		</button>
-	{/snippet}
-
-	<div class="chat">
-		<div class="chat__thread" bind:this={thread}>
-			{#if empty}
-				<div class="opener">
-					<span class="opener__mark" aria-hidden="true">
-						<Sparkles size={22} strokeWidth={1.6} />
-					</span>
-					<h2 class="opener__title">What can I do for you, {firstName}?</h2>
-					<p class="opener__sub">
-						Ask about anything in the console — the content, the email templates, who applied and
-						where they stand. I can edit the website's copy for you; everything else I only read.
-					</p>
-					<ul class="chips">
-						{#each SUGGESTIONS as suggestion (suggestion)}
-							<li>
-								<button type="button" class="chip" onclick={() => send(suggestion)}>
-									{suggestion}
-								</button>
-							</li>
-						{/each}
-					</ul>
-					{#if !configured}
-						<button type="button" class="opener__link" onclick={openSettings}>
-							Add a Sarvam API key to begin
-						</button>
-					{/if}
-				</div>
-			{:else}
-				<ul class="msgs">
-					{#each messages as message (message.id)}
-						<li class="msg msg--{message.role}">
-							{#if message.role === 'you'}
-								<span class="msg__who">You</span>
-								{#if message.attachments.length}
-									<ul class="shots">
-										{#each message.attachments as shot, index (index)}
-											<li>
-												{#if shot.kind === 'image' && (shot.dataUrl || shot.url)}
-													<img src={shot.dataUrl || shot.url} alt={shot.name} />
-												{:else}
-													<span class="doc">
-														<FileText size={15} strokeWidth={1.8} aria-hidden="true" />
-														<span class="doc__name">{shot.name}</span>
-													</span>
-												{/if}
-											</li>
-										{/each}
-									</ul>
-								{/if}
-								{#if message.text}
-									<p class="msg__text">{message.text}</p>
-								{/if}
-							{:else}
-								<span class="msg__who msg__who--bot">
-									<Sparkles size={13} strokeWidth={1.9} aria-hidden="true" />
-									Assistant
-								</span>
-
-								{#if message.reasoning}
-									<details class="think" open={message.streaming && !message.text.trim()}>
-										<summary class="think__head">
-											{message.streaming && !message.text.trim()
-												? 'Thinking…'
-												: 'Thought it through'}
-										</summary>
-										<p class="think__body">{message.reasoning}</p>
-									</details>
-								{/if}
-
-								{#if message.steps.length}
-									<ul class="steps">
-										{#each message.steps as step, index (index)}
-											<li class="step">
-												<Check size={12} strokeWidth={2.4} aria-hidden="true" />
-												{step}
-											</li>
-										{/each}
-									</ul>
-								{/if}
-
-								{#if message.text.trim()}
-									<!-- renderMarkdown HTML-escapes the reply before it adds a single
-										 tag, so the only markup here is the handful it emits itself.
-										 Model output is untrusted — it echoes database rows. -->
-									<!-- eslint-disable-next-line svelte/no-at-html-tags -->
-									<div class="md">{@html renderMarkdown(message.text.trim())}</div>
-								{/if}
-
-								{#if message.streaming && !message.text.trim() && !message.reasoning}
-									<p class="thinking">
-										<span class="dot"></span><span class="dot"></span><span class="dot"></span>
-									</p>
-								{/if}
-
-								{#each message.proposals as proposal (proposal.id)}
-									<div class="prop" class:prop--done={proposal.status !== 'pending'}>
-										<p class="prop__head">
-											<ShieldCheck size={13} strokeWidth={2} aria-hidden="true" />
-											{proposal.summary}
-										</p>
-										{#if proposal.html}
-											<!-- The rendered email, so a non-technical admin approves how the
-												 message looks rather than its HTML. allow-same-origin (without
-												 allow-scripts) keeps the content inert but lets us measure it, so
-												 the frame is sized to the email and never grows its own scrollbar. -->
-											<div class="prop__email">
-												<iframe
-													class="prop__frame"
-													title="Email preview"
-													sandbox="allow-same-origin"
-													srcdoc={proposal.html}
-													onload={fitEmailFrame}
-												></iframe>
-											</div>
-										{:else}
-											<div class="prop__diff">
-												<div class="prop__side">
-													<span class="prop__label">Now</span>
-													{#if imageUrl(proposal.before)}
-														<img class="prop__img" src={imageUrl(proposal.before)} alt="" />
-													{:else}
-														<pre class="prop__code">{preview(proposal.before)}</pre>
-													{/if}
-												</div>
-												<div class="prop__side">
-													<span class="prop__label">After</span>
-													{#if imageUrl(proposal.after)}
-														<img class="prop__img" src={imageUrl(proposal.after)} alt="" />
-													{:else}
-														<pre class="prop__code prop__code--new">{preview(proposal.after)}</pre>
-													{/if}
-												</div>
-											</div>
-										{/if}
-
-										{#if proposal.status === 'pending' || proposal.status === 'applying'}
-											<div class="prop__actions">
-												<button
-													type="button"
-													class="prop__reject"
-													disabled={proposal.status === 'applying'}
-													onclick={() => rejectProposal(proposal)}
-												>
-													Reject
-												</button>
-												<button
-													type="button"
-													class="prop__approve"
-													disabled={proposal.status === 'applying'}
-													onclick={() => approveProposal(proposal)}
-												>
-													{proposal.status === 'applying' ? 'Applying…' : 'Approve & apply'}
-												</button>
-											</div>
-										{:else if proposal.status === 'approved'}
-											<p class="prop__state prop__state--ok">
-												<Check size={12} strokeWidth={2.4} aria-hidden="true" />
-												{proposal.note || 'Applied to the site'}
-											</p>
-										{:else if proposal.status === 'rejected'}
-											<p class="prop__state">Rejected — nothing was changed</p>
-										{:else if proposal.status === 'error'}
-											<p class="prop__state prop__state--err">{proposal.error}</p>
-										{/if}
-									</div>
-								{/each}
-
-								{#if message.error}
-									<p class="fail">{message.error}</p>
-								{/if}
-							{/if}
-						</li>
-					{/each}
-				</ul>
-			{/if}
+		<div class="head__text">
+			<h2 class="head__title">Assistant</h2>
+			<span class="head__model" class:head__model--off={!configured}>
+				{#if configured}{model.label}{:else}No API key{/if}
+			</span>
 		</div>
+		<div class="head__actions">
+			<button
+				type="button"
+				class="mode"
+				class:mode--auto={assistantSettings.autoApprove}
+				onclick={toggleApprove}
+				title={assistantSettings.autoApprove
+					? 'Edits apply automatically — click to require your approval'
+					: 'Edits wait for your approval — click to apply them automatically'}
+			>
+				{#if assistantSettings.autoApprove}
+					<Zap size={13} strokeWidth={2} aria-hidden="true" /> Auto
+				{:else}
+					<ShieldCheck size={13} strokeWidth={2} aria-hidden="true" /> Review
+				{/if}
+			</button>
+			<button
+				type="button"
+				class="gear"
+				onclick={openHistory}
+				title="Chat history"
+				aria-label="Chat history"
+			>
+				<History size={16} strokeWidth={1.9} />
+			</button>
+			<button
+				type="button"
+				class="gear"
+				onclick={newChat}
+				disabled={empty && !busy}
+				title="New chat"
+				aria-label="New chat"
+			>
+				<SquarePen size={16} strokeWidth={1.9} />
+			</button>
+			<button
+				type="button"
+				class="gear"
+				onclick={openSettings}
+				title="Assistant settings"
+				aria-label="Assistant settings"
+			>
+				<Settings size={16} strokeWidth={1.9} />
+			</button>
+			<button
+				type="button"
+				class="gear"
+				onclick={() => assistantPanel.close()}
+				title="Close (Esc)"
+				aria-label="Close the assistant"
+			>
+				<X size={16} strokeWidth={1.9} />
+			</button>
+		</div>
+	</header>
 
-		<div class="composer">
-			{#if pending.length}
-				<ul class="queue">
-					{#each pending as item, index (index)}
-						<li
-							class="queue__item"
-							class:queue__item--busy={item.uploading}
-							class:queue__item--file={item.kind === 'file'}
-						>
-							{#if item.kind === 'image'}
-								<img src={item.dataUrl} alt={item.name} />
-							{:else}
-								<span class="queue__doc">
-									<FileText size={16} strokeWidth={1.8} aria-hidden="true" />
-									<span class="queue__docname">{item.name}</span>
-									{#if item.size}<span class="queue__docsize">{item.size}</span>{/if}
-								</span>
-							{/if}
-							{#if item.uploading}
-								<span class="queue__spin" aria-label="Uploading"></span>
-							{/if}
-							<button
-								type="button"
-								class="queue__drop"
-								onclick={() => removeAttachment(index)}
-								aria-label="Remove attachment"
-							>
-								<X size={12} strokeWidth={2.4} />
+	<div class="chat__thread" bind:this={thread}>
+		{#if empty}
+			<div class="opener">
+				<span class="opener__mark" aria-hidden="true">
+					<Sparkles size={22} strokeWidth={1.6} />
+				</span>
+				<h2 class="opener__title">What can I do for you, {firstName}?</h2>
+				<p class="opener__sub">
+					Ask about anything in the console — the content, the email templates, who applied and
+					where they stand. I can edit the website's copy for you; everything else I only read.
+				</p>
+				<ul class="chips">
+					{#each SUGGESTIONS as suggestion (suggestion)}
+						<li>
+							<button type="button" class="chip" onclick={() => send(suggestion)}>
+								{suggestion}
 							</button>
 						</li>
 					{/each}
 				</ul>
-			{/if}
+			</div>
+		{:else}
+			<ul class="msgs">
+				{#each messages as message (message.id)}
+					<li class="msg msg--{message.role}">
+						{#if message.role === 'you'}
+							<span class="msg__who">You</span>
+							{#if message.attachments.length}
+								<ul class="shots">
+									{#each message.attachments as shot, index (index)}
+										<li>
+											{#if shot.kind === 'image' && (shot.dataUrl || shot.url)}
+												<img src={shot.dataUrl || shot.url} alt={shot.name} />
+											{:else}
+												<span class="doc">
+													<FileText size={15} strokeWidth={1.8} aria-hidden="true" />
+													<span class="doc__name">{shot.name}</span>
+												</span>
+											{/if}
+										</li>
+									{/each}
+								</ul>
+							{/if}
+							{#if message.text}
+								<p class="msg__text">{message.text}</p>
+							{/if}
+						{:else}
+							<span class="msg__who msg__who--bot">
+								<Sparkles size={13} strokeWidth={1.9} aria-hidden="true" />
+								Assistant
+							</span>
 
-			<textarea
-				class="composer__box"
-				bind:this={box}
-				bind:value={draft}
-				oninput={grow}
-				onkeydown={onKeydown}
-				rows="1"
-				placeholder="Ask, or describe what you want done…"
-				aria-label="Message the assistant"
-			></textarea>
+							{#if message.reasoning}
+								<details class="think" open={message.streaming && !message.text.trim()}>
+									<summary class="think__head">
+										{message.streaming && !message.text.trim() ? 'Thinking…' : 'Thought it through'}
+									</summary>
+									<p class="think__body">{message.reasoning}</p>
+								</details>
+							{/if}
 
-			<div class="composer__bar">
-				<input
-					type="file"
-					accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv"
-					multiple
-					class="composer__file"
-					bind:this={picker}
-					onchange={onPick}
-					tabindex="-1"
-					aria-hidden="true"
-				/>
+							{#if message.steps.length}
+								<ul class="steps">
+									{#each message.steps as step, index (index)}
+										<li class="step">
+											<Check size={12} strokeWidth={2.4} aria-hidden="true" />
+											{step}
+										</li>
+									{/each}
+								</ul>
+							{/if}
+
+							{#if message.text.trim()}
+								<!-- renderMarkdown HTML-escapes the reply before it adds a single
+										 tag, so the only markup here is the handful it emits itself.
+										 Model output is untrusted — it echoes database rows. -->
+								<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+								<div class="md">{@html renderMarkdown(message.text.trim())}</div>
+							{/if}
+
+							{#if message.streaming && !message.text.trim() && !message.reasoning}
+								<p class="thinking">
+									<span class="dot"></span><span class="dot"></span><span class="dot"></span>
+								</p>
+							{/if}
+
+							{#each message.proposals as proposal (proposal.id)}
+								<div class="prop" class:prop--done={proposal.status !== 'pending'}>
+									<p class="prop__head">
+										<ShieldCheck size={13} strokeWidth={2} aria-hidden="true" />
+										{proposal.summary}
+									</p>
+									{#if proposal.html}
+										<!-- The rendered email, so a non-technical admin approves how the
+												 message looks rather than its HTML. allow-same-origin (without
+												 allow-scripts) keeps the content inert but lets us measure it, so
+												 the frame is sized to the email and never grows its own scrollbar. -->
+										<div class="prop__email">
+											<iframe
+												class="prop__frame"
+												title="Email preview"
+												sandbox="allow-same-origin"
+												srcdoc={proposal.html}
+												onload={fitEmailFrame}
+											></iframe>
+										</div>
+									{:else}
+										<div class="prop__diff">
+											<div class="prop__side">
+												<span class="prop__label">Now</span>
+												{#if imageUrl(proposal.before)}
+													<img class="prop__img" src={imageUrl(proposal.before)} alt="" />
+												{:else}
+													<pre class="prop__code">{preview(proposal.before)}</pre>
+												{/if}
+											</div>
+											<div class="prop__side">
+												<span class="prop__label">After</span>
+												{#if imageUrl(proposal.after)}
+													<img class="prop__img" src={imageUrl(proposal.after)} alt="" />
+												{:else}
+													<pre class="prop__code prop__code--new">{preview(proposal.after)}</pre>
+												{/if}
+											</div>
+										</div>
+									{/if}
+
+									{#if proposal.status === 'pending' || proposal.status === 'applying'}
+										<div class="prop__actions">
+											<button
+												type="button"
+												class="prop__reject"
+												disabled={proposal.status === 'applying'}
+												onclick={() => rejectProposal(proposal)}
+											>
+												Reject
+											</button>
+											<button
+												type="button"
+												class="prop__approve"
+												disabled={proposal.status === 'applying'}
+												onclick={() => approveProposal(proposal)}
+											>
+												{proposal.status === 'applying' ? 'Applying…' : 'Approve & apply'}
+											</button>
+										</div>
+									{:else if proposal.status === 'approved'}
+										<p class="prop__state prop__state--ok">
+											<Check size={12} strokeWidth={2.4} aria-hidden="true" />
+											{proposal.note || 'Applied to the site'}
+										</p>
+									{:else if proposal.status === 'rejected'}
+										<p class="prop__state">Rejected — nothing was changed</p>
+									{:else if proposal.status === 'error'}
+										<p class="prop__state prop__state--err">{proposal.error}</p>
+									{/if}
+								</div>
+							{/each}
+
+							{#if message.error}
+								<p class="fail">{message.error}</p>
+							{/if}
+						{/if}
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
+
+	<div class="composer">
+		{#if pending.length}
+			<ul class="queue">
+				{#each pending as item, index (index)}
+					<li
+						class="queue__item"
+						class:queue__item--busy={item.uploading}
+						class:queue__item--file={item.kind === 'file'}
+					>
+						{#if item.kind === 'image'}
+							<img src={item.dataUrl} alt={item.name} />
+						{:else}
+							<span class="queue__doc">
+								<FileText size={16} strokeWidth={1.8} aria-hidden="true" />
+								<span class="queue__docname">{item.name}</span>
+								{#if item.size}<span class="queue__docsize">{item.size}</span>{/if}
+							</span>
+						{/if}
+						{#if item.uploading}
+							<span class="queue__spin" aria-label="Uploading"></span>
+						{/if}
+						<button
+							type="button"
+							class="queue__drop"
+							onclick={() => removeAttachment(index)}
+							aria-label="Remove attachment"
+						>
+							<X size={12} strokeWidth={2.4} />
+						</button>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+
+		<textarea
+			class="composer__box"
+			bind:this={box}
+			bind:value={draft}
+			oninput={grow}
+			onkeydown={onKeydown}
+			rows="1"
+			placeholder="Ask, or describe what you want done…"
+			aria-label="Message the assistant"
+		></textarea>
+
+		<div class="composer__bar">
+			<input
+				type="file"
+				accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv"
+				multiple
+				class="composer__file"
+				bind:this={picker}
+				onchange={onPick}
+				tabindex="-1"
+				aria-hidden="true"
+			/>
+			<button
+				type="button"
+				class="composer__icon"
+				title="Attach an image or file"
+				aria-label="Attach an image or file"
+				onclick={() => picker?.click()}
+			>
+				<Paperclip size={16} strokeWidth={1.9} />
+			</button>
+
+			<span class="composer__hint">Enter to send · Shift + Enter for a new line</span>
+
+			{#if busy}
+				<button type="button" class="composer__send" aria-label="Stop" onclick={stop}>
+					<Square size={13} strokeWidth={2.4} fill="currentColor" />
+				</button>
+			{:else}
 				<button
 					type="button"
-					class="composer__icon"
-					title="Attach an image or file"
-					aria-label="Attach an image or file"
-					onclick={() => picker?.click()}
+					class="composer__send"
+					disabled={!canSend}
+					aria-label="Send"
+					onclick={() => send(draft)}
 				>
-					<Paperclip size={16} strokeWidth={1.9} />
+					<ArrowUp size={17} strokeWidth={2.2} />
 				</button>
-
-				<span class="composer__hint">Enter to send · Shift + Enter for a new line</span>
-
-				{#if busy}
-					<button type="button" class="composer__send" aria-label="Stop" onclick={stop}>
-						<Square size={13} strokeWidth={2.4} fill="currentColor" />
-					</button>
-				{:else}
-					<button
-						type="button"
-						class="composer__send"
-						disabled={!canSend}
-						aria-label="Send"
-						onclick={() => send(draft)}
-					>
-						<ArrowUp size={17} strokeWidth={2.2} />
-					</button>
-				{/if}
-			</div>
+			{/if}
 		</div>
 	</div>
-</AdminShell>
+</div>
 
 <dialog
 	bind:this={settingsEl}
@@ -1040,7 +1055,7 @@
 					</button>
 				</div>
 				<p class="field__note">
-					{#if data.hasServerKey}
+					{#if hasServerKey}
 						This deployment already has a key set on the server. Paste one here only to use your own
 						instead.
 					{:else}
@@ -1146,19 +1161,50 @@
 
 	// ---- header ---------------------------------------------------------------
 
-	.status {
-		font-size: 11px;
-		font-weight: $font-weight-semibold;
-		letter-spacing: 0.04em;
-		color: admin-tone-fg('violet');
-		background: admin-tone-bg('violet');
-		border-radius: $admin-radius-pill;
-		padding: 6px 12px;
+	// The panel draws its own header rather than borrowing the page's: the page
+	// behind it keeps its title, and the close button belongs beside New chat,
+	// not in a second bar above it.
+	.head {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 12px 12px 12px 16px;
+		border-bottom: 1px solid $admin-line-soft;
 	}
 
-	.status--off {
-		color: $admin-ink-3;
-		background: $admin-sunken;
+	.head__mark {
+		@include admin-icon-tile('violet', 30px);
+	}
+
+	.head__text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+		margin-right: auto;
+	}
+
+	.head__title {
+		margin: 0;
+		font-size: 14px;
+		font-weight: $font-weight-bold;
+		letter-spacing: -0.01em;
+		color: $admin-ink;
+	}
+
+	.head__model {
+		font-size: 11px;
+		color: admin-tone-fg('violet');
+		white-space: nowrap;
+
+		&--off {
+			color: $admin-ink-3;
+		}
+	}
+
+	.head__actions {
+		display: flex;
+		align-items: center;
+		gap: 4px;
 	}
 
 	.gear {
@@ -1166,8 +1212,8 @@
 		align-items: center;
 		justify-content: center;
 		flex: none;
-		width: 34px;
-		height: 34px;
+		width: 30px;
+		height: 30px;
 		color: $admin-ink-2;
 		background: $admin-surface;
 		border: 1px solid $admin-line;
@@ -1191,18 +1237,24 @@
 
 	// ---- shell ----------------------------------------------------------------
 
+	// Fills whatever the layout gives it: a docked column, a floating panel, or
+	// the whole screen on a phone. The thread is the only part that scrolls.
 	.chat {
-		@include admin-panel;
 		display: flex;
 		flex-direction: column;
-		height: min(72vh, 780px);
-		min-height: 460px;
+		height: 100%;
+		min-height: 0;
+		background: $admin-surface;
+		color: $admin-ink;
+		font-family: $font-family-base;
 	}
 
 	.chat__thread {
 		flex: 1;
+		min-height: 0;
 		overflow-y: auto;
-		padding: 26px;
+		overscroll-behavior: contain;
+		padding: 20px 18px;
 		scroll-behavior: smooth;
 	}
 
@@ -1226,14 +1278,14 @@
 	}
 
 	.opener__mark {
-		@include admin-icon-tile('violet', 52px);
+		@include admin-icon-tile('violet', 46px);
 		margin-bottom: 4px;
 	}
 
 	.opener__title {
 		margin: 0;
 		font-family: $font-family-serif;
-		font-size: 26px;
+		font-size: 22px;
 		font-weight: $font-weight-regular;
 		letter-spacing: -0.02em;
 		color: $admin-ink;
@@ -1247,31 +1299,17 @@
 		color: $admin-ink-2;
 	}
 
-	.opener__link {
-		font: inherit;
-		font-size: 12.5px;
-		font-weight: $font-weight-semibold;
-		color: $admin-accent;
-		background: none;
-		border: 0;
-		border-radius: $admin-radius-sm;
-		margin-top: 14px;
-		padding: 4px 6px;
-		cursor: pointer;
-		text-decoration: underline;
-		text-underline-offset: 3px;
-		@include admin-focus-ring($admin-accent);
-	}
-
+	// A column, not a wrapped row: in a panel this narrow a wrapped row lands
+	// one chip per line anyway, just unevenly.
 	.chips {
 		list-style: none;
-		margin: 18px 0 0;
+		margin: 14px 0 0;
 		padding: 0;
 		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		gap: 8px;
-		max-width: 620px;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 6px;
+		width: 100%;
 	}
 
 	.chip {
@@ -1280,8 +1318,8 @@
 		color: $admin-ink-2;
 		background: $admin-sunken;
 		border: 1px solid $admin-line-soft;
-		border-radius: $admin-radius-pill;
-		padding: 8px 14px;
+		border-radius: $admin-radius-md;
+		padding: 9px 12px;
 		cursor: pointer;
 		text-align: left;
 		@include admin-focus-ring;
@@ -1608,7 +1646,7 @@
 
 	.composer {
 		border-top: 1px solid $admin-line-soft;
-		padding: 14px 18px 16px;
+		padding: 12px 14px 14px;
 		display: flex;
 		flex-direction: column;
 		gap: 10px;
@@ -1998,8 +2036,8 @@
 		display: inline-flex;
 		align-items: center;
 		gap: 5px;
-		height: 34px;
-		padding: 0 12px;
+		height: 30px;
+		padding: 0 10px;
 		font-size: 11px;
 		font-weight: $font-weight-semibold;
 		letter-spacing: 0.03em;
@@ -2233,22 +2271,14 @@
 		color: $admin-ink-3;
 	}
 
+	// Two columns of before/after do not fit a panel; they stack.
+	.prop__diff {
+		grid-template-columns: 1fr;
+	}
+
 	@media (max-width: $bp-sm) {
-		.chat {
-			height: auto;
-			min-height: 70vh;
-		}
-
-		.chat__thread {
-			padding: 18px;
-		}
-
 		.composer__hint {
 			display: none;
-		}
-
-		.prop__diff {
-			grid-template-columns: 1fr;
 		}
 
 		.sheet__foot {

@@ -76,7 +76,8 @@ export const POST: RequestHandler = async ({ request, cookies, getClientAddress 
 		fullName?: string;
 		captchaToken?: string;
 	};
-	if (!(await verifyTurnstile(body.captchaToken, getClientAddress()))) error(400, 'Verification failed. Please try again.');
+	if (!(await verifyTurnstile(body.captchaToken, getClientAddress())))
+		error(400, 'Verification failed. Please try again.');
 
 	// --- bootstrap: only while the console has no admin at all ---------------
 	if (body.bootstrapPassword !== undefined) {

@@ -138,7 +138,9 @@ export async function runTurn(options: CallOptions): Promise<Turn> {
 			temperature: tuning.temperature,
 			top_p: tuning.topP,
 			max_tokens: tuning.maxTokens,
-			...(sarvamModel && tuning.reasoningEffort ? { reasoning_effort: tuning.reasoningEffort } : {}),
+			...(sarvamModel && tuning.reasoningEffort
+				? { reasoning_effort: tuning.reasoningEffort }
+				: {}),
 			stream: wantsStream,
 			...(options.tools?.length ? { tools: options.tools, tool_choice: 'auto' } : {})
 		})

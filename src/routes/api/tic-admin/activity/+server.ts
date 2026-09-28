@@ -16,7 +16,9 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 	if (view === 'audit') {
 		let query = ctx.db
 			.from('audit_log')
-			.select('id, occurred_at, source, actor_id, actor_label, action, table_name, record_id, before, after')
+			.select(
+				'id, occurred_at, source, actor_id, actor_label, action, table_name, record_id, before, after'
+			)
 			.order('id', { ascending: false })
 			.limit(PAGE_SIZE);
 
