@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Pager } from '$lib/utils/pager.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import FounderShell from '$lib/components/FounderShell.svelte';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
@@ -94,6 +96,9 @@
 			year: 'numeric'
 		});
 	}
+
+	// A page at a time; back to the first page whenever the view changes.
+	const pager = new Pager(() => members, () => []);
 </script>
 
 <svelte:head>
@@ -188,7 +193,7 @@
 								<td class="actions-col"></td>
 							</tr>
 						{/if}
-						{#each members as member (member.id)}
+						{#each pager.rows as member (member.id)}
 							<tr>
 								<td>
 									<p class="cell__name">{member.full_name || '—'}</p>
@@ -213,6 +218,7 @@
 					</tbody>
 				</table>
 			</div>
+			<Pagination pager={pager} noun="team members" />
 		</div>
 	{/if}
 </FounderShell>

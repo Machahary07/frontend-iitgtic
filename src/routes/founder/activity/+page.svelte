@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Pager } from '$lib/utils/pager.svelte';
 	import FounderShell from '$lib/components/FounderShell.svelte';
 	import type { PageData } from './$types';
 
@@ -34,6 +36,9 @@
 			minute: '2-digit'
 		});
 	}
+
+	// A page at a time; back to the first page whenever the view changes.
+	const pager = new Pager(() => entries, () => []);
 </script>
 
 <svelte:head>
@@ -49,7 +54,7 @@
 >
 	<p class="lede">
 		Everything that happened to this startup's records — what your team did here, and what TIC did
-		in review. The hundred most recent entries.
+		in review. The 500 most recent entries.
 	</p>
 
 	{#if entries.length === 0}
@@ -57,7 +62,7 @@
 	{:else}
 		<div class="panel">
 			<ol class="feed">
-				{#each entries as entry (entry.id)}
+				{#each pager.rows as entry (entry.id)}
 					<li class="entry">
 						<div class="entry__head">
 							<p class="entry__action">{entry.action}</p>
@@ -72,6 +77,7 @@
 					</li>
 				{/each}
 			</ol>
+			<Pagination pager={pager} noun="entries" />
 		</div>
 	{/if}
 </FounderShell>

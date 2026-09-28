@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Pager } from '$lib/utils/pager.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
@@ -51,6 +53,9 @@
 	function statusLabel(status: ApplicationStatus) {
 		return status === 'under-review' ? 'under review' : status;
 	}
+
+	// A page at a time; back to the first page whenever the view changes.
+	const pager = new Pager(() => filtered, () => [filter]);
 </script>
 
 <svelte:head>
@@ -126,7 +131,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each filtered as application (application.id)}
+						{#each pager.rows as application (application.id)}
 							<tr>
 								<td>
 									<p class="cell__name">{application.startup_name || 'Untitled startup'}</p>
@@ -183,6 +188,7 @@
 					</tbody>
 				</table>
 			</div>
+			<Pagination pager={pager} noun="applications" />
 		{/if}
 	</div>
 </AdminShell>

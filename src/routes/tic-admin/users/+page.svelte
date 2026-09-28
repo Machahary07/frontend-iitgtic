@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Pagination from '$lib/components/Pagination.svelte';
+	import { Pager } from '$lib/utils/pager.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
@@ -165,6 +167,9 @@
 		if (days < 30) return `${days} days ago`;
 		return fmtDate(iso) ?? 'never';
 	}
+
+	// A page at a time; back to the first page whenever the view changes.
+	const pager = new Pager(() => filtered, () => [filter]);
 </script>
 
 <svelte:head>
@@ -228,7 +233,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						{#each filtered as user (user.id)}
+						{#each pager.rows as user (user.id)}
 							<!-- The whole row opens the account; the buttons in it stop the
 							     click so they still do only their own thing. -->
 							<tr
@@ -301,6 +306,7 @@
 					</tbody>
 				</table>
 			</div>
+			<Pagination pager={pager} noun="accounts" />
 		{/if}
 	</div>
 </AdminShell>
