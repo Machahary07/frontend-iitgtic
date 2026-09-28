@@ -11,10 +11,8 @@ export const STAFF_ROLES = [
 	'admin',
 	'tic_admin',
 	'tic_ceo',
-	'tic_chairman',
 	'tic_coordinator',
-	'tic_head',
-	'tic_president'
+	'tic_head'
 ] as const;
 
 export type StaffRole = (typeof STAFF_ROLES)[number];
@@ -111,18 +109,6 @@ export const ROLE_INFO: Record<AccountRole, RoleInfo> = {
 		label: 'TIC CEO',
 		hint: 'Pipeline and activity',
 		blurb: 'Leads the incubator. Sees the pipeline and the activity behind it.',
-		sections: [...PIPELINE, 'activity']
-	},
-	tic_chairman: {
-		label: 'TIC Chairman',
-		hint: 'Pipeline and activity',
-		blurb: 'Chairs the governing body. Sees the pipeline and the activity behind it.',
-		sections: [...PIPELINE, 'activity']
-	},
-	tic_president: {
-		label: 'TIC President',
-		hint: 'Pipeline and activity',
-		blurb: 'Oversees the incubator. Sees the pipeline and the activity behind it.',
 		sections: [...PIPELINE, 'activity']
 	},
 	tic_head: {

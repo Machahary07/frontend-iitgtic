@@ -479,7 +479,7 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 	{
 		name: 'list_users',
 		description:
-			'Account profiles. Role is founder, or one of the TIC staff roles: developer, admin, tic_admin, tic_ceo, tic_chairman, tic_coordinator, tic_head, tic_president. Use it for questions about who has access to what.',
+			'Account profiles. Role is founder, or one of the TIC staff roles: developer, admin, tic_admin, tic_ceo, tic_coordinator, tic_head. Use it for questions about who has access to what.',
 		parameters: {
 			type: 'object',
 			properties: {
