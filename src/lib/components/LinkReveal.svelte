@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { loadGsap, prefersReducedMotion } from '$lib/utils/animation';
 
 	interface Props {
@@ -7,6 +8,8 @@
 		class?: string;
 		role?: string;
 		onclick?: (event: MouseEvent) => void;
+		// Plays the reveal on its own every 1.5s (hold 0.9s, slide 0.6s); hover/focus pauses it.
+		autoplay?: boolean;
 	}
 
 	let {
@@ -14,12 +17,37 @@
 		href,
 		class: className = '',
 		role = '',
-		onclick
+		onclick,
+		autoplay = false
 	}: Props = $props();
 
 	let inner: HTMLElement;
+	let loop: ReturnType<typeof import('gsap').gsap.timeline> | undefined;
+
+	onMount(() => {
+		if (!autoplay || prefersReducedMotion()) return;
+
+		let destroyed = false;
+		loadGsap().then(({ gsap }) => {
+			if (destroyed) return;
+			// Both lines are identical, so snapping back to 0 at each repeat is invisible.
+			loop = gsap
+				.timeline({ repeat: -1 })
+				.fromTo(inner, { yPercent: 0 }, { yPercent: -50, duration: 0.6, ease: 'hop' }, 0.9);
+		});
+
+		return () => {
+			destroyed = true;
+			loop?.kill();
+		};
+	});
 
 	async function animate(yPercent: number) {
+		if (autoplay) {
+			if (yPercent === 0) loop?.resume();
+			else loop?.pause();
+			return;
+		}
 		if (prefersReducedMotion()) return;
 
 		const { gsap } = await loadGsap();
