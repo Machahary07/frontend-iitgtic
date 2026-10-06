@@ -7,6 +7,7 @@
 	import { ACCOUNT_ROLES, ROLE_INFO, roleLabel } from '$lib/utils/roles';
 	import { exitViewAs, searchViewAs, viewAs, type ViewAsAccount } from '$lib/utils/viewAs';
 	import { showToast } from '$lib/utils/toast.svelte';
+	import { floating } from '$lib/utils/floating';
 
 	// "View as", for developers — the topbar pill that opens the console as
 	// another account. Both consoles' layouts send the same two fields, so it
@@ -27,6 +28,7 @@
 	let switching = $state('');
 	let root = $state<HTMLDivElement | null>(null);
 	let input = $state<HTMLInputElement | null>(null);
+	let pill = $state<HTMLButtonElement | null>(null);
 
 	function toggle() {
 		if (!open) {
@@ -105,6 +107,7 @@
 			type="button"
 			class="pill"
 			class:pill--on={viewing}
+			bind:this={pill}
 			onclick={toggle}
 			aria-expanded={open}
 			aria-haspopup="dialog"
@@ -126,7 +129,12 @@
 		</button>
 
 		{#if open}
-			<div class="pop" role="dialog" aria-label="View as another account">
+			<div
+				class="pop"
+				role="dialog"
+				aria-label="View as another account"
+				use:floating={{ anchor: pill, align: 'end', gap: 8 }}
+			>
 				{#if viewing}
 					<div class="pop__now">
 						<UserCog size={14} strokeWidth={2} aria-hidden="true" />
@@ -268,10 +276,6 @@
 	}
 
 	.pop {
-		position: absolute;
-		right: 0;
-		top: calc(100% + 8px);
-		z-index: 70;
 		width: min(460px, calc(100vw - 32px));
 		max-height: min(70vh, 560px);
 		display: flex;

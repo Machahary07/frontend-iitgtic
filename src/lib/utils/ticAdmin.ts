@@ -47,6 +47,10 @@ export type ApplicationSummary = {
 	// private note. Only the console (service role) can read review_note.
 	applicant_message: string | null;
 	review_note: string | null;
+	// 0–6 through the review chain (see ReviewProgress), and the step a
+	// rejection happened at.
+	review_stage: number;
+	rejected_stage: number | null;
 	reviewed_at: string | null;
 	created_at: string;
 	updated_at: string;
@@ -71,6 +75,23 @@ export async function adminSetApplicationStatus(
 		body: JSON.stringify({ id, status, applicantMessage, reviewNote })
 	});
 	return res.ok;
+}
+
+/** One step along the review chain — see /api/tic-admin/applications/review.
+ *  Returns the server's refusal as text, or null when it went through. */
+export async function adminReviewAction(
+	id: string,
+	action: 'forward' | 'assign' | 'sign-off' | 'live',
+	extra: { kind?: 'coordinator' | 'head'; userIds?: string[]; note?: string } = {}
+): Promise<string | null> {
+	const res = await fetch('/api/tic-admin/applications/review', {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify({ id, action, ...extra })
+	});
+	if (res.ok) return null;
+	const body = (await res.json().catch(() => null)) as { message?: string } | null;
+	return body?.message ?? 'Could not save. Please try again.';
 }
 
 export async function adminDeleteApplication(id: string): Promise<boolean> {

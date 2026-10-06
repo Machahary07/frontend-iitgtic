@@ -13,15 +13,6 @@
 
 	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
 
-	type PendingCompany = {
-		id: string;
-		company_name: string;
-		website: string;
-		contact_name: string;
-		contact_email: string;
-		phone: string;
-		created_at: string;
-	};
 	type Job = {
 		id: string;
 		company_id: string;
@@ -48,7 +39,6 @@
 		created_at: string;
 	};
 
-	const newCompanies = $derived(data.pendingCompanies as PendingCompany[]);
 	const jobs = $derived(data.pendingJobs as Job[]);
 	const members = $derived(data.pendingMembers as Member[]);
 	const changes = $derived(data.pendingChanges as Change[]);
@@ -56,7 +46,7 @@
 		data.companies as { id: string; company_name: string; status: string }[]
 	);
 
-	const total = $derived(newCompanies.length + jobs.length + members.length + changes.length);
+	const total = $derived(jobs.length + members.length + changes.length);
 
 	const LABEL: Record<string, string> = {
 		companyName: 'Company name',
@@ -79,7 +69,7 @@
 	let busy = $state('');
 
 	async function decide(
-		kind: 'company' | 'job' | 'member' | 'profile',
+		kind: 'job' | 'member' | 'profile',
 		id: string,
 		decision: 'approve' | 'reject'
 	) {
@@ -124,12 +114,6 @@
 	}
 
 	// A page at a time; back to the first page whenever the view changes.
-	const companyPager = new Pager(
-		() => newCompanies,
-		() => []
-	);
-
-	// A page at a time; back to the first page whenever the view changes.
 	const jobPager = new Pager(
 		() => jobs,
 		() => []
@@ -168,54 +152,6 @@
 
 	{#if total === 0}
 		<div class="empty"><p>Nothing waiting. Everything founders have sent has been decided.</p></div>
-	{/if}
-
-	{#if newCompanies.length > 0}
-		<section class="group">
-			<h2 class="group__title">
-				New startups <span class="group__count">{newCompanies.length}</span>
-			</h2>
-			{#each companyPager.rows as startup (startup.id)}
-				<article class="item">
-					<div class="item__head">
-						<div class="item__text">
-							<p class="item__name">{startup.company_name}</p>
-							<p class="item__sub">
-								{startup.contact_name} · {startup.contact_email} · {startup.phone} · registered
-								{when(startup.created_at)}
-							</p>
-							{#if startup.website}
-								<p class="item__sub">{startup.website}</p>
-							{/if}
-						</div>
-					</div>
-					<div class="decide">
-						<input
-							type="text"
-							class="note"
-							placeholder="Reason, if refusing"
-							value={notes[startup.id] ?? ''}
-							oninput={(e) => (notes = { ...notes, [startup.id]: e.currentTarget.value })}
-						/>
-						<button
-							class="btn-small btn-small--primary"
-							disabled={busy === startup.id}
-							onclick={() => decide('company', startup.id, 'approve')}
-						>
-							Verify
-						</button>
-						<button
-							class="btn-small btn-small--danger"
-							disabled={busy === startup.id}
-							onclick={() => decide('company', startup.id, 'reject')}
-						>
-							Refuse
-						</button>
-					</div>
-				</article>
-			{/each}
-			<Pagination pager={companyPager} noun="startups" />
-		</section>
 	{/if}
 
 	{#if jobs.length > 0}

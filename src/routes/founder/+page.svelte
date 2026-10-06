@@ -209,11 +209,25 @@
 		color: $admin-ink;
 	}
 
+	// Six tiles: one row on wide screens, then three-up and two-up so the rows
+	// below never end ragged.
 	.tiles {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+		grid-template-columns: repeat(6, minmax(0, 1fr));
 		gap: 14px;
 		margin-bottom: 18px;
+
+		@media (max-width: #{$bp-lg}) {
+			grid-template-columns: repeat(3, 1fr);
+		}
+
+		@media (max-width: #{$bp-md}) {
+			grid-template-columns: repeat(2, 1fr);
+		}
+
+		@media (max-width: #{$bp-xs}) {
+			grid-template-columns: 1fr;
+		}
 	}
 
 	.tile {

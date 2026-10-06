@@ -1,5 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
+import { sendTemplateEmail } from '$lib/server/email';
 import type { RequestHandler } from './$types';
 
 // The verdict side of the three founder queues. One route rather than three
@@ -26,33 +27,8 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 	const approved = body.decision === 'approve';
 	const note = body.note?.trim() || null;
 
-	if (body.kind === 'company') {
-		// Verifying a startup is the first gate of the four: until it passes, the
-		// company cannot post at all, so nothing downstream of it can be public.
-		const { data, error: dbError } = await ctx.db
-			.from('companies')
-			.update({
-				status: approved ? 'verified' : 'rejected',
-				rejection_reason: approved ? null : note
-			})
-			.eq('id', body.id)
-			.select('company_name')
-			.maybeSingle();
-
-		if (dbError) error(500, dbError.message);
-		if (!data) error(404, 'Company not found.');
-
-		await logAdminAction(
-			ctx,
-			`${approved ? 'verified' : 'rejected'} ${data.company_name as string}`,
-			{
-				table: 'companies',
-				recordId: body.id,
-				after: { status: approved ? 'verified' : 'rejected', note }
-			}
-		);
-		return json({ ok: true });
-	}
+	// Companies are verified by accepting their incubation application, not here.
+	if (body.kind === 'company') error(410, 'Companies are verified by accepting their application.');
 
 	if (body.kind === 'job') {
 		const { data, error: dbError } = await ctx.db
@@ -64,11 +40,35 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 				reviewed_by: ctx.admin.userId
 			})
 			.eq('id', body.id)
-			.select('role, company')
+			.select('role, company, company_id')
 			.maybeSingle();
 
 		if (dbError) error(500, dbError.message);
 		if (!data) error(404, 'Job not found.');
+
+		// The founder hears the verdict by email as well as in their console.
+		const { data: company } = await ctx.db
+			.from('companies')
+			.select('company_name, contact_name, contact_email, email')
+			.eq('id', data.company_id as string)
+			.maybeSingle();
+		const to = (company?.contact_email as string) || (company?.email as string) || '';
+		if (to) {
+			await sendTemplateEmail({
+				templateKey: 'role-decision',
+				to,
+				toName: (company?.contact_name as string) ?? '',
+				variables: {
+					contactName: (company?.contact_name as string) ?? '',
+					role: data.role as string,
+					companyName: (company?.company_name as string) || (data.company as string),
+					approved: approved ? 'yes' : '',
+					reason: approved ? '' : (note ?? '')
+				},
+				context: { table: 'jobs', recordId: body.id, status: approved ? 'approved' : 'rejected' },
+				sentBy: ctx.admin.userId
+			});
+		}
 
 		await logAdminAction(
 			ctx,

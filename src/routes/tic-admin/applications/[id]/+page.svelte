@@ -4,8 +4,10 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
+	import ReviewProgress, { type ReviewStage } from '$lib/components/ReviewProgress.svelte';
 	import {
 		adminDeleteApplication,
+		adminReviewAction,
 		adminSetApplicationStatus,
 		type ApplicationDetail,
 		type ApplicationStatus
@@ -32,6 +34,54 @@
 	const reviewNote = $derived(noteDraft ?? application.review_note ?? '');
 
 	let saving = $state(false);
+
+	// ---- review chain ----------------------------------------------------------
+	const scope = $derived(data.scope);
+	const isAdmin = $derived(scope === 'admin');
+	const canAssign = $derived(scope === 'admin' || scope === 'ceo');
+	const rejected = $derived(application.status === 'rejected');
+	const stage = $derived(
+		((rejected ? application.rejected_stage : application.review_stage) ?? 0) as ReviewStage
+	);
+	const reviewers = $derived(data.reviewers);
+	const coordinatorRows = $derived(reviewers.filter((r) => r.kind === 'coordinator'));
+	const headRows = $derived(reviewers.filter((r) => r.kind === 'head'));
+	const reviewerGroups = $derived([
+		{ label: 'Coordinators', rows: coordinatorRows },
+		{ label: 'TIC heads', rows: headRows }
+	]);
+	const headsDone = $derived(headRows.length > 0 && headRows.every((r) => r.done_at));
+	const myPending = $derived(
+		reviewers.find((r) => r.user_id === data.me && r.kind === scope && !r.done_at) ?? null
+	);
+	const mySignOffOpen = $derived(
+		myPending !== null && stage === (myPending.kind === 'coordinator' ? 3 : 5)
+	);
+
+	let picked = $state<string[]>([]);
+	let signOffNote = $state('');
+
+	function togglePick(id: string) {
+		picked = picked.includes(id) ? picked.filter((p) => p !== id) : [...picked, id];
+	}
+
+	async function step(
+		action: Parameters<typeof adminReviewAction>[1],
+		extra: Parameters<typeof adminReviewAction>[2] = {},
+		done = 'Saved.'
+	) {
+		saving = true;
+		const refusal = await adminReviewAction(application.id, action, extra);
+		saving = false;
+		if (refusal) {
+			showToast(refusal, 'err');
+			return;
+		}
+		picked = [];
+		signOffNote = '';
+		await invalidateAll();
+		showToast(done);
+	}
 
 	async function setStatus(status: ApplicationStatus) {
 		saving = true;
@@ -104,6 +154,52 @@
 		>{application ? `${application.startup_name} · TIC Admin` : 'Application · TIC Admin'}</title
 	>
 </svelte:head>
+
+{#snippet picker(
+	kind: 'coordinator' | 'head',
+	people: { id: string; name: string; email: string }[]
+)}
+	<p class="step__hint">
+		{kind === 'coordinator'
+			? 'Choose the coordinators who review it. Only they will see it.'
+			: 'Choose the TIC heads who review it. Only they will see it.'}
+	</p>
+	{#if people.length === 0}
+		<p class="step__empty">
+			No one holds the {kind === 'coordinator' ? 'coordinator' : 'TIC head'} role yet.
+		</p>
+	{:else}
+		<ul class="pick">
+			{#each people as person (person.id)}
+				<li>
+					<label class="pick__row">
+						<input
+							type="checkbox"
+							checked={picked.includes(person.id)}
+							onchange={() => togglePick(person.id)}
+						/>
+						<span class="pick__name">{person.name}</span>
+						<span class="pick__email">{person.email}</span>
+					</label>
+				</li>
+			{/each}
+		</ul>
+		<button
+			class="btn btn--primary"
+			disabled={saving || picked.length === 0}
+			onclick={() =>
+				step(
+					'assign',
+					{ kind, userIds: picked },
+					kind === 'coordinator' ? 'Coordinators assigned.' : 'Heads assigned.'
+				)}
+		>
+			Assign {kind === 'coordinator' ? 'coordinators' : 'heads'}{picked.length
+				? ` (${picked.length})`
+				: ''}
+		</button>
+	{/if}
+{/snippet}
 
 <AdminShell
 	brand="TIC Team Admin"
@@ -213,39 +309,143 @@
 						<span class="status-row__when">Last updated {fmtDateTime(application.reviewed_at)}</span
 						>
 					{/if}
+					<ReviewProgress {stage} {rejected} />
 				</div>
 
-				<label class="field">
-					<span>Message to applicant</span>
-					<textarea
-						value={applicantMessage}
-						oninput={(e) => (messageDraft = (e.currentTarget as HTMLTextAreaElement).value)}
-						rows="4"
-						placeholder="Shown to the applicant and included in the decision email."
-					></textarea>
-				</label>
+				{#if !rejected}
+					<div class="step">
+						{#if stage === 0}
+							{#if isAdmin}
+								<p class="step__hint">Checked it? Pass it to the CEO to start the review.</p>
+								<button
+									class="btn btn--primary"
+									disabled={saving}
+									onclick={() => step('forward', {}, 'Passed to the CEO.')}>Pass to CEO</button
+								>
+							{:else}
+								<p class="step__hint">Waiting for admin to check it.</p>
+							{/if}
+						{:else if stage <= 2}
+							{#if canAssign}
+								{@render picker('coordinator', data.assignable.coordinators)}
+							{:else}
+								<p class="step__hint">With the CEO for review.</p>
+							{/if}
+						{:else if stage === 3}
+							<p class="step__hint">Assigned coordinators are reviewing.</p>
+						{:else if stage === 4}
+							{#if canAssign}
+								{@render picker('head', data.assignable.heads)}
+							{:else}
+								<p class="step__hint">With the CEO for a recheck.</p>
+							{/if}
+						{:else if stage === 5}
+							{#if isAdmin && application.status === 'accepted'}
+								<p class="step__hint">
+									Final email sent. Mark it live once it shows among the incubated startups.
+								</p>
+								<button
+									class="btn btn--primary"
+									disabled={saving}
+									onclick={() => step('live', {}, 'Marked live.')}>Mark live</button
+								>
+							{:else if headsDone}
+								<p class="step__hint">
+									{isAdmin
+										? 'Every head has signed off. Send the final email to accept it.'
+										: 'Back with admin for the final email.'}
+								</p>
+							{:else}
+								<p class="step__hint">Assigned TIC heads are reviewing.</p>
+							{/if}
+						{:else}
+							<p class="step__hint">Live among the incubated startups.</p>
+						{/if}
 
-				<label class="field">
-					<span>Internal note</span>
-					<textarea
-						value={reviewNote}
-						oninput={(e) => (noteDraft = (e.currentTarget as HTMLTextAreaElement).value)}
-						rows="3"
-						placeholder="Private to the TIC team — never shown to the applicant."
-					></textarea>
-				</label>
+						{#if mySignOffOpen}
+							<label class="field">
+								<span>Your review</span>
+								<textarea
+									bind:value={signOffNote}
+									rows="3"
+									placeholder="What you found, seen by admin and the CEO."
+								></textarea>
+							</label>
+							<button
+								class="btn btn--primary"
+								disabled={saving}
+								onclick={() => step('sign-off', { note: signOffNote }, 'Signed off.')}
+								>Sign off</button
+							>
+						{/if}
+					</div>
+				{/if}
 
-				<div class="decision">
-					<button class="btn btn--primary" disabled={saving} onclick={() => setStatus('accepted')}
-						>Accept</button
-					>
-					<button class="btn" disabled={saving} onclick={() => setStatus('under-review')}
-						>Mark under review</button
-					>
-					<button class="btn btn--danger" disabled={saving} onclick={() => setStatus('rejected')}
-						>Reject</button
-					>
-				</div>
+				{#if reviewers.length > 0}
+					<div class="reviewers">
+						{#each reviewerGroups as group (group.label)}
+							{#if group.rows.length > 0}
+								<p class="reviewers__title">{group.label}</p>
+								<ul>
+									{#each group.rows as r (r.id)}
+										<li class="reviewer">
+											<span class="reviewer__name">{r.name || r.email}</span>
+											<span class="reviewer__state" class:reviewer__state--done={r.done_at}>
+												{r.done_at ? 'Signed off' : 'Reviewing'}
+											</span>
+											{#if r.note}<p class="reviewer__note">{r.note}</p>{/if}
+										</li>
+									{/each}
+								</ul>
+							{/if}
+						{/each}
+					</div>
+				{/if}
+
+				{#if isAdmin || (scope === 'ceo' && !rejected)}
+					<label class="field">
+						<span>Message to applicant</span>
+						<textarea
+							value={applicantMessage}
+							oninput={(e) => (messageDraft = (e.currentTarget as HTMLTextAreaElement).value)}
+							rows="4"
+							placeholder="Shown to the applicant and included in the decision email."
+						></textarea>
+					</label>
+
+					<label class="field">
+						<span>Internal note</span>
+						<textarea
+							value={reviewNote}
+							oninput={(e) => (noteDraft = (e.currentTarget as HTMLTextAreaElement).value)}
+							rows="3"
+							placeholder="Private to the TIC team, never shown to the applicant."
+						></textarea>
+					</label>
+
+					<div class="decision">
+						{#if isAdmin && !rejected && stage === 5 && headsDone && application.status !== 'accepted'}
+							<button
+								class="btn btn--primary"
+								disabled={saving}
+								onclick={() => setStatus('accepted')}>Accept and send final email</button
+							>
+						{/if}
+						{#if rejected}
+							{#if isAdmin}
+								<button class="btn" disabled={saving} onclick={() => setStatus('under-review')}
+									>Reopen</button
+								>
+							{/if}
+						{:else}
+							<button
+								class="btn btn--danger"
+								disabled={saving}
+								onclick={() => setStatus('rejected')}>Reject</button
+							>
+						{/if}
+					</div>
+				{/if}
 
 				<dl class="meta">
 					<div>
@@ -262,7 +462,9 @@
 					</div>
 				</dl>
 
-				<button class="btn btn--danger delete" onclick={remove}>Delete application</button>
+				{#if isAdmin}
+					<button class="btn btn--danger delete" onclick={remove}>Delete application</button>
+				{/if}
 			</div>
 		</aside>
 	</div>
@@ -493,6 +695,132 @@
 				box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
 			}
 		}
+	}
+
+	.step {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding: 14px;
+		background: $admin-sunken;
+		border-radius: $admin-radius-sm;
+	}
+
+	.step__hint {
+		margin: 0;
+		font-size: 12px;
+		line-height: 1.45;
+		color: $admin-ink-2;
+	}
+
+	.step__empty {
+		margin: 0;
+		font-size: 12px;
+		color: $admin-ink-3;
+	}
+
+	.pick {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		max-height: 220px;
+		margin: 0;
+		padding: 4px;
+		overflow-y: auto;
+		list-style: none;
+		background: #fff;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-sm;
+	}
+
+	.pick__row {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		column-gap: 8px;
+		padding: 6px 8px;
+		cursor: pointer;
+
+		input {
+			grid-row: span 2;
+			margin: 2px 0 0;
+			accent-color: #111;
+		}
+	}
+
+	.pick__name {
+		font-size: 13px;
+		font-weight: $font-weight-semibold;
+		color: #111;
+	}
+
+	.pick__email {
+		font-size: 11px;
+		color: $admin-ink-3;
+		overflow-wrap: anywhere;
+	}
+
+	.reviewers {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+
+		ul {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			margin: 0 0 6px;
+			padding: 0;
+			list-style: none;
+		}
+	}
+
+	.reviewers__title {
+		margin: 0;
+		font-size: 11px;
+		font-weight: $font-weight-semibold;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: #444;
+	}
+
+	.reviewer {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 4px 8px;
+		padding: 8px 10px;
+		border: 1px solid $admin-line-soft;
+		border-radius: $admin-radius-sm;
+	}
+
+	.reviewer__name {
+		font-size: 13px;
+		font-weight: $font-weight-semibold;
+		color: #111;
+	}
+
+	.reviewer__state {
+		padding: 2px 8px;
+		font-size: 10px;
+		font-weight: $font-weight-semibold;
+		border-radius: 999px;
+		background: #fff4d4;
+		color: #6a4f00;
+
+		&--done {
+			background: #d6f5e1;
+			color: #0e6b2c;
+		}
+	}
+
+	.reviewer__note {
+		flex-basis: 100%;
+		margin: 2px 0 0;
+		font-size: 12px;
+		line-height: 1.45;
+		color: $admin-ink-2;
+		white-space: pre-wrap;
 	}
 
 	.decision {

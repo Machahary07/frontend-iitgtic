@@ -65,7 +65,7 @@
 	const label = $derived(company?.companyName || founder.name || founder.email);
 
 	const STATUS_HINT: Record<string, string> = {
-		pending: 'waiting for TIC',
+		pending: 'not incubated yet',
 		verified: 'verified',
 		rejected: 'not verified'
 	};
@@ -181,12 +181,12 @@
 		</div>
 	{:else if gate === 'company-pending'}
 		<div class="gate gate--wait" role="status">
-			<p class="gate__title">{label} is waiting to be verified</p>
+			<p class="gate__title">Fill in the incubation application for {label}</p>
 			<p>
-				TIC reviews every startup before it can put anything in front of the public. Posting roles
-				and reading applicants unlock as soon as it is verified. Your incubation application does
-				not wait on this and can be filled in now.
+				Posting roles and reading applicants unlock once TIC accepts {label} for incubation. Start
+				with the application form; you can follow its review from the Startups page.
 			</p>
+			<a class="gate__cta" href={resolve('/founder/application')}>Fill application form</a>
 		</div>
 	{:else if gate === 'company-rejected'}
 		<div class="gate gate--stop" role="alert">

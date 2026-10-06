@@ -40,6 +40,10 @@ export type EmailBlock =
 	| ({ type: 'heading'; text: string } & Common)
 	| ({ type: 'subheading'; text: string } & Common)
 	| ({ type: 'text'; text: string } & Common)
+	| ({ type: 'lede'; text: string } & Common)
+	| ({ type: 'sticker'; tone: BlockTone; text: string } & Common)
+	| ({ type: 'progress'; stage: string } & Common)
+	| ({ type: 'details'; title?: string; items: string[] } & Common)
 	| ({ type: 'bullets'; items: string[] } & Common)
 	| ({ type: 'numbers'; items: string[] } & Common)
 	| ({ type: 'quote'; text: string; attribution?: string } & Common)
@@ -77,6 +81,30 @@ export const BLOCK_LABELS: Record<BlockType, BlockMeta> = {
 		icon: 'h'
 	},
 	text: { name: 'Paragraph', hint: 'A normal paragraph of the message', group: 'Text', icon: '¶' },
+	lede: {
+		name: 'Intro',
+		hint: 'The opening line under the heading, centred and a size up',
+		group: 'Text',
+		icon: 'Ⅰ'
+	},
+	sticker: {
+		name: 'Status sticker',
+		hint: 'A small pill above the heading, like “Submitted” or “Accepted”',
+		group: 'Emphasis',
+		icon: '◉'
+	},
+	progress: {
+		name: 'Review progress',
+		hint: 'The six review dots, with the current step glowing',
+		group: 'Emphasis',
+		icon: '⋯'
+	},
+	details: {
+		name: 'Details card',
+		hint: '“Label: value” rows on a black card, like startup, founder, stage',
+		group: 'Emphasis',
+		icon: '▤'
+	},
 	bullets: {
 		name: 'Bullet list',
 		hint: 'Points that have no particular order',
@@ -146,8 +174,15 @@ export function blankBlock(type: BlockType): EmailBlock {
 		case 'heading':
 		case 'subheading':
 		case 'text':
+		case 'lede':
 		case 'note':
 			return { type, text: '' };
+		case 'sticker':
+			return { type, tone: 'info', text: '' };
+		case 'progress':
+			return { type, stage: '1' };
+		case 'details':
+			return { type, title: '', items: ['Startup: {{startupName}}'] };
 		case 'bullets':
 		case 'numbers':
 			return { type, items: [''] };
@@ -178,6 +213,9 @@ export function blankBlock(type: BlockType): EmailBlock {
 // in the HTML tab.
 const LINK = /\[([^\]\n]+)\]\(([^)\s]+)\)/g;
 const BOLD = /\*\*?([^*\n]+)\*\*?/g;
+// _words_ in italics, the emphasis the headlines use. Only at word edges, so an
+// underscore inside a link or a name is left alone.
+const ITALIC = /(^|[\s(“"'])_([^_\n]+)_(?=$|[\s.,!?;:)”"'])/g;
 
 export function renderInline(text: string): string {
 	// Escaped first, so anything the author types is content rather than markup —
@@ -186,43 +224,107 @@ export function renderInline(text: string): string {
 		.replace(
 			LINK,
 			(_m, label: string, href: string) =>
-				`<a href="${href}" style="color:#004EBB;text-decoration:underline;">${label}</a>`
+				`<a href="${href}" style="color:#004EBC;text-decoration:underline;">${label}</a>`
 		)
 		.replace(BOLD, '<strong>$1</strong>')
+		.replace(ITALIC, '$1<em>$2</em>')
 		.replace(/\n/g, '<br />');
 }
 
 // The same markers, flattened for anywhere the words are wanted without markup.
 export function inlineToText(text: string): string {
-	return text.replace(LINK, '$1 ($2)').replace(BOLD, '$1');
+	return text.replace(LINK, '$1 ($2)').replace(BOLD, '$1').replace(ITALIC, '$1$2');
 }
 
 // --- compiling --------------------------------------------------------------
 
-const SANS = `-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`;
-const HEADING = `margin:0 0 16px;font:600 20px/1.3 ${SANS};color:#111111;letter-spacing:-0.01em;`;
-const SUBHEADING = `margin:24px 0 10px;font:600 15px/1.4 ${SANS};color:#111111;`;
-const TEXT = `margin:0 0 14px;`;
-const NOTE = `margin:18px 0 0;font-size:13px;color:#777777;`;
-const LIST = `margin:0 0 14px;padding-left:22px;`;
-const LIST_ITEM = `margin:0 0 6px;`;
+// The house style (see .agents/emails-template.html): Anek Latin headlines with
+// italic emphasis centred like the home page, Open Sans copy, black pill
+// buttons, details on an inverted black card, and the six review dots. Gmail
+// drops web fonts, so each stack falls back to something with the same shape.
+const SANS = `'Open Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`;
+const SERIF = `'Anek Latin','Mukta',Georgia,'Times New Roman',serif`;
+const INK = '#111111';
+const COPY = '#2E3036';
+const GREY = '#686A74';
+const RULE = '#EDEDEA';
+
+const HEADING = `margin:0 0 18px;font:800 36px/1.1 ${SERIF};color:${INK};letter-spacing:-0.025em;text-align:center;`;
+const SUBHEADING = `margin:30px 0 12px;font:700 11px/1.4 ${SANS};letter-spacing:0.16em;text-transform:uppercase;color:${INK};`;
+const TEXT = `margin:0 0 18px;font:400 16px/1.7 ${SANS};color:${COPY};`;
+const LEDE = `margin:0 auto 30px;max-width:440px;font:400 17px/1.6 ${SANS};color:${COPY};text-align:center;`;
+const NOTE = `margin:26px 0 0;font:400 13px/1.6 ${SANS};color:${GREY};text-align:center;`;
 
 const TONES: Record<BlockTone, { bar: string; bg: string; label: string }> = {
-	info: { bar: '#004EBB', bg: '#f6f8fd', label: '#24427e' },
-	good: { bar: '#0EB05B', bg: '#f2fbf6', label: '#0e6b2c' },
-	bad: { bar: '#a01515', bg: '#fdf4f4', label: '#9a1515' }
+	info: { bar: '#004EBC', bg: '#EEF3FC', label: '#0B3A8C' },
+	good: { bar: '#00B451', bg: '#E8F8EF', label: '#0B6B36' },
+	bad: { bar: '#D93636', bg: '#FDEEEE', label: '#9A201F' }
 };
 
+// The six steps of the incubation review, in the colours the console uses.
+export const REVIEW_STEP_COLORS = [
+	'#E5484D',
+	'#F76B15',
+	'#F5A524',
+	'#D6C31F',
+	'#8BC34A',
+	'#30A46C'
+];
+export const REVIEW_STEP_NAMES = [
+	'Admin check',
+	'CEO review',
+	'Coordinator review',
+	'CEO recheck',
+	'TIC head review',
+	'Live'
+];
+
 const SPACER_PX: Record<SpacerSize, number> = { small: 12, medium: 24, large: 40 };
-const IMAGE_PX: Record<ImageWidth, string> = { small: '160', half: '260', full: '496' };
+const IMAGE_PX: Record<ImageWidth, string> = { small: '160', half: '260', full: '512' };
+
+function dot(size: number, color: string, extra = ''): string {
+	return `<div style="width:${size}px;height:${size}px;border-radius:${size}px;background:${color};${extra}font-size:0;line-height:0;">&nbsp;</div>`;
+}
 
 function list(items: string[], ordered: boolean): string {
-	const tag = ordered ? 'ol' : 'ul';
 	const rows = items
 		.filter((item) => item.trim())
-		.map((item) => `<li style="${LIST_ITEM}">${renderInline(item)}</li>`)
+		.map((item, i) => {
+			const mark = ordered
+				? `<span style="font:italic 800 22px/1 ${SERIF};color:${i % 2 ? '#00B451' : '#004EBC'};">${String(i + 1).padStart(2, '0')}</span>`
+				: dot(8, '#00B451', 'margin-top:8px;');
+			return `<tr><td width="${ordered ? 44 : 22}" valign="top" style="padding:12px 0;border-bottom:1px solid ${RULE};">${mark}</td><td style="padding:12px 0;border-bottom:1px solid ${RULE};font:400 15px/1.6 ${SANS};color:${COPY};">${renderInline(item)}</td></tr>`;
+		})
 		.join('');
-	return `<${tag} style="${LIST}">${rows}</${tag}>`;
+	return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 22px;border-top:1px solid ${RULE};">${rows}</table>`;
+}
+
+/** The dots for one fixed step: done filled, the current one glowing, later faint. */
+export function progressDots(stage: number): string {
+	const cells = REVIEW_STEP_COLORS.map((color, i) => {
+		const style =
+			i < stage - 1 || (stage === 6 && i === 5)
+				? ''
+				: i === stage - 1
+					? `box-shadow:0 0 0 4px ${color}33,0 0 10px 2px ${color}88;`
+					: 'opacity:0.2;';
+		return `<td style="padding:0 6px;">${dot(12, color, style)}</td>`;
+	}).join('');
+	const caption = stage
+		? `Step ${stage} of 6 &middot; ${REVIEW_STEP_NAMES[stage - 1]}`
+		: 'Waiting for the admin check';
+	return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 24px;"><tr><td align="center"><table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr>${cells}</tr></table><p style="margin:10px 0 0;font:600 11px/1.4 ${SANS};letter-spacing:0.12em;text-transform:uppercase;color:${GREY};text-align:center;">${caption}</p></td></tr></table>`;
+}
+
+// A "Label: value" row. A value that is a single {{variable}} is dropped when
+// that variable arrives empty, so an optional phone number leaves no blank row.
+function detailRow(item: string): string {
+	const at = item.indexOf(':');
+	const label = at > 0 ? item.slice(0, at).trim() : '';
+	const value = at > 0 ? item.slice(at + 1).trim() : item.trim();
+	const row = `<tr><td style="padding:11px 0;border-top:1px solid #2A2A2A;font:600 10px/1.5 ${SANS};letter-spacing:0.14em;text-transform:uppercase;color:#9EA1A8;width:120px;" valign="top">${renderInline(label)}</td><td style="padding:11px 0;border-top:1px solid #2A2A2A;font:500 15px/1.5 ${SANS};color:#FFFFFF;">${renderInline(value)}</td></tr>`;
+	const only = value.match(/^\{\{\s*([\w.]+)\s*\}\}$/);
+	return only ? `{{#if ${only[1]}}}${row}{{/if}}` : row;
 }
 
 function compile(block: EmailBlock): string {
@@ -232,6 +334,9 @@ function compile(block: EmailBlock): string {
 
 		case 'subheading':
 			return `<h2 style="${SUBHEADING}">${renderInline(block.text)}</h2>`;
+
+		case 'lede':
+			return `<p style="${LEDE}">${renderInline(block.text)}</p>`;
 
 		case 'text':
 			return `<p style="${TEXT}">${renderInline(block.text)}</p>`;
@@ -245,15 +350,44 @@ function compile(block: EmailBlock): string {
 		case 'numbers':
 			return list(block.items, true);
 
+		case 'sticker': {
+			const tone = TONES[block.tone] ?? TONES.info;
+			return `<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 20px;"><tr><td style="border:1px solid ${tone.bar};border-radius:999px;padding:7px 14px;font:700 10px/1 ${SANS};letter-spacing:0.18em;text-transform:uppercase;color:${tone.label};"><span style="display:inline-block;width:7px;height:7px;border-radius:7px;background:${tone.bar};vertical-align:1px;margin-right:8px;"></span>${renderInline(block.text)}</td></tr></table>`;
+		}
+
+		case 'progress': {
+			// A fixed step compiles to its dots. A {{variable}} compiles to all seven
+			// and the sender picks one: sendTemplateEmail sets <name>_<n> from it.
+			const variable = block.stage.trim().match(/^\{\{\s*([\w.]+)\s*\}\}$/)?.[1];
+			if (variable) {
+				return [0, 1, 2, 3, 4, 5, 6]
+					.map((n) => `{{#if ${variable}_${n}}}${progressDots(n)}{{/if}}`)
+					.join('');
+			}
+			const fixed = Number(block.stage);
+			return progressDots(Number.isInteger(fixed) && fixed >= 0 && fixed <= 6 ? fixed : 0);
+		}
+
+		case 'details': {
+			const title = block.title?.trim()
+				? `<tr><td colspan="2" style="padding:0 0 14px;font:700 10px/1 ${SANS};letter-spacing:0.18em;text-transform:uppercase;color:#00B451;">${renderInline(block.title)}</td></tr>`
+				: '';
+			const rows = block.items
+				.filter((item) => item.trim())
+				.map(detailRow)
+				.join('');
+			return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:6px 0 24px;"><tr><td style="background:#0B0B0B;border-radius:18px;padding:22px 24px 12px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%">${title}${rows}</table></td></tr></table>`;
+		}
+
 		case 'quote': {
 			const from = block.attribution?.trim()
-				? `<p style="margin:8px 0 0;font-size:12px;color:#888888;">— ${renderInline(block.attribution)}</p>`
+				? `<p style="margin:12px 0 0;font:700 10px/1.4 ${SANS};letter-spacing:0.16em;text-transform:uppercase;color:${GREY};">${renderInline(block.attribution)}</p>`
 				: '';
-			return `<blockquote style="margin:0 0 18px;padding:2px 0 2px 16px;border-left:3px solid #e0e3e8;"><p style="margin:0;font-size:15px;font-style:italic;color:#444444;">${renderInline(block.text)}</p>${from}</blockquote>`;
+			return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:8px 0 24px;"><tr><td style="padding:6px 8px;text-align:center;"><p style="margin:0;font:800 44px/0.6 ${SERIF};color:#00B451;">&ldquo;</p><p style="margin:8px 0 0;font:italic 500 22px/1.4 ${SERIF};color:${INK};">${renderInline(block.text)}</p>${from}</td></tr></table>`;
 		}
 
 		case 'divider':
-			return `<hr style="margin:24px 0;border:0;border-top:1px solid #eef0f3;" />`;
+			return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:26px 0;"><tr><td style="border-top:1px solid ${RULE};font-size:0;line-height:0;">&nbsp;</td></tr></table>`;
 
 		case 'spacer':
 			// A sized table cell rather than a margin: Outlook drops margins on empty
@@ -261,45 +395,45 @@ function compile(block: EmailBlock): string {
 			return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="height:${SPACER_PX[block.size] ?? 24}px;line-height:${SPACER_PX[block.size] ?? 24}px;font-size:0;">&nbsp;</td></tr></table>`;
 
 		case 'signature':
-			return `<p style="margin:22px 0 0;font-size:14px;color:#333333;">${renderInline(block.name)}${
+			return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:30px 0 0;"><tr><td style="border-top:1px solid ${RULE};padding-top:22px;"><p style="margin:0;font:italic 700 20px/1.2 ${SERIF};color:${INK};">${renderInline(block.name)}</p>${
 				block.role?.trim()
-					? `<br /><span style="font-size:13px;color:#888888;">${renderInline(block.role)}</span>`
+					? `<p style="margin:4px 0 0;font:400 13px/1.4 ${SANS};color:${GREY};">${renderInline(block.role)}</p>`
 					: ''
-			}</p>`;
+			}</td></tr></table>`;
 
 		case 'callout': {
 			const tone = TONES[block.tone] ?? TONES.info;
 			const label = block.label?.trim()
-				? `<p style="margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:${tone.label};">${renderInline(block.label)}</p>`
+				? `<p style="margin:0 0 6px;font:700 10px/1.4 ${SANS};letter-spacing:0.16em;text-transform:uppercase;color:${tone.label};">${renderInline(block.label)}</p>`
 				: '';
-			return `<div style="margin:0 0 18px;padding:14px 16px;background:${tone.bg};border-left:3px solid ${tone.bar};border-radius:0 6px 6px 0;">${label}<p style="margin:0;font-size:14px;color:#333333;">${renderInline(block.text)}</p></div>`;
+			return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;"><tr><td style="background:${tone.bg};border-radius:16px;padding:20px 22px;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr><td width="18" valign="top">${dot(10, tone.bar, 'margin-top:3px;')}</td><td>${label}<p style="margin:0;font:italic 500 18px/1.45 ${SERIF};color:${INK};">${renderInline(block.text)}</p></td></tr></table></td></tr></table>`;
 		}
 
 		case 'link':
-			return `<p style="${TEXT}"><a href="${escapeHtml(block.href)}" style="color:#004EBB;text-decoration:underline;">${renderInline(block.label)}</a></p>`;
+			return `<p style="margin:0 0 18px;text-align:center;"><a href="${escapeHtml(block.href)}" style="font:italic 600 15px/1.5 ${SERIF};color:${INK};text-decoration:underline;">${renderInline(block.label)} &rarr;</a></p>`;
 
 		case 'button':
 			// A table rather than a styled <a>: Outlook ignores padding on inline
 			// elements, and this is the shape that survives it.
-			return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:22px 0;">
-	<tr><td style="background:#111111;border-radius:6px;">
-		<a href="${escapeHtml(block.href)}" style="display:inline-block;padding:11px 22px;font:600 14px ${SANS};color:#ffffff;text-decoration:none;">${renderInline(block.label)}</a>
+			return `<table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin:10px auto 28px;">
+	<tr><td style="background:#000000;border-radius:999px;">
+		<a href="${escapeHtml(block.href)}" style="display:inline-block;padding:15px 38px;font:italic 600 16px/1 ${SERIF};color:#ffffff;text-decoration:none;border-radius:999px;">${renderInline(block.label)}</a>
 	</td></tr>
 </table>`;
 
 		case 'image': {
 			// width as an attribute as well as a style: Outlook reads the attribute.
 			const px = IMAGE_PX[block.width] ?? IMAGE_PX.full;
-			const img = `<img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt)}" width="${px}" style="width:100%;max-width:${px}px;height:auto;display:block;border:0;border-radius:8px;" />`;
+			const img = `<img src="${escapeHtml(block.src)}" alt="${escapeHtml(block.alt)}" width="${px}" style="width:100%;max-width:${px}px;height:auto;display:block;border:0;border-radius:14px;margin:0 auto;" />`;
 			const wrapped = block.href?.trim() ? `<a href="${escapeHtml(block.href)}">${img}</a>` : img;
-			return `<div style="margin:0 0 18px;">${wrapped}</div>`;
+			return `<div style="margin:0 0 20px;text-align:center;">${wrapped}</div>`;
 		}
 
 		case 'file':
-			return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 18px;">
-	<tr><td style="padding:12px 14px;background:#fafbfc;border:1px solid #eef0f3;border-radius:8px;">
-		<a href="${escapeHtml(block.src)}" style="font:600 14px ${SANS};color:#004EBB;text-decoration:none;">${escapeHtml(block.name || 'Download')}</a>
-		${block.size?.trim() ? `<span style="font-size:12px;color:#888888;"> · ${escapeHtml(block.size)}</span>` : ''}
+			return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0 0 20px;">
+	<tr><td style="padding:14px 18px;background:#F6F6F3;border-radius:14px;">
+		<a href="${escapeHtml(block.src)}" style="font:600 14px ${SANS};color:#004EBC;text-decoration:none;">${escapeHtml(block.name || 'Download')}</a>
+		${block.size?.trim() ? `<span style="font:400 12px ${SANS};color:${GREY};"> · ${escapeHtml(block.size)}</span>` : ''}
 	</td></tr>
 </table>`;
 	}
@@ -385,8 +519,23 @@ export function parseBlocks(input: unknown): EmailBlock[] | null {
 			case 'heading':
 			case 'subheading':
 			case 'text':
+			case 'lede':
 			case 'note':
 				out.push({ type, text, ...gate });
+				break;
+			case 'sticker':
+				out.push({
+					type,
+					tone: TONE_VALUES.includes(item.tone as BlockTone) ? (item.tone as BlockTone) : 'info',
+					text,
+					...gate
+				});
+				break;
+			case 'progress':
+				out.push({ type, stage: str(item.stage).trim() || '0', ...gate });
+				break;
+			case 'details':
+				out.push({ type, title: str(item.title), items, ...gate });
 				break;
 			case 'bullets':
 			case 'numbers':
@@ -474,7 +623,12 @@ export function blockProblems(blocks: EmailBlock[]): string[] {
 				break;
 			case 'bullets':
 			case 'numbers':
+			case 'details':
 				if (block.items.every((item) => !item.trim())) problems.push(`${at}: the list is empty.`);
+				break;
+			case 'progress':
+				if (!/^([0-6]|\{\{\s*[\w.]+\s*\}\})$/.test(block.stage.trim()))
+					problems.push(`${at}: use a step from 0 to 6, or a variable like {{stage}}.`);
 				break;
 			case 'signature':
 				if (!block.name.trim()) problems.push(`${at}: who is it from?`);

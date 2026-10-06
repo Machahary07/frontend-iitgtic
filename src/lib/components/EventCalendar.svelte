@@ -1,5 +1,6 @@
 <script lang="ts">
 	import LinkReveal from './LinkReveal.svelte';
+	import { floating } from '$lib/utils/floating';
 	import { getContent } from '$lib/content';
 
 	const content = getContent();
@@ -53,6 +54,7 @@
 
 	let listEl: HTMLDivElement | null = $state(null);
 	let filterRoot: HTMLDivElement | null = $state(null);
+	let filterTrigger: HTMLButtonElement | null = $state(null);
 
 	function isoOf(y: number, m: number, d: number) {
 		return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -258,6 +260,7 @@
 								type="button"
 								class="filter-trigger"
 								class:is-open={filterOpen}
+								bind:this={filterTrigger}
 								aria-haspopup="listbox"
 								aria-expanded={filterOpen}
 								onclick={(e) => {
@@ -280,7 +283,11 @@
 								</svg>
 							</button>
 							{#if filterOpen}
-								<div class="filter-menu" role="listbox">
+								<div
+									class="filter-menu"
+									role="listbox"
+									use:floating={{ anchor: filterTrigger, gap: 8 }}
+								>
 									<button
 										type="button"
 										role="option"
@@ -659,7 +666,9 @@
 		text-transform: uppercase;
 		color: rgba($color-black, 0.55);
 		border-radius: $radius-sm;
-		transition: background $transition-base, color $transition-base;
+		transition:
+			background $transition-base,
+			color $transition-base;
 
 		&:hover,
 		&.is-open {
@@ -680,10 +689,6 @@
 	}
 
 	.filter-menu {
-		position: absolute;
-		top: calc(100% + #{$space-2});
-		left: -#{$space-3};
-		z-index: $z-dropdown;
 		display: flex;
 		flex-direction: column;
 		min-width: 200px;
@@ -706,7 +711,9 @@
 		text-transform: uppercase;
 		color: rgba($color-black, 0.7);
 		border-radius: $radius-sm;
-		transition: background $transition-base, color $transition-base;
+		transition:
+			background $transition-base,
+			color $transition-base;
 
 		& + & {
 			border-top: 1px solid rgba($color-black, 0.06);

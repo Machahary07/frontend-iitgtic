@@ -187,6 +187,54 @@ a.link-reveal.inline-link {
 	color: var(--color-white);
 }
 
+// The `floating` action (src/lib/utils/floating.ts) puts menus in the top layer
+// as popovers. Strip the browser's popover box (centred, bordered, padded) at
+// zero specificity, so each component's own class styles always win.
+:where([data-floating]) {
+	position: fixed;
+	inset: auto;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: inherit;
+	overflow: visible;
+	width: auto;
+	height: auto;
+}
+
+// Site-wide scrollbar: a thin black pill on a clear track. Chromium and Safari
+// take the ::-webkit-scrollbar rules; Chromium ignores those once the standard
+// properties are set, so the standard ones are only given to browsers without
+// the pseudo-elements (Firefox). Components with their own scrollbar rules win
+// on specificity.
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background: rgba($color-black, 0.35);
+	border-radius: var(--radius-pill);
+	border: 2px solid transparent;
+	background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+	* {
+		scrollbar-width: thin;
+		scrollbar-color: rgba($color-black, 0.35) transparent;
+	}
+}
+
 // ---- Typography utility classes ----
 .font-light {
 	@include font-light;

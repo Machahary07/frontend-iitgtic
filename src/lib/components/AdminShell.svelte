@@ -88,8 +88,12 @@
 	// without touching the saved preference — closing it puts the sidebar back.
 	const railCollapsed = $derived(collapsed || assistantPanel.borrowsRail);
 
+	// Goes by what is on screen, not the saved preference: a rail folded for the
+	// assistant reads as closed, and opening it puts the assistant away.
 	function toggleCollapsed() {
-		collapsed = !collapsed;
+		const expand = railCollapsed;
+		if (expand) assistantPanel.close();
+		collapsed = !expand;
 		try {
 			localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0');
 		} catch {
@@ -420,7 +424,10 @@
 				type="button"
 				class="hamburger"
 				aria-label="Toggle navigation"
-				onclick={() => (mobileOpen = !mobileOpen)}
+				onclick={() => {
+					mobileOpen = !mobileOpen;
+					if (mobileOpen) assistantPanel.close();
+				}}
 			>
 				<span></span><span></span><span></span>
 			</button>
@@ -431,12 +438,12 @@
 			<button
 				type="button"
 				class="collapse"
-				aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-				aria-expanded={!collapsed}
-				title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+				aria-label={railCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+				aria-expanded={!railCollapsed}
+				title={railCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
 				onclick={toggleCollapsed}
 			>
-				{#if collapsed}
+				{#if railCollapsed}
 					<PanelLeftOpen size={17} strokeWidth={1.9} />
 				{:else}
 					<PanelLeftClose size={17} strokeWidth={1.9} />

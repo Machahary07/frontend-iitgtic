@@ -6,7 +6,17 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import { adminSetApplicationStatus, type ApplicationStatus } from '$lib/utils/ticAdmin';
+	import {
+		adminSetApplicationStatus,
+		type ApplicationStatus,
+		type ApplicationSummary
+	} from '$lib/utils/ticAdmin';
+	import ReviewProgress, {
+		REVIEW_STAGES,
+		type ReviewStage
+	} from '$lib/components/ReviewProgress.svelte';
+	import Info from '@lucide/svelte/icons/info';
+	import { floating } from '$lib/utils/floating';
 	import type { PageData } from './$types';
 
 	type Filter = 'all' | ApplicationStatus;
@@ -50,6 +60,20 @@
 		});
 	}
 
+	// The dots legend floats above the table, so its scroll box cannot clip it.
+	let tipAnchor = $state<HTMLElement | null>(null);
+	const showTip = (event: Event) => (tipAnchor = event.currentTarget as HTMLElement);
+	const hideTip = () => (tipAnchor = null);
+
+	// Where it sits in the chain; for a rejection, the step it was turned down at.
+	function stageOf(application: Pick<ApplicationSummary, 'status' | 'review_stage' | 'rejected_stage'>): ReviewStage {
+		const stage = application.status === 'rejected' ? application.rejected_stage : application.review_stage;
+		return (stage ?? 0) as ReviewStage;
+	}
+
+	// Admin decides; the CEO may also turn one down. Everyone else reviews.
+	const canReject = $derived(data.scope === 'admin' || data.scope === 'ceo');
+
 	function statusLabel(status: ApplicationStatus) {
 		return status === 'under-review' ? 'under review' : status;
 	}
@@ -64,6 +88,30 @@
 <svelte:head>
 	<title>TIC Admin · Applications</title>
 </svelte:head>
+
+{#if tipAnchor}
+	<div class="tip" role="tooltip" use:floating={{ anchor: tipAnchor, align: 'center', gap: 8 }}>
+		<div class="tip__head">
+			<span class="tip__title">Review progress</span>
+			<span class="tip__bar"></span>
+		</div>
+		<ol class="tip__steps">
+			{#each REVIEW_STAGES as s, i (s.label)}
+				<li class="tip__step" style:--c={s.color}>
+					<span class="tip__dot">{i + 1}</span>
+					<span class="tip__text">
+						<span class="tip__label">
+							{s.label}
+							<span class="tip__role">{s.role}</span>
+						</span>
+						<span class="tip__detail">{s.detail}</span>
+					</span>
+				</li>
+			{/each}
+		</ol>
+		<p class="tip__foot"><span class="tip__glow"></span> Glowing dot = step in progress</p>
+	</div>
+{/if}
 
 <AdminShell
 	brand="TIC Team Admin"
@@ -129,7 +177,23 @@
 							<th>Startup</th>
 							<th>Founder</th>
 							<th>Submitted</th>
-							<th>Status</th>
+							<th>
+								<span class="th-info">
+									Status
+									<span
+										class="info"
+										tabindex="0"
+										role="button"
+										aria-label="What the dots mean"
+										onmouseenter={showTip}
+										onmouseleave={hideTip}
+										onfocus={showTip}
+										onblur={hideTip}
+									>
+										<Info size={13} strokeWidth={2} />
+									</span>
+								</span>
+							</th>
 							<th class="actions-col">Actions</th>
 						</tr>
 					</thead>
@@ -156,6 +220,12 @@
 									<span class="badge badge--{application.status}">
 										{statusLabel(application.status)}
 									</span>
+									<div>
+										<ReviewProgress
+											stage={stageOf(application)}
+											rejected={application.status === 'rejected'}
+										/>
+									</div>
 									{#if application.review_note}
 										<p class="cell__reason">{application.review_note}</p>
 									{/if}
@@ -168,15 +238,7 @@
 										>
 											Review
 										</a>
-										{#if application.status !== 'accepted'}
-											<button
-												class="btn btn--primary"
-												onclick={() => setStatus(application.id, 'accepted')}
-											>
-												Accept
-											</button>
-										{/if}
-										{#if application.status !== 'rejected'}
+										{#if canReject && application.status !== 'rejected'}
 											<button
 												class="btn btn--danger"
 												onclick={() => setStatus(application.id, 'rejected')}
@@ -291,6 +353,143 @@
 		color: $admin-ink-2;
 		background: $admin-sunken;
 		border-bottom: 1px solid $admin-line-soft;
+	}
+
+	.th-info {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.info {
+		position: relative;
+		display: inline-flex;
+		cursor: help;
+		outline: none;
+	}
+
+	.tip {
+		width: 300px;
+		pointer-events: none;
+		overflow: hidden;
+		background: $admin-surface;
+		border: 1px solid $admin-line;
+		border-radius: $admin-radius-md;
+		box-shadow:
+			0 1px 2px rgba(17, 20, 24, 0.06),
+			0 18px 40px -12px rgba(17, 20, 24, 0.22);
+		font-family: $font-family-base;
+		font-size: 12px;
+		line-height: 1.4;
+		color: $admin-ink-2;
+	}
+
+	.tip__head {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding: 12px 14px 10px;
+		background: $admin-sunken;
+		border-bottom: 1px solid $admin-line-soft;
+	}
+
+	.tip__title {
+		font-size: 11px;
+		font-weight: $font-weight-semibold;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: $admin-ink;
+	}
+
+	.tip__bar {
+		height: 4px;
+		border-radius: $admin-radius-pill;
+		background: linear-gradient(90deg, #e5484d, #f76b15, #f5a524, #d6c31f, #8bc34a, #30a46c);
+	}
+
+	.tip__steps {
+		margin: 0;
+		padding: 10px 14px 4px;
+		list-style: none;
+	}
+
+	.tip__step {
+		position: relative;
+		display: flex;
+		gap: 10px;
+		padding-bottom: 10px;
+
+		// The thread joining one step to the next.
+		&:not(:last-child)::before {
+			content: '';
+			position: absolute;
+			left: 9px;
+			top: 20px;
+			bottom: 0;
+			width: 2px;
+			background: color-mix(in srgb, var(--c) 30%, transparent);
+		}
+	}
+
+	.tip__dot {
+		flex: none;
+		display: grid;
+		place-items: center;
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background: color-mix(in srgb, var(--c) 16%, white);
+		border: 1.5px solid var(--c);
+		font-size: 10px;
+		font-weight: $font-weight-bold;
+		color: color-mix(in srgb, var(--c) 75%, black);
+	}
+
+	.tip__text {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+		padding-top: 1px;
+	}
+
+	.tip__label {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-weight: $font-weight-semibold;
+		color: $admin-ink;
+	}
+
+	.tip__role {
+		padding: 1px 7px;
+		border-radius: $admin-radius-pill;
+		background: color-mix(in srgb, var(--c) 14%, white);
+		font-size: 10px;
+		font-weight: $font-weight-semibold;
+		color: color-mix(in srgb, var(--c) 70%, black);
+	}
+
+	.tip__detail {
+		color: $admin-ink-3;
+	}
+
+	.tip__foot {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 0;
+		padding: 9px 14px;
+		border-top: 1px solid $admin-line-soft;
+		font-size: 11px;
+		color: $admin-ink-3;
+	}
+
+	.tip__glow {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: #f5a524;
+		box-shadow: 0 0 0 3px rgba(245, 165, 36, 0.25), 0 0 8px 1px rgba(245, 165, 36, 0.7);
 	}
 
 	tbody td {

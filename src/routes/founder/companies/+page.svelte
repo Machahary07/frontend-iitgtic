@@ -3,7 +3,7 @@
 	import { Pager } from '$lib/utils/pager.svelte';
 	import { phoneInput } from '$lib/utils/phone';
 	import { untrack } from 'svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import FounderShell from '$lib/components/FounderShell.svelte';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
@@ -14,11 +14,39 @@
 
 	const companies = $derived(data.companies);
 
-	const STATUS: Record<string, { label: string; tone: string }> = {
-		pending: { label: 'Waiting for TIC', tone: 'warn' },
-		verified: { label: 'Verified', tone: 'good' },
-		rejected: { label: 'Not verified', tone: 'bad' }
-	};
+	// A startup's standing is its incubation application: nothing to wait on
+	// until the form is in, then each step of TIC's review.
+	function stickers(id: string): { label: string; tone: string }[] {
+		const app = data.applications[id];
+		if (!app) return [{ label: 'Application not filled', tone: 'warn' }];
+		switch (app.status) {
+			case 'submitted':
+				return [{ label: 'Submitted', tone: 'info' }];
+			case 'under-review':
+				return [
+					{ label: 'Submitted', tone: 'info' },
+					{ label: 'Under review', tone: 'warn' }
+				];
+			case 'accepted':
+				return app.live
+					? [
+							{ label: 'Incubated', tone: 'good' },
+							{ label: 'Live', tone: 'good' }
+						]
+					: [
+							{ label: 'Accepted', tone: 'good' },
+							{ label: 'Listing soon', tone: 'info' }
+						];
+			case 'rejected':
+				return [{ label: 'Not accepted', tone: 'bad' }];
+		}
+	}
+
+	// The form applies for whichever startup is in view, so open it on this one.
+	async function openApplication(id: string) {
+		if (id !== data.activeCompanyId) await switchTo(id);
+		await goto(resolve('/founder/application'));
+	}
 
 	let adding = $state(false);
 	let companyName = $state('');
@@ -50,7 +78,7 @@
 				formError = body.error ?? body.message ?? 'Could not register the startup.';
 				return;
 			}
-			showToast('Registered. TIC verifies it before anything goes public.', 'ok');
+			showToast('Registered. Next, fill in its application form.', 'ok');
 			companyName = '';
 			website = '';
 			phone = '';
@@ -177,8 +205,11 @@
 							{/if}
 						</p>
 						<p class="item__meta">
-							<span class="badge badge--{STATUS[company.status].tone}">
-								{STATUS[company.status].label}
+							<span class="stickers">
+								{#each stickers(company.id) as sticker, i (sticker.label)}
+									{#if i > 0}<span class="stickers__dot" aria-hidden="true">•</span>{/if}
+									<span class="badge badge--{sticker.tone}">{sticker.label}</span>
+								{/each}
 							</span>
 							{#if company.relation === 'member'}
 								<span class="item__note">You were added to this one</span>
@@ -187,6 +218,13 @@
 					</div>
 
 					<div class="item__actions">
+						<button
+							class="btn-small"
+							class:btn-small--primary={!data.applications[company.id]}
+							onclick={() => openApplication(company.id)}
+						>
+							{data.applications[company.id] ? 'Application' : 'Fill application form'}
+						</button>
 						{#if company.id !== data.activeCompanyId}
 							<button class="btn-small" onclick={() => switchTo(company.id)}>Work on this</button>
 						{:else}
@@ -326,6 +364,18 @@
 		gap: 12px;
 	}
 
+	.stickers {
+		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.stickers__dot {
+		font-size: 11px;
+		color: $admin-ink-3;
+	}
+
 	.badge {
 		@include admin-badge;
 
@@ -338,10 +388,19 @@
 		&--bad {
 			@include admin-badge-tone('bad');
 		}
+		&--info {
+			@include admin-badge-tone('info');
+		}
 	}
 
 	.btn-small {
 		@include admin-btn-small;
+
+		&--primary {
+			color: $color-white;
+			background: $admin-ink;
+			border-color: $admin-ink;
+		}
 	}
 
 	.link {

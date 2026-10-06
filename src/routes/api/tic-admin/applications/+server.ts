@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
 import { sendTemplateEmail } from '$lib/server/email';
+import { canSeeApplication, reviewScope } from '$lib/server/applicationReview';
 import type { RequestHandler } from './$types';
 
 // Application review. Applicants can read only their own rows and cannot touch
@@ -34,18 +35,61 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 	if (!body.id) error(400, 'Missing application id.');
 	if (!STATUSES.includes(body.status as Status)) error(400, 'Unknown status.');
 
+	// Admin decides; the CEO may also turn one down while it is with them.
+	// Nobody else changes status — coordinators and heads sign off instead.
+	const scope = reviewScope(ctx.admin);
+	const rejecting = body.status === 'rejected';
+	if (scope !== 'admin' && !(rejecting && scope === 'ceo')) error(403, 'Not allowed.');
+	if (!(await canSeeApplication(ctx.db, ctx.admin, body.id))) error(404, 'Application not found.');
+
+	const { data: current } = await ctx.db
+		.from('applications')
+		.select('review_stage')
+		.eq('id', body.id)
+		.maybeSingle();
+	if (!current) error(404, 'Application not found.');
+	const stage = current.review_stage as number;
+
+	// The final email goes out only once every assigned head has signed off.
+	if (body.status === 'accepted') {
+		const { count: heads } = await ctx.db
+			.from('application_reviewers')
+			.select('id', { count: 'exact', head: true })
+			.eq('application_id', body.id)
+			.eq('kind', 'head');
+		const { count: pending } = await ctx.db
+			.from('application_reviewers')
+			.select('id', { count: 'exact', head: true })
+			.eq('application_id', body.id)
+			.eq('kind', 'head')
+			.is('done_at', null);
+		if (stage < 5 || !heads || pending) error(409, 'Every assigned TIC head has to sign off first.');
+	}
+
 	const { data: application, error: dbError } = await ctx.db
 		.from('applications')
 		.update({
 			status: body.status,
 			applicant_message: body.applicantMessage?.trim() || null,
 			review_note: body.reviewNote?.trim() || null,
-			reviewed_at: new Date().toISOString()
+			reviewed_at: new Date().toISOString(),
+			// Where it was turned down, kept for the dots; cleared if reopened.
+			rejected_stage: rejecting ? stage : null,
+			...(body.status === 'under-review' && stage === 0 ? { review_stage: 1 } : {})
 		})
 		.eq('id', body.id)
-		.select('email, full_name, startup_name, applicant_message')
+		.select('email, full_name, startup_name, applicant_message, company_id')
 		.maybeSingle();
 	if (dbError) error(500, dbError.message);
+
+	// Accepted for incubation is what makes it a TIC company: verify it, so it
+	// shows on the Companies tab and can post roles.
+	if (body.status === 'accepted' && application?.company_id) {
+		await ctx.db
+			.from('companies')
+			.update({ status: 'verified', rejection_reason: null })
+			.eq('id', application.company_id);
+	}
 
 	await logAdminAction(ctx, `moved application to ${body.status}`, {
 		table: 'applications',
@@ -78,6 +122,7 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
 	const ctx = await requireAdmin(cookies);
+	if (reviewScope(ctx.admin) !== 'admin') error(403, 'Not allowed.');
 	const id = url.searchParams.get('id');
 	if (!id) error(400, 'Missing application id.');
 

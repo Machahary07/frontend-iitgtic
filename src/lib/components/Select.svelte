@@ -2,6 +2,7 @@
 	import { tick } from 'svelte';
 	import Check from '@lucide/svelte/icons/check';
 	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import { floating } from '$lib/utils/floating';
 
 	// One dropdown for the whole app, so a chooser looks and behaves the same on a
 	// public form and inside either console — a native <select> renders as the
@@ -51,11 +52,6 @@
 	let list = $state<HTMLDivElement>();
 	let root = $state<HTMLDivElement>();
 
-	// Opening upward when there is no room below: the console's tables put these
-	// near the bottom of the viewport often enough that a list clipped off-screen
-	// would be unusable.
-	let dropUp = $state(false);
-
 	const selected = $derived(options.find((o) => o.value === value) ?? null);
 	const selectedIndex = $derived(options.findIndex((o) => o.value === value));
 
@@ -66,8 +62,6 @@
 
 	async function openList() {
 		if (disabled) return;
-		const box = trigger?.getBoundingClientRect();
-		dropUp = box ? window.innerHeight - box.bottom < 260 && box.top > 260 : false;
 		open = true;
 		active = selectedIndex >= 0 ? selectedIndex : firstEnabled();
 		await tick();
@@ -228,7 +222,7 @@
 		     describes and what screen readers announce. -->
 		<div
 			class="select__list"
-			class:select__list--up={dropUp}
+			use:floating={{ anchor: trigger, matchWidth: true, gap: 5 }}
 			role="listbox"
 			tabindex="-1"
 			aria-label={ariaLabel}
@@ -345,11 +339,6 @@
 	}
 
 	.select__list {
-		position: absolute;
-		z-index: 60;
-		top: calc(100% + 5px);
-		left: 0;
-		right: 0;
 		max-height: 250px;
 		overflow-y: auto;
 		padding: 5px;
@@ -358,11 +347,6 @@
 		border-radius: $admin-radius-md;
 		box-shadow: $admin-shadow-raised;
 		animation: select-in 0.12s ease-out;
-
-		&--up {
-			top: auto;
-			bottom: calc(100% + 5px);
-		}
 
 		&:focus {
 			outline: none;

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ACCOUNT_ROLES, canOpen, type ConsoleSection } from '$lib/utils/roles';
+import { canSeeApplication, visibleApplicationIds } from '$lib/server/applicationReview';
 import { getSection, getSiteContent, invalidateSiteContent } from '$lib/server/siteContent';
 import { logAdminAction, type AdminContext } from '$lib/server/adminGuard';
 import {
@@ -338,7 +339,11 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			args.status
 				? `Reading ${String(args.status)} applications`
 				: 'Reading incubation applications',
-		run: async (db, args) => {
+		run: async (db, args, ctx) => {
+			// Same narrowing as the Applications page: only what this role may see.
+			const visible = await visibleApplicationIds(db, ctx.admin);
+			if (visible !== null && visible.length === 0) return { applications: [] };
+
 			let query = db
 				.from('applications')
 				.select(
@@ -346,6 +351,8 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 				)
 				.order('created_at', { ascending: false })
 				.limit(limitOf(args));
+
+			if (visible !== null) query = query.in('id', visible);
 
 			const status = textOf(args, 'status');
 			if (status) query = query.eq('status', status);
@@ -373,9 +380,11 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			required: ['id']
 		},
 		label: () => 'Opening an application',
-		run: async (db, args) => {
+		run: async (db, args, ctx) => {
 			const id = textOf(args, 'id');
 			if (!id) return { error: 'An application id is required.' };
+			if (!(await canSeeApplication(db, ctx.admin, id)))
+				return { error: 'No application with that id.' };
 
 			const { data, error } = await db
 				.from('applications')

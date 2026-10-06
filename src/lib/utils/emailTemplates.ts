@@ -25,9 +25,11 @@ export type EmailTemplateDef = {
 	group:
 		| 'Layout'
 		| 'Founder accounts'
-		| 'Admin'
-		| 'Companies'
+		| 'Startups'
 		| 'Incubation applications'
+		| 'Internal review'
+		| 'Founder console'
+		| 'Admin'
 		| 'Role applicants'
 		| 'Newsletter'
 		| 'Direct';
@@ -71,13 +73,21 @@ function truthy(value: unknown): boolean {
  */
 export function renderTemplate(source: string, variables: Record<string, string>): string {
 	// Conditionals first, so a variable inside a dropped branch is never
-	// substituted — and run to a fixed point so nested blocks resolve.
-	const block = /\{\{#if\s+([\w.]+)\s*\}\}([\s\S]*?)(?:\{\{else\}\}([\s\S]*?))?\{\{\/if\}\}/;
+	// substituted. Innermost first — a branch may not itself contain an {{#if}} —
+	// and repeated until none are left, so a block nested in another (an optional
+	// row inside a conditional card) closes on its own {{/if}}, not its parent's.
+	const inner = '((?:(?!\\{\\{#if)[\\s\\S])*?)';
+	const block = new RegExp(
+		`\\{\\{#if\\s+([\\w.]+)\\s*\\}\\}${inner}(?:\\{\\{else\\}\\}${inner})?\\{\\{\\/if\\}\\}`,
+		'g'
+	);
 	let out = source;
-	for (let pass = 0; pass < 10 && block.test(out); pass += 1) {
+	for (let pass = 0; pass < 20 && block.test(out); pass += 1) {
+		block.lastIndex = 0;
 		out = out.replace(block, (_match, name: string, yes: string, no = '') =>
 			truthy(variables[name]) ? yes : no
 		);
+		block.lastIndex = 0;
 	}
 
 	out = out.replace(/\{\{\{\s*([\w.]+)\s*\}\}\}/g, (_match, name: string) => variables[name] ?? '');
@@ -98,6 +108,8 @@ const NAMED_ENTITIES: Record<string, string> = {
 	rsquo: '\u2019',
 	ldquo: '\u201c',
 	rdquo: '\u201d',
+	middot: '\u00b7',
+	rarr: '\u2192',
 	lbrace: '{',
 	rbrace: '}'
 };
@@ -114,12 +126,14 @@ export function htmlToText(html: string): string {
 			// of the text part.
 			.replace(/<(div|span|td)\b[^>]*display\s*:\s*none[^>]*>[\s\S]*?<\/\1>/gi, '')
 			.replace(/<a\b[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, '$2 ($1)')
+			// Side-by-side cells (a details row's label and value) keep a gap.
+			.replace(/<\/td>\s*<td/gi, '</td> <td')
 			.replace(/<\/(p|div|tr|h[1-6]|li)>/gi, '\n')
 			.replace(/<br\s*\/?>/gi, '\n')
 			.replace(/<[^>]+>/g, '')
 			.replace(/&nbsp;/g, ' ')
 			.replace(
-				/&(copy|reg|hellip|mdash|ndash|lsquo|rsquo|ldquo|rdquo|lbrace|rbrace);/g,
+				/&(copy|reg|hellip|mdash|ndash|lsquo|rsquo|ldquo|rdquo|middot|rarr|lbrace|rbrace);/g,
 				(_m, name: string) => NAMED_ENTITIES[name] ?? _m
 			)
 			.replace(/&#(\d+);/g, (_m, code: string) => String.fromCodePoint(Number(code)))
@@ -140,32 +154,79 @@ export function htmlToText(html: string): string {
 
 // --- bundled copy -----------------------------------------------------------
 
+// The TIC symbol's dot grid, blue melting into green: the strip under the logo.
+// Built once here so the layout stays a plain string an admin can edit.
+function dotStrip(): string {
+	const rows = 3;
+	const cols = 26;
+	const mix = (f: number) => {
+		const a = [0x00, 0x4e, 0xbc];
+		const b = [0x00, 0xb4, 0x51];
+		return (
+			'#' +
+			a
+				.map((x, i) =>
+					Math.round(x + (b[i] - x) * f)
+						.toString(16)
+						.padStart(2, '0')
+				)
+				.join('')
+		);
+	};
+	let out = '';
+	for (let r = 0; r < rows; r++) {
+		let cells = '';
+		for (let c = 0; c < cols; c++) {
+			const reach = cols * (0.32 - 0.12 * (Math.abs(r - 1) - 1));
+			const show = r === 1 || (Math.abs(c - (cols - 1) / 2) <= reach && c % 2 === 1);
+			cells += `<td style="padding:0 2px;"><div style="width:6px;height:6px;border-radius:6px;background:${show ? mix(c / (cols - 1)) : 'transparent'};font-size:0;line-height:0;">&nbsp;</div></td>`;
+		}
+		out += `<tr><td style="padding:2px 0;"><table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr>${cells}</tr></table></td></tr>`;
+	}
+	return `<table role="presentation" cellpadding="0" cellspacing="0" align="center">${out}</table>`;
+}
+
+const FONT_SANS = `'Open Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`;
+const FONT_SERIF = `'Anek Latin','Mukta',Georgia,'Times New Roman',serif`;
+
 // The shared chrome. Every other template renders into `{{{content}}}`, so the
-// header, the footer and the table scaffolding email clients still need are
-// written once. Inline styles throughout — Gmail strips <style> blocks.
+// logo, the dot strip, the black footer band and the table scaffolding email
+// clients still need are written once. Inline styles throughout — Gmail strips
+// <style> blocks. The logo is a PNG: no major inbox renders SVG.
 const LAYOUT_BODY = `<!doctype html>
 <html lang="en">
-	<body style="margin:0;padding:0;background:#f6f7f9;">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="color-scheme" content="light" />
+		<link href="https://fonts.googleapis.com/css2?family=Anek+Latin:wght@400..800&family=Open+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet" />
+	</head>
+	<body style="margin:0;padding:0;background:#EDEDE8;">
 		<div style="display:none;max-height:0;overflow:hidden;opacity:0;">{{preheader}}</div>
-		<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f9;padding:32px 16px;">
+		<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EDEDE8;padding:40px 12px;">
 			<tr>
 				<td align="center">
-					<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e6e8ec;border-radius:12px;overflow:hidden;">
+					<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#FFFFFF;border-radius:24px;overflow:hidden;">
 						<tr>
-							<td style="padding:24px 32px;border-bottom:1px solid #eef0f3;">
-								<a href="{{siteUrl}}" style="font:700 18px Georgia,'Times New Roman',serif;color:#111111;text-decoration:none;letter-spacing:-0.01em;">{{siteName}}</a>
+							<td align="center" style="padding:34px 40px 8px;">
+								<a href="{{siteUrl}}"><img src="{{siteUrl}}/brand/tic-iitg-horizontal-color.png" width="200" alt="TIC IITG — Technology Incubation Centre, IIT Guwahati" style="display:block;border:0;width:200px;height:auto;" /></a>
 							</td>
 						</tr>
 						<tr>
-							<td style="padding:32px;font:400 15px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#333333;">
+							<td align="center" style="padding:18px 40px 30px;">${dotStrip()}</td>
+						</tr>
+						<tr>
+							<td style="padding:0 44px 40px;font:400 16px/1.7 ${FONT_SANS};color:#2E3036;">
 								{{{content}}}
 							</td>
 						</tr>
 						<tr>
-							<td style="padding:20px 32px;background:#fafbfc;border-top:1px solid #eef0f3;font:400 12px/1.6 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#888888;">
-								<p style="margin:0;">Technology Incubation Centre, IIT Guwahati, Assam 781039</p>
-								<p style="margin:6px 0 0;">You are receiving this because you contacted or applied to {{siteName}}. &copy; {{year}}</p>
-								{{#if unsubscribeUrl}}<p style="margin:10px 0 0;"><a href="{{unsubscribeUrl}}" style="color:#888888;text-decoration:underline;">Unsubscribe from the newsletter</a></p>{{/if}}
+							<td style="background:#000000;padding:34px 44px 30px;">
+								<p style="margin:0 0 18px;font:italic 700 24px/1.2 ${FONT_SERIF};color:#FFFFFF;letter-spacing:-0.01em;">Building deep tech<br />from the North East.</p>
+								<p style="margin:0 0 22px;"><a href="{{siteUrl}}" style="color:#FFFFFF;text-decoration:none;font:italic 600 14px/1 ${FONT_SERIF};">Website</a> &nbsp;&nbsp; <a href="{{siteUrl}}/programs" style="color:#FFFFFF;text-decoration:none;font:italic 600 14px/1 ${FONT_SERIF};">Programs</a> &nbsp;&nbsp; <a href="{{siteUrl}}/events" style="color:#FFFFFF;text-decoration:none;font:italic 600 14px/1 ${FONT_SERIF};">Events</a> &nbsp;&nbsp; <a href="{{siteUrl}}/contact" style="color:#FFFFFF;text-decoration:none;font:italic 600 14px/1 ${FONT_SERIF};">Contact</a></p>
+								<div style="height:1px;background:#262626;line-height:1px;font-size:0;margin:0 0 16px;">&nbsp;</div>
+								<p style="margin:0;font:400 12px/1.7 ${FONT_SANS};color:#9EA1A8;">Technology Incubation Centre, IIT Guwahati, Assam 781039<br />You are receiving this because you contacted or applied to {{siteName}}. &copy; {{year}}</p>
+								{{#if unsubscribeUrl}}<p style="margin:14px 0 0;font:400 12px/1.6 ${FONT_SANS};"><a href="{{unsubscribeUrl}}" style="color:#9EA1A8;text-decoration:underline;">Unsubscribe from the newsletter</a></p>{{/if}}
 							</td>
 						</tr>
 					</table>
@@ -183,12 +244,18 @@ function fromBlocks(blocks: EmailBlock[]): { blocks: EmailBlock[]; body: string 
 	return { blocks, body: renderBlocks(blocks) };
 }
 
+const SIGN_OFF: EmailBlock = {
+	type: 'signature',
+	name: 'Team TIC IITG',
+	role: 'Technology Incubation Centre, IIT Guwahati'
+};
+
 export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 	{
 		key: EMAIL_LAYOUT_KEY,
 		name: 'Shared layout',
 		description:
-			'Header, footer and table scaffolding wrapped around every other template. Edit it to change the branding on all mail at once.',
+			'Logo, dot strip, black footer band and table scaffolding wrapped around every other template. Edit it to change the branding on all mail at once.',
 		trigger: 'Wraps every outgoing message',
 		group: 'Layout',
 		variables: [
@@ -201,38 +268,6 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		],
 		subject: '{{subject}}',
 		body: LAYOUT_BODY
-	},
-
-	// --- newsletter ---------------------------------------------------------
-	{
-		key: 'newsletter',
-		name: 'Newsletter',
-		description:
-			'The message sent to everyone on the newsletter list. Compose it here (or ask the assistant to), then send the blast — every recipient gets a one-click unsubscribe link.',
-		trigger: 'Sent to every active subscriber when the newsletter is blasted',
-		group: 'Newsletter',
-		variables: [],
-		subject: 'News from {{siteName}}',
-		...fromBlocks([
-			{ type: 'heading', text: 'News from {{siteName}}' },
-			{ type: 'text', text: 'Write your update here.' }
-		])
-	},
-
-	// --- direct -------------------------------------------------------------
-	{
-		key: 'direct-message',
-		name: 'Direct message',
-		description:
-			'A one-off email the assistant composes and sends to specific people — an applicant, a company, an individual. It is restaged each time it is sent; the exact message that went out is kept in the delivery log.',
-		trigger: 'Sent by the assistant to a chosen recipient',
-		group: 'Direct',
-		variables: [],
-		subject: 'A message from {{siteName}}',
-		...fromBlocks([
-			{ type: 'heading', text: 'Hello' },
-			{ type: 'text', text: 'Your message here.' }
-		])
 	},
 
 	// --- founder accounts ---------------------------------------------------
@@ -251,23 +286,36 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				sample: 'https://iitgtic.itsjeu.com/verify-email?u=…&e=…&t=…'
 			}
 		],
-		subject: 'Welcome to {{siteName}} — please confirm your email',
+		subject: 'Welcome to {{siteName}} — confirm your email',
 		...fromBlocks([
-			{ type: 'heading', text: 'Welcome, {{fullName}}', showIf: 'fullName' },
-			{ type: 'heading', text: 'Welcome to {{siteName}}', hideIf: 'fullName' },
+			{ type: 'sticker', tone: 'good', text: 'Account created' },
+			{ type: 'heading', text: 'Welcome, _{{fullName}}_', showIf: 'fullName' },
+			{ type: 'heading', text: 'Welcome to _TIC IITG_', hideIf: 'fullName' },
 			{
-				type: 'text',
-				text: 'Thanks for creating an account. You can start your incubation application straight away and come back to it whenever you like.'
+				type: 'lede',
+				text: 'Your founder console is ready. Register your startup, then start the incubation application whenever you like — it saves as you go.'
 			},
 			{
-				type: 'text',
-				text: 'One thing before you can submit: please confirm this is your email. It only takes a click and it is how we make sure decisions reach the right inbox.'
+				type: 'callout',
+				tone: 'info',
+				label: 'One thing first',
+				text: 'Confirm your email so we can reach you about your application. The final step cannot be submitted until you do.'
 			},
 			{ type: 'button', label: 'Confirm your email', href: '{{verifyUrl}}' },
+			{ type: 'subheading', text: 'What happens next' },
+			{
+				type: 'numbers',
+				items: [
+					'Register your startup in the console.',
+					'Fill in the incubation application.',
+					'Our team reviews it and keeps you posted by email.'
+				]
+			},
 			{
 				type: 'note',
-				text: 'If you did not sign up to {{siteName}}, you can ignore this email and nothing further will happen.'
-			}
+				text: 'Did not create this account? You can safely ignore this email — nothing happens until the link is used.'
+			},
+			SIGN_OFF
 		])
 	},
 
@@ -280,19 +328,376 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		group: 'Founder accounts',
 		variables: [
 			{ name: 'fullName', description: 'Founder name', sample: 'Rahul Bora' },
+			{ name: 'email', description: 'Their account email (dropped if empty)', sample: '' },
 			{ name: 'loginTime', description: 'When they signed in (dropped if empty)', sample: '' }
 		],
 		subject: 'New sign-in to your {{siteName}} account',
 		...fromBlocks([
-			{ type: 'heading', text: 'Welcome back, {{fullName}}', showIf: 'fullName' },
-			{ type: 'heading', text: 'New sign-in', hideIf: 'fullName' },
-			{ type: 'text', text: 'You just signed in to your {{siteName}} account.' },
-			{ type: 'callout', tone: 'info', label: 'When', text: '{{loginTime}}', showIf: 'loginTime' },
+			{ type: 'sticker', tone: 'info', text: 'Security' },
+			{ type: 'heading', text: 'Welcome back, _{{fullName}}_', showIf: 'fullName' },
+			{ type: 'heading', text: 'New _sign-in_', hideIf: 'fullName' },
+			{ type: 'lede', text: 'You just signed in to your founder console.' },
+			{
+				type: 'details',
+				title: 'Sign-in',
+				items: ['When: {{loginTime}}', 'Account: {{email}}'],
+				showIf: 'loginTime'
+			},
 			{
 				type: 'text',
-				text: 'If this was you, nothing to do. If it was not, reset your password from the sign-in page to secure your account.'
+				text: 'If this was you, there is nothing to do. If it was not, reset your password from the sign-in page right away and let us know.'
 			},
-			{ type: 'button', label: 'Go to your account', href: '{{siteUrl}}/account' }
+			{ type: 'button', label: 'Go to your console', href: '{{siteUrl}}/founder' },
+			SIGN_OFF
+		])
+	},
+
+	// --- startups -----------------------------------------------------------
+	{
+		key: 'startup-registered',
+		name: 'Startup registered',
+		description:
+			'Confirms a founder has registered a startup and points them at its incubation application, which is what TIC reviews.',
+		trigger: 'A founder registers a startup in the console',
+		group: 'Startups',
+		variables: [
+			{ name: 'companyName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{ name: 'contactName', description: 'Contact person', sample: 'Rahul Bora' },
+			{ name: 'email', description: 'Account email', sample: 'rahul@brahmaputra.bio' }
+		],
+		subject: '{{companyName}} is registered — next, the application',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'good', text: 'Registered' },
+			{ type: 'heading', text: '_{{companyName}}_ is registered' },
+			{
+				type: 'lede',
+				text: 'Thanks, {{contactName}}. Your startup now has its own space in the founder console. To be considered for incubation, fill in its application — that is what our team reviews.'
+			},
+			{
+				type: 'bullets',
+				items: [
+					'It takes about 20 minutes and saves as you go.',
+					'Keep your pitch deck handy as a PDF.',
+					'Posting roles and reading applicants unlock once you are accepted.'
+				]
+			},
+			{
+				type: 'button',
+				label: 'Fill the application form',
+				href: '{{siteUrl}}/founder/application'
+			},
+			{
+				type: 'note',
+				text: 'Registered from {{email}}. If this was not you, reply to this email and we will look into it.'
+			},
+			SIGN_OFF
+		])
+	},
+
+	// --- incubation applications --------------------------------------------
+	{
+		key: 'application-received',
+		name: 'Application received',
+		description: 'Confirms a submitted incubation application and explains how the review works.',
+		trigger: 'A founder submits the application at /founder/application',
+		group: 'Incubation applications',
+		variables: [
+			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{
+				name: 'applicationId',
+				description: 'The application id',
+				sample: '00000000-0000-0000-0000-000000000000'
+			}
+		],
+		subject: 'We have received your {{siteName}} application',
+		...fromBlocks([
+			{ type: 'progress', stage: '0' },
+			{ type: 'sticker', tone: 'info', text: 'Submitted' },
+			{ type: 'heading', text: 'Got it, _{{fullName}}_', showIf: 'fullName' },
+			{ type: 'heading', text: 'Application _received_', hideIf: 'fullName' },
+			{
+				type: 'lede',
+				text: 'Your incubation application for **{{startupName}}** has reached us. Our team checks every application by hand, so please give us a little time.'
+			},
+			{ type: 'subheading', text: 'How the review works' },
+			{
+				type: 'numbers',
+				items: [
+					'Our admin team checks it is complete.',
+					'The CEO and a panel of coordinators and TIC heads review it.',
+					'We email you the decision — and at every step in between.'
+				]
+			},
+			{ type: 'button', label: 'View your application', href: '{{siteUrl}}/founder/application' },
+			{
+				type: 'note',
+				text: 'The application cannot be edited once submitted. If something important changes, reply to this email.'
+			},
+			SIGN_OFF
+		])
+	},
+	{
+		key: 'application-under-review',
+		name: 'Application under review',
+		description:
+			'Tells the applicant their application passed the first check and is with the panel.',
+		trigger: 'Admin passes the application to the CEO',
+		group: 'Incubation applications',
+		variables: [
+			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' }
+		],
+		subject: 'Your {{siteName}} application is under review',
+		...fromBlocks([
+			{ type: 'progress', stage: '1' },
+			{ type: 'sticker', tone: 'info', text: 'Under review' },
+			{ type: 'heading', text: 'We are reading it _now_' },
+			{
+				type: 'lede',
+				text: 'Hi {{fullName}}, your application for **{{startupName}}** passed our first check and is now with the review panel.'
+			},
+			{
+				type: 'callout',
+				tone: 'info',
+				label: 'Note from the team',
+				text: '{{note}}',
+				showIf: 'note'
+			},
+			{
+				type: 'text',
+				text: 'There is nothing you need to do right now. We will email you as soon as there is news.'
+			},
+			{ type: 'button', label: 'Track your application', href: '{{siteUrl}}/founder/companies' },
+			SIGN_OFF
+		])
+	},
+	{
+		key: 'application-accepted',
+		name: 'Application accepted',
+		description:
+			'The final email: the startup is accepted for incubation, and its company is verified so roles and team access unlock.',
+		trigger: 'Admin accepts after every TIC head signs off',
+		group: 'Incubation applications',
+		variables: [
+			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' }
+		],
+		subject: 'Congratulations — {{startupName}} is in',
+		...fromBlocks([
+			{ type: 'progress', stage: '5' },
+			{ type: 'sticker', tone: 'good', text: 'Accepted' },
+			{ type: 'heading', text: 'Welcome to _TIC IITG_' },
+			{
+				type: 'callout',
+				tone: 'good',
+				label: 'Accepted for incubation',
+				text: '{{startupName}} has been accepted into the Technology Incubation Centre, IIT Guwahati.'
+			},
+			{
+				type: 'text',
+				text: 'Congratulations, {{fullName}}. This is the start of something good, and we are glad to build it with you.'
+			},
+			{
+				type: 'callout',
+				tone: 'info',
+				label: 'Note from the panel',
+				text: '{{note}}',
+				showIf: 'note'
+			},
+			{ type: 'subheading', text: 'Your first steps' },
+			{
+				type: 'numbers',
+				items: [
+					'Our team will contact you within a week to schedule onboarding.',
+					'Posting roles and team access are now unlocked in your console.',
+					'Your startup will appear among our incubated startups shortly.'
+				]
+			},
+			{ type: 'button', label: 'Open your founder console', href: '{{siteUrl}}/founder' },
+			SIGN_OFF
+		])
+	},
+	{
+		key: 'application-rejected',
+		name: 'Application declined',
+		description: 'Tells the applicant they were not accepted this time, with the panel’s feedback.',
+		trigger: 'Admin or the CEO rejects the application',
+		group: 'Incubation applications',
+		variables: [
+			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' }
+		],
+		subject: 'About your {{siteName}} application',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'bad', text: 'Decision' },
+			{ type: 'heading', text: 'Not _this_ time' },
+			{
+				type: 'lede',
+				text: 'Hi {{fullName}}, thank you for applying with **{{startupName}}**. After careful review, we are not able to offer incubation in this cycle.'
+			},
+			{
+				type: 'callout',
+				tone: 'bad',
+				label: 'Feedback from the panel',
+				text: '{{note}}',
+				showIf: 'note'
+			},
+			{
+				type: 'text',
+				text: 'This is not a judgement on you or the idea’s future. Many of our incubated founders applied more than once — we would genuinely like to hear from you again.'
+			},
+			{ type: 'button', label: 'Explore our programs', href: '{{siteUrl}}/programs' },
+			SIGN_OFF
+		])
+	},
+	{
+		key: 'startup-live',
+		name: 'Startup is live',
+		description:
+			'Closes the loop: the startup now shows among the incubated startups on the website.',
+		trigger: 'Admin marks the startup live (the sixth dot)',
+		group: 'Incubation applications',
+		variables: [
+			{ name: 'fullName', description: 'Founder name', sample: 'Rahul Bora' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' }
+		],
+		subject: '{{startupName}} is now live on {{siteName}}',
+		...fromBlocks([
+			{ type: 'progress', stage: '6' },
+			{ type: 'sticker', tone: 'good', text: 'Live' },
+			{ type: 'heading', text: '_{{startupName}}_ is live' },
+			{
+				type: 'lede',
+				text: 'Your startup now appears on our incubated startups page — share it with your investors, customers and team.'
+			},
+			{ type: 'button', label: 'See your listing', href: '{{siteUrl}}/incubated-startups' },
+			{ type: 'link', label: 'Update your startup details', href: '{{siteUrl}}/founder/settings' },
+			SIGN_OFF
+		])
+	},
+
+	// --- internal review ----------------------------------------------------
+	{
+		key: 'review-your-turn',
+		name: 'An application needs your review',
+		description:
+			'Tells the next person in the review chain that an application is waiting on them: the CEO when admin passes it on, each assigned coordinator or TIC head, the CEO again for the recheck, and admin for the final email.',
+		trigger: 'An application reaches a new step of the review chain',
+		group: 'Internal review',
+		variables: [
+			{ name: 'recipientName', description: 'Who is being asked', sample: 'Priya' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{ name: 'founderName', description: 'Founder name', sample: 'Rahul Bora' },
+			{ name: 'stage', description: 'The step it is at, 1–6', sample: '3' },
+			{ name: 'stageName', description: 'That step in words', sample: 'Coordinator review' },
+			{
+				name: 'ask',
+				description: 'What they are asked to do',
+				sample: 'the CEO has assigned you to review this incubation application.'
+			},
+			{ name: 'assignedBy', description: 'Who handed it over (dropped if empty)', sample: '' },
+			{
+				name: 'applicationUrl',
+				description: 'Link to the application in the console',
+				sample: 'https://iitgtic.itsjeu.com/tic-admin/applications/…'
+			}
+		],
+		subject: 'Your review: {{startupName}}',
+		...fromBlocks([
+			{ type: 'progress', stage: '{{stage}}' },
+			{ type: 'sticker', tone: 'info', text: 'Your turn · {{stageName}}' },
+			{ type: 'heading', text: 'An application is _waiting on you_' },
+			{ type: 'lede', text: 'Hi {{recipientName}}, {{ask}} Only the people assigned can see it.' },
+			{
+				type: 'details',
+				title: 'The application',
+				items: [
+					'Startup: {{startupName}}',
+					'Founder: {{founderName}}',
+					'Step: {{stage}} / 6 · {{stageName}}',
+					'Handed over by: {{assignedBy}}'
+				]
+			},
+			{ type: 'button', label: 'Open the application', href: '{{applicationUrl}}' },
+			{ type: 'note', text: 'You are getting this because of your role in the TIC review chain.' }
+		])
+	},
+
+	// --- founder console ----------------------------------------------------
+	{
+		key: 'role-decision',
+		name: 'Job posting approved / sent back',
+		description:
+			'Tells a founder whether TIC approved a role they posted, or sent it back with a reason.',
+		trigger: 'Admin approves or refuses a job posting in Approvals',
+		group: 'Founder console',
+		variables: [
+			{ name: 'contactName', description: 'Founder or contact name', sample: 'Rahul Bora' },
+			{ name: 'role', description: 'Role title', sample: 'Lab Research Intern' },
+			{ name: 'companyName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{ name: 'approved', description: 'Set when approved, empty when sent back', sample: 'yes' },
+			{ name: 'reason', description: 'Why it was sent back (dropped if empty)', sample: '' }
+		],
+		subject:
+			'{{#if approved}}Your role “{{role}}” is live{{else}}Your role “{{role}}” needs a change{{/if}}',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'good', text: 'Approved', showIf: 'approved' },
+			{ type: 'sticker', tone: 'bad', text: 'Sent back', hideIf: 'approved' },
+			{ type: 'heading', text: 'Your role is _on the board_', showIf: 'approved' },
+			{ type: 'heading', text: 'Your role _needs a change_', hideIf: 'approved' },
+			{
+				type: 'lede',
+				text: '“{{role}}” at {{companyName}} is now live on the opportunities page.',
+				showIf: 'approved'
+			},
+			{
+				type: 'lede',
+				text: 'TIC looked at “{{role}}” at {{companyName}} and sent it back before it goes public.',
+				hideIf: 'approved'
+			},
+			{
+				type: 'callout',
+				tone: 'bad',
+				label: 'What to change',
+				text: '{{reason}}',
+				showIf: 'reason'
+			},
+			{ type: 'button', label: 'Manage your roles', href: '{{siteUrl}}/founder/jobs' },
+			SIGN_OFF
+		])
+	},
+	{
+		key: 'new-role-applicant',
+		name: 'New applicant for your role',
+		description: 'Tells a startup that someone has applied to one of its posted roles.',
+		trigger: 'Someone applies to a role a startup posted',
+		group: 'Founder console',
+		variables: [
+			{ name: 'contactName', description: 'Founder or contact name', sample: 'Rahul Bora' },
+			{ name: 'role', description: 'Role title', sample: 'Lab Research Intern' },
+			{ name: 'applicantName', description: 'Applicant name', sample: 'Meera Das' },
+			{ name: 'applicantEmail', description: 'Applicant email', sample: 'meera@example.com' },
+			{ name: 'applicantRole', description: 'Applying as (dropped if empty)', sample: 'Intern' }
+		],
+		subject: 'New applicant for {{role}}',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'info', text: 'New applicant' },
+			{ type: 'heading', text: 'Someone applied to _{{role}}_' },
+			{
+				type: 'details',
+				title: 'Applicant',
+				items: [
+					'Name: {{applicantName}}',
+					'Email: {{applicantEmail}}',
+					'Applying as: {{applicantRole}}'
+				]
+			},
+			{ type: 'button', label: 'See the applicant', href: '{{siteUrl}}/founder/applicants' },
+			SIGN_OFF
 		])
 	},
 
@@ -302,287 +707,58 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		name: 'Admin sign-in alert',
 		description:
 			'A security heads-up to the operating inbox whenever someone signs in to the TIC admin console.',
-		trigger: 'Any admin signs in at /login',
+		trigger: 'Any staff account signs in at /login',
 		group: 'Admin',
 		variables: [
 			{ name: 'adminName', description: 'Who signed in', sample: 'Ananya Sharma' },
 			{ name: 'adminEmail', description: 'Their account email', sample: 'ananya@iitg.ac.in' },
 			{ name: 'loginTime', description: 'When they signed in (dropped if empty)', sample: '' }
 		],
-		subject: 'New sign-in to the {{siteName}} admin console',
+		subject: 'New sign-in to the {{siteName}} console',
 		...fromBlocks([
-			{ type: 'heading', text: 'Admin console sign-in' },
-			{ type: 'text', text: 'Someone just signed in to the {{siteName}} admin console.' },
-			{ type: 'callout', tone: 'info', label: 'Account', text: '{{adminName}} — {{adminEmail}}' },
-			{ type: 'callout', tone: 'info', label: 'When', text: '{{loginTime}}', showIf: 'loginTime' },
+			{ type: 'sticker', tone: 'info', text: 'Security' },
+			{ type: 'heading', text: 'Console _sign-in_' },
+			{ type: 'lede', text: 'Someone just signed in to the TIC admin console.' },
+			{
+				type: 'details',
+				title: 'Console sign-in',
+				items: ['Account: {{adminName}} — {{adminEmail}}', 'When: {{loginTime}}']
+			},
 			{
 				type: 'text',
-				text: 'If this was you or a colleague, no action is needed. If you do not recognise it, change that account’s password and review recent activity in the console.'
-			}
+				text: 'If you do not recognise this sign-in, reset that account’s password and review it in Users.'
+			},
+			{ type: 'button', label: 'Open Users', href: '{{siteUrl}}/tic-admin/users' }
 		])
 	},
 	{
 		key: 'new-applicant-alert',
-		name: 'New applicant signed up',
+		name: 'New founder signed up',
 		description:
-			'A heads-up to the operating inbox whenever a new founder creates an account. One per applicant, sent at signup.',
+			'A heads-up to the operating inbox whenever a new founder creates an account. One per founder, sent at signup.',
 		trigger: 'A founder signs up at /apply',
 		group: 'Admin',
 		variables: [
-			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
-			{ name: 'email', description: 'Applicant email', sample: 'rahul@brahmaputra.bio' },
-			{ name: 'phone', description: 'Applicant phone (dropped if empty)', sample: '9876543210' },
+			{ name: 'fullName', description: 'Founder name', sample: 'Rahul Bora' },
+			{ name: 'email', description: 'Founder email', sample: 'rahul@brahmaputra.bio' },
+			{ name: 'phone', description: 'Founder phone (dropped if empty)', sample: '9876543210' },
 			{ name: 'signupTime', description: 'When they signed up (dropped if empty)', sample: '' }
 		],
-		subject: 'New applicant signed up — {{fullName}}',
+		subject: 'New founder signed up — {{fullName}}',
 		...fromBlocks([
-			{ type: 'heading', text: 'A new applicant just signed up' },
+			{ type: 'sticker', tone: 'good', text: 'New founder' },
+			{ type: 'heading', text: 'A new founder _just joined_' },
 			{
-				type: 'text',
-				text: 'Someone created a founder account on {{siteName}}. They can now fill in the incubation application.'
-			},
-			{ type: 'callout', tone: 'info', label: 'Name', text: '{{fullName}}' },
-			{ type: 'callout', tone: 'info', label: 'Email', text: '{{email}}' },
-			{ type: 'callout', tone: 'info', label: 'Phone', text: '{{phone}}', showIf: 'phone' },
-			{
-				type: 'callout',
-				tone: 'info',
-				label: 'Signed up',
-				text: '{{signupTime}}',
-				showIf: 'signupTime'
+				type: 'details',
+				title: 'New founder',
+				items: [
+					'Name: {{fullName}}',
+					'Email: {{email}}',
+					'Phone: {{phone}}',
+					'Signed up: {{signupTime}}'
+				]
 			},
 			{ type: 'button', label: 'Open the console', href: '{{siteUrl}}/tic-admin/users' }
-		])
-	},
-
-	// --- companies ----------------------------------------------------------
-	{
-		key: 'company-signup',
-		name: 'Company signup received',
-		description: 'Confirms a job-portal signup and sets the expectation that TIC verifies it.',
-		trigger: 'A founder registers a startup in the console',
-		group: 'Companies',
-		variables: [
-			{ name: 'companyName', description: 'Company name', sample: 'Northeast Robotics' },
-			{ name: 'contactName', description: 'Contact person', sample: 'Ananya Sharma' },
-			{ name: 'email', description: 'Account email', sample: 'hiring@northeastrobotics.in' }
-		],
-		subject: 'We have your {{siteName}} hiring account request',
-		...fromBlocks([
-			{ type: 'heading', text: 'Thanks, {{contactName}}', showIf: 'contactName' },
-			{ type: 'heading', text: 'Thanks for signing up', hideIf: 'contactName' },
-			{
-				type: 'text',
-				text: 'We have created a hiring account for *{{companyName}}* and it is now with the TIC team for verification.'
-			},
-			{
-				type: 'text',
-				text: 'Verification is a manual check that you are who you say you are — it usually takes a working day or two. You will get another email the moment it is decided, and you can post roles as soon as it clears.'
-			},
-			{
-				type: 'button',
-				label: 'Open your dashboard',
-				href: '{{siteUrl}}/founder'
-			},
-			{
-				type: 'note',
-				text: 'Signed up as {{email}}. If this was not you, ignore this message and the account will stay unverified.'
-			}
-		])
-	},
-	{
-		key: 'company-verified',
-		name: 'Company verified',
-		description: 'Tells a company its account is live and it can post roles.',
-		trigger: 'An admin sets a company to Verified in Companies',
-		group: 'Companies',
-		variables: [
-			{ name: 'companyName', description: 'Company name', sample: 'Northeast Robotics' },
-			{ name: 'contactName', description: 'Contact person', sample: 'Ananya Sharma' }
-		],
-		subject: '{{companyName}} is verified — you can post roles now',
-		...fromBlocks([
-			{ type: 'heading', text: 'You are verified' },
-			{
-				type: 'callout',
-				tone: 'good',
-				text: '*{{companyName}}* has been verified by the TIC team.'
-			},
-			{
-				type: 'text',
-				text: 'Roles you post now appear on the public Opportunities board straight away, and applications come to you through the dashboard.'
-			},
-			{ type: 'button', label: 'Post a role', href: '{{siteUrl}}/founder' },
-			{
-				type: 'note',
-				text: 'Keep the role description and the closing date current — stale posts are the main reason applicants drop off.'
-			}
-		])
-	},
-	{
-		key: 'company-rejected',
-		name: 'Company not verified',
-		description: 'Declines a hiring account, with the reason the admin gave.',
-		trigger: 'An admin sets a company to Rejected in Companies',
-		group: 'Companies',
-		variables: [
-			{ name: 'companyName', description: 'Company name', sample: 'Northeast Robotics' },
-			{ name: 'contactName', description: 'Contact person', sample: 'Ananya Sharma' },
-			{
-				name: 'reason',
-				description: 'Rejection reason — the block is dropped if empty',
-				sample: 'We could not match the website to a registered entity.'
-			}
-		],
-		subject: 'About your {{siteName}} hiring account',
-		...fromBlocks([
-			{ type: 'heading', text: 'We could not verify {{companyName}}' },
-			{
-				type: 'text',
-				text: 'Thanks for your interest in hiring through {{siteName}}. We were not able to verify the account this time.'
-			},
-			{ type: 'callout', tone: 'bad', label: 'Reason', text: '{{reason}}', showIf: 'reason' },
-			{
-				type: 'text',
-				text: 'If you think this is a mistake, or you can send us something that settles it, reply to this email and we will look again.'
-			}
-		])
-	},
-
-	// --- incubation applications --------------------------------------------
-	{
-		key: 'application-received',
-		name: 'Application received',
-		description:
-			'Receipt to a founder the moment they submit an incubation application, linking them to their account to view it.',
-		trigger: 'A founder submits the application at /founder/application',
-		group: 'Incubation applications',
-		variables: [
-			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
-			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
-			{
-				name: 'applicationId',
-				description: 'Application id — used to link to the applicant’s own view of it',
-				sample: '00000000-0000-0000-0000-000000000000'
-			}
-		],
-		subject: 'We have received your {{siteName}} application',
-		...fromBlocks([
-			{ type: 'heading', text: 'Got it, {{fullName}}', showIf: 'fullName' },
-			{ type: 'heading', text: 'Application received', hideIf: 'fullName' },
-			{
-				type: 'text',
-				text: 'Your incubation application for *{{startupName}}* has been submitted to {{siteName}}.'
-			},
-			{
-				type: 'text',
-				text: 'The committee will review it and get back to you. You can open your application any time from your account to see its current status.'
-			},
-			{
-				type: 'button',
-				label: 'View your application',
-				href: '{{siteUrl}}/account/{{applicationId}}'
-			},
-			{
-				type: 'note',
-				text: 'For your security this link opens your account, which asks you to sign in first.'
-			}
-		])
-	},
-	{
-		key: 'application-under-review',
-		name: 'Application under review',
-		description: 'Lets a founder know their incubation application has been picked up.',
-		trigger: 'An admin moves an application to Under review',
-		group: 'Incubation applications',
-		variables: [
-			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
-			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
-			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' }
-		],
-		subject: 'Your {{siteName}} application is under review',
-		...fromBlocks([
-			{ type: 'heading', text: 'We are reading it now' },
-			{
-				type: 'text',
-				text: 'Hi {{fullName}}, your application for *{{startupName}}* has moved to review.'
-			},
-			{
-				type: 'text',
-				text: 'The committee looks at the problem, the team and how far you have already got. We will come back to you with a decision, and we may ask for a short call before then.'
-			},
-			{
-				type: 'callout',
-				tone: 'info',
-				label: 'From the reviewer',
-				text: '{{note}}',
-				showIf: 'note'
-			},
-			{ type: 'button', label: 'View your application', href: '{{siteUrl}}/application' }
-		])
-	},
-	{
-		key: 'application-accepted',
-		name: 'Application accepted',
-		description: 'The offer of a place, with the next step spelled out.',
-		trigger: 'An admin moves an application to Accepted',
-		group: 'Incubation applications',
-		variables: [
-			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
-			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
-			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' }
-		],
-		subject: 'Congratulations — {{startupName}} is in',
-		...fromBlocks([
-			{ type: 'heading', text: 'Welcome to {{siteName}}' },
-			{
-				type: 'callout',
-				tone: 'good',
-				text: '*{{startupName}}* has been accepted into the incubation programme.'
-			},
-			{
-				type: 'text',
-				text: 'Hi {{fullName}} — the committee has approved your application. Someone from the team will be in touch within a few days about onboarding, workspace and the support you can draw on.'
-			},
-			{
-				type: 'callout',
-				tone: 'info',
-				label: 'From the reviewer',
-				text: '{{note}}',
-				showIf: 'note'
-			},
-			{ type: 'button', label: 'See what happens next', href: '{{siteUrl}}/about/what-happens' }
-		])
-	},
-	{
-		key: 'application-rejected',
-		name: 'Application declined',
-		description: 'Declines an incubation application without closing the door.',
-		trigger: 'An admin moves an application to Rejected',
-		group: 'Incubation applications',
-		variables: [
-			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
-			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
-			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' }
-		],
-		subject: 'Your {{siteName}} application',
-		...fromBlocks([
-			{ type: 'heading', text: 'Not this time' },
-			{
-				type: 'text',
-				text: 'Hi {{fullName}}, thank you for applying with *{{startupName}}*. We are not taking it forward in this cycle.'
-			},
-			{
-				type: 'callout',
-				tone: 'bad',
-				label: 'From the reviewer',
-				text: '{{note}}',
-				showIf: 'note'
-			},
-			{
-				type: 'text',
-				text: 'This is a decision about fit and timing, not about whether the idea is worth building. Applications reopen each cycle and we would genuinely like to see where you have taken it.'
-			}
 		])
 	},
 
@@ -590,7 +766,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 	{
 		key: 'job-application-received',
 		name: 'Role application received',
-		description: 'Receipt for someone who has applied to a role on the Opportunities board.',
+		description: 'A receipt for someone who applied to a role on the opportunities board.',
 		trigger: 'Someone submits the apply form at /opportunities/[id]',
 		group: 'Role applicants',
 		variables: [
@@ -601,22 +777,21 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		],
 		subject: 'Application received — {{role}} at {{company}}',
 		...fromBlocks([
-			{ type: 'heading', text: 'Got it, {{fullName}}' },
+			{ type: 'sticker', tone: 'info', text: 'Received' },
+			{ type: 'heading', text: 'Thanks, _{{fullName}}_' },
 			{
-				type: 'text',
-				text: 'Your application for *{{role}}* at *{{company}}* is in, resume and all.'
+				type: 'lede',
+				text: 'Your application for **{{role}}** at **{{company}}** has reached us. We will be in touch if you are shortlisted.'
 			},
-			{
-				type: 'text',
-				text: 'The TIC team screens applications before passing them to the company, so give it a few days. We will email you when the status changes — you do not need to follow up.'
-			},
-			{ type: 'button', label: 'View the role', href: '{{jobUrl}}' }
+			{ type: 'button', label: 'View the role', href: '{{jobUrl}}' },
+			{ type: 'link', label: 'Browse more roles', href: '{{siteUrl}}/opportunities' },
+			SIGN_OFF
 		])
 	},
 	{
 		key: 'job-applicant-shortlisted',
 		name: 'Applicant shortlisted',
-		description: 'Tells an applicant they have made the shortlist.',
+		description: 'Tells a role applicant they are on the shortlist.',
 		trigger: 'An admin moves a role applicant to Shortlisted',
 		group: 'Role applicants',
 		variables: [
@@ -627,29 +802,26 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		],
 		subject: 'You have been shortlisted for {{role}}',
 		...fromBlocks([
-			{ type: 'heading', text: 'You are on the shortlist' },
+			{ type: 'sticker', tone: 'good', text: 'Shortlisted' },
+			{ type: 'heading', text: 'You are on the _shortlist_' },
 			{
-				type: 'callout',
-				tone: 'good',
-				text: 'Shortlisted for *{{role}}* at *{{company}}*.'
-			},
-			{
-				type: 'text',
-				text: 'Hi {{fullName}} — your application stood out and it is going to {{company}} for the next round. Expect to hear from them directly about a conversation.'
+				type: 'lede',
+				text: 'Hi {{fullName}}, you have been shortlisted for **{{role}}** at {{company}}. The next step is a conversation with the team.'
 			},
 			{
 				type: 'callout',
 				tone: 'info',
-				label: 'Note from the team',
-				text: '{{note}}',
-				showIf: 'note'
-			}
+				label: 'Next step',
+				text: 'Expect an email or a call from the startup within a few days.'
+			},
+			{ type: 'callout', tone: 'info', label: 'Note', text: '{{note}}', showIf: 'note' },
+			SIGN_OFF
 		])
 	},
 	{
 		key: 'job-applicant-forwarded',
 		name: 'Application sent to the company',
-		description: 'Confirms an application has been passed on to the hiring company.',
+		description: 'Tells a role applicant their application has gone directly to the startup.',
 		trigger: 'An admin moves a role applicant to Forwarded',
 		group: 'Role applicants',
 		variables: [
@@ -660,28 +832,20 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		],
 		subject: 'Your application has gone to {{company}}',
 		...fromBlocks([
-			{ type: 'heading', text: 'Passed on to {{company}}' },
+			{ type: 'sticker', tone: 'info', text: 'With the startup' },
+			{ type: 'heading', text: 'Your application is _with the team_' },
 			{
-				type: 'text',
-				text: 'Hi {{fullName}}, we have sent your application for *{{role}}* to {{company}}, together with your resume.'
+				type: 'lede',
+				text: 'We have passed your application for **{{role}}** directly to {{company}}. They will contact you if they would like to take it further.'
 			},
-			{
-				type: 'text',
-				text: 'They take it from here, so any interview or follow-up will come from them rather than from us.'
-			},
-			{
-				type: 'callout',
-				tone: 'info',
-				label: 'Note from the team',
-				text: '{{note}}',
-				showIf: 'note'
-			}
+			{ type: 'callout', tone: 'info', label: 'Note', text: '{{note}}', showIf: 'note' },
+			SIGN_OFF
 		])
 	},
 	{
 		key: 'job-applicant-rejected',
 		name: 'Applicant not taken forward',
-		description: 'Closes the loop with an applicant who did not get through.',
+		description: 'Tells a role applicant the startup is not taking their application forward.',
 		trigger: 'An admin moves a role applicant to Rejected',
 		group: 'Role applicants',
 		variables: [
@@ -692,23 +856,75 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		],
 		subject: 'Update on your {{role}} application',
 		...fromBlocks([
-			{ type: 'heading', text: 'Not moving forward this time' },
+			{ type: 'sticker', tone: 'bad', text: 'Update' },
+			{ type: 'heading', text: 'Thank you for _applying_' },
+			{
+				type: 'lede',
+				text: 'Hi {{fullName}}, the team has decided not to take your application for **{{role}}** forward this time.'
+			},
+			{ type: 'callout', tone: 'bad', label: 'Feedback', text: '{{note}}', showIf: 'note' },
 			{
 				type: 'text',
-				text: 'Hi {{fullName}}, thank you for applying for *{{role}}* at *{{company}}*. On this occasion they are going ahead with other candidates.'
+				text: 'New roles open at our startups every month — we would love to see you apply again.'
 			},
+			{ type: 'button', label: 'See open roles', href: '{{siteUrl}}/opportunities' },
+			SIGN_OFF
+		])
+	},
+
+	// --- newsletter ---------------------------------------------------------
+	{
+		key: 'newsletter',
+		name: 'Newsletter',
+		description:
+			'The message sent to everyone on the newsletter list. Compose it here (or ask the assistant to), then send the blast — every recipient gets a one-click unsubscribe link.',
+		trigger: 'Sent to every active subscriber when the newsletter is blasted',
+		group: 'Newsletter',
+		variables: [],
+		subject: 'News from {{siteName}}',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'info', text: 'Newsletter' },
+			{ type: 'heading', text: 'This month at _TIC_' },
+			{ type: 'lede', text: 'A quick round-up of what is happening across the incubator.' },
+			{ type: 'subheading', text: 'First story' },
+			{ type: 'text', text: 'Write your update here.' },
+			SIGN_OFF
+		])
+	},
+	{
+		key: 'newsletter-welcome',
+		name: 'Newsletter subscription confirmed',
+		description: 'Thanks someone for subscribing, so a sign-up is never met with silence.',
+		trigger: 'Someone subscribes from the site footer',
+		group: 'Newsletter',
+		variables: [],
+		subject: 'You are subscribed to {{siteName}}',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'good', text: 'Subscribed' },
+			{ type: 'heading', text: 'You are _on the list_' },
 			{
-				type: 'callout',
-				tone: 'bad',
-				label: 'Note from the team',
-				text: '{{note}}',
-				showIf: 'note'
+				type: 'lede',
+				text: 'Thanks for subscribing. You will hear from us about events, new cohorts, open roles and founder stories. No spam, ever.'
 			},
-			{
-				type: 'text',
-				text: 'New roles at our startups go up regularly, and applying again is welcome.'
-			},
-			{ type: 'button', label: 'See open roles', href: '{{siteUrl}}/opportunities' }
+			{ type: 'button', label: 'Visit the website', href: '{{siteUrl}}' },
+			SIGN_OFF
+		])
+	},
+
+	// --- direct -------------------------------------------------------------
+	{
+		key: 'direct-message',
+		name: 'Direct message',
+		description:
+			'A one-off email the assistant composes and sends to specific people — an applicant, a company, an individual. It is restaged each time it is sent; the exact message that went out is kept in the delivery log.',
+		trigger: 'Sent by the assistant to a chosen recipient',
+		group: 'Direct',
+		variables: [],
+		subject: 'A message from {{siteName}}',
+		...fromBlocks([
+			{ type: 'heading', text: '_Hello_' },
+			{ type: 'text', text: 'Your message here.' },
+			SIGN_OFF
 		])
 	}
 ];
@@ -722,5 +938,7 @@ export function templateDef(key: string): EmailTemplateDef | undefined {
 export function sampleVariables(def: Pick<EmailTemplateDef, 'variables'>): Record<string, string> {
 	const out: Record<string, string> = {};
 	for (const v of [...COMMON_VARIABLES, ...def.variables]) out[v.name] = v.sample;
+	// A {{stage}} progress block shows the dots for the sample step, as a send would.
+	if (/^[0-6]$/.test(out.stage ?? '')) out[`stage_${out.stage}`] = '1';
 	return out;
 }

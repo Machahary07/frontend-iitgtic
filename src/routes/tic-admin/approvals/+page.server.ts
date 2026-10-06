@@ -9,12 +9,9 @@ export const load: PageServerLoad = async ({ parent }) => {
 	const { admin } = await parent();
 	const db = adminDb(admin!);
 
-	const [pendingCompanies, jobs, members, changes, companies] = await Promise.all([
-		db
-			.from('companies')
-			.select('id, owner_id, company_name, website, contact_name, contact_email, phone, created_at')
-			.eq('status', 'pending')
-			.order('created_at', { ascending: true }),
+	// New startups are not verified here any more: accepting their incubation
+	// application verifies the company (see /api/tic-admin/applications).
+	const [jobs, members, changes, companies] = await Promise.all([
 		db
 			.from('jobs')
 			.select(
@@ -37,7 +34,6 @@ export const load: PageServerLoad = async ({ parent }) => {
 	]);
 
 	return {
-		pendingCompanies: pendingCompanies.data ?? [],
 		pendingJobs: jobs.data ?? [],
 		pendingMembers: members.data ?? [],
 		pendingChanges: changes.data ?? [],

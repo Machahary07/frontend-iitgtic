@@ -21,11 +21,10 @@
 	const companies = $derived(data.companies);
 	const applications = $derived(data.applications);
 
-	const pending = $derived(companies.filter((c) => c.status === 'pending'));
-	const verified = $derived(companies.filter((c) => c.status === 'verified'));
-	const rejected = $derived(companies.filter((c) => c.status === 'rejected'));
 	const userJobs = $derived(data.jobs);
 	const newApplications = $derived(applications.filter((a) => a.status === 'submitted'));
+	const inReview = $derived(applications.filter((a) => a.status === 'under-review'));
+	const rejected = $derived(applications.filter((a) => a.status === 'rejected'));
 	const jobApplicants = $derived(data.jobApplications);
 	const newApplicants = $derived(jobApplicants.filter((a) => a.status === 'new'));
 
@@ -33,15 +32,24 @@
 	// `tone` picks a tint from the shared admin palette.
 	const tiles = $derived([
 		{
-			label: 'Pending companies',
-			value: pending.length,
+			label: 'New applications',
+			value: newApplications.length,
 			tone: 'warn',
-			icon: Clock,
-			href: '/tic-admin/companies',
+			icon: FileText,
+			href: resolve('/tic-admin/applications'),
 			cta: 'Review'
 		},
-		{ label: 'Verified companies', value: verified.length, tone: 'good', icon: BadgeCheck },
-		{ label: 'Rejected', value: rejected.length, tone: 'bad', icon: CircleX },
+		{ label: 'In review', value: inReview.length, tone: 'info', icon: Clock },
+		{
+			// Companies only count once their application is accepted.
+			label: 'Incubated companies',
+			value: companies.length,
+			tone: 'good',
+			icon: BadgeCheck,
+			href: '/tic-admin/companies',
+			cta: 'View all'
+		},
+		{ label: 'Rejected applications', value: rejected.length, tone: 'bad', icon: CircleX },
 		{
 			label: 'User-posted jobs',
 			value: userJobs.length,
@@ -49,14 +57,6 @@
 			icon: Briefcase,
 			href: '/tic-admin/jobs',
 			cta: 'View all'
-		},
-		{
-			label: 'New applications',
-			value: newApplications.length,
-			tone: 'good',
-			icon: FileText,
-			href: resolve('/tic-admin/applications'),
-			cta: 'Review'
 		},
 		{
 			label: 'New role applicants',
@@ -109,22 +109,25 @@
 
 	<section class="panel">
 		<header class="panel__head">
-			<h2>Recent pending signups</h2>
-			<a href="/tic-admin/companies" class="panel__more">All companies →</a>
+			<h2>New applications</h2>
+			<a href={resolve('/tic-admin/applications')} class="panel__more">All applications →</a>
 		</header>
-		{#if pending.length === 0}
-			<p class="empty">No companies waiting for verification.</p>
+		{#if newApplications.length === 0}
+			<p class="empty">No applications waiting for an admin check.</p>
 		{:else}
 			<ul class="rows">
-				{#each pending.slice(0, 5) as company (company.id)}
+				{#each newApplications.slice(0, 5) as application (application.id)}
 					<li class="row">
 						<div class="row__main">
-							<p class="row__title">{company.companyName}</p>
+							<p class="row__title">{application.startup_name || 'Untitled startup'}</p>
 							<p class="row__meta">
-								{company.email} · {new Date(company.createdAt).toLocaleDateString()}
+								{application.email} · {new Date(application.created_at).toLocaleDateString()}
 							</p>
 						</div>
-						<a href="/tic-admin/companies" class="row__cta">Review</a>
+						<a
+							href={resolve('/tic-admin/applications/[id]', { id: application.id })}
+							class="row__cta">Review</a
+						>
 					</li>
 				{/each}
 			</ul>
@@ -197,10 +200,15 @@
 
 	.stats {
 		display: grid;
-		// Six tiles: an even three-up on wide screens keeps two tidy rows.
-		grid-template-columns: repeat(3, 1fr);
+		// Six tiles: one row on wide screens, then an even three-up and two-up so
+		// the rows below never end ragged.
+		grid-template-columns: repeat(6, minmax(0, 1fr));
 		gap: 16px;
 		margin-bottom: 28px;
+
+		@include breakpoint-down($bp-lg) {
+			grid-template-columns: repeat(3, 1fr);
+		}
 
 		@include breakpoint-down($bp-md) {
 			grid-template-columns: repeat(2, 1fr);

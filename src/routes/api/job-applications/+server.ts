@@ -181,5 +181,31 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
 		context: { table: 'job_applications', jobSlug: job.slug }
 	});
 
+	// A role a startup posted itself: tell the startup someone applied. Seed
+	// roles have no company behind them in the database.
+	if (job.companyId) {
+		const { data: company } = await supabaseAdmin
+			.from('companies')
+			.select('contact_name, contact_email, email')
+			.eq('id', job.companyId)
+			.maybeSingle();
+		const to = (company?.contact_email as string) || (company?.email as string) || '';
+		if (to) {
+			await sendTemplateEmail({
+				templateKey: 'new-role-applicant',
+				to,
+				toName: (company?.contact_name as string) ?? '',
+				variables: {
+					contactName: (company?.contact_name as string) ?? '',
+					role: job.role,
+					applicantName: fullName,
+					applicantEmail: email,
+					applicantRole
+				},
+				context: { table: 'job_applications', jobSlug: job.slug }
+			});
+		}
+	}
+
 	return json({ ok: true }, { status: 201 });
 };

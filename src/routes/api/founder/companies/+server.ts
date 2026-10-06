@@ -86,7 +86,7 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 	// The receipt that used to go out on company signup. It says what happens
 	// next, which is the part a founder cannot see from here.
 	await sendTemplateEmail({
-		templateKey: 'company-signup',
+		templateKey: 'startup-registered',
 		to: founder.email,
 		toName: contactName,
 		variables: { companyName, contactName, email: founder.email },

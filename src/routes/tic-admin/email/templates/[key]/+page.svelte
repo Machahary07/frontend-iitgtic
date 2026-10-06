@@ -5,6 +5,7 @@
 	import Select from '$lib/components/Select.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
+	import { floating } from '$lib/utils/floating';
 	import {
 		adminResetEmailTemplate,
 		adminSaveEmailTemplate,
@@ -149,6 +150,7 @@
 
 	// Which "+" is open, as the index the new block would land at. null is closed.
 	let paletteAt = $state<number | null>(null);
+	let paletteAnchor = $state<HTMLElement | null>(null);
 
 	// A popover that only closes by picking something is a trap on a long page,
 	// so anywhere else and Escape both dismiss it.
@@ -378,12 +380,15 @@
 			class="insert__btn"
 			aria-expanded={paletteAt === at}
 			aria-label="Add a component here"
-			onclick={() => (paletteAt = paletteAt === at ? null : at)}
+			onclick={(event) => {
+				paletteAnchor = event.currentTarget;
+				paletteAt = paletteAt === at ? null : at;
+			}}
 		>
 			+
 		</button>
 		{#if paletteAt === at}
-			<div class="palette">
+			<div class="palette" use:floating={{ anchor: paletteAnchor, align: 'center' }}>
 				{#each PALETTE as section (section.group)}
 					<div class="palette__group">
 						<p class="palette__title">{section.group}</p>
@@ -608,27 +613,82 @@
 											: 'What happens next'}
 										data-insertable="true"
 									/>
-								{:else if block.type === 'text' || block.type === 'note'}
+								{:else if block.type === 'text' || block.type === 'lede' || block.type === 'note'}
 									<textarea
 										class="input textarea textarea--copy"
 										bind:value={block.text}
-										rows={block.type === 'note' ? 2 : 3}
+										rows={block.type === 'text' ? 3 : 2}
 										placeholder="Write the sentence as you would say it."
 										data-insertable="true"
 									></textarea>
-								{:else if block.type === 'bullets' || block.type === 'numbers'}
+								{:else if block.type === 'sticker'}
+									<div class="row">
+										<label class="field field--grow">
+											<span class="field__label">Says</span>
+											<input
+												class="input"
+												type="text"
+												bind:value={block.text}
+												placeholder="Under review"
+												data-insertable="true"
+											/>
+										</label>
+										<div class="field">
+											<span class="field__label">Tone</span>
+											<Select
+												id="block-{i}-sticker-tone"
+												bind:value={block.tone}
+												options={TONES.map((tone) => ({
+													value: tone,
+													label: TONE_LABELS[tone]
+												}))}
+												size="sm"
+												ariaLabel="Tone of this sticker"
+											/>
+										</div>
+									</div>
+								{:else if block.type === 'progress'}
+									<label class="field field--narrow">
+										<span class="field__label"
+											>Step <em>0–6, or a variable like {'{{stage}}'}</em></span
+										>
+										<input
+											class="input"
+											type="text"
+											bind:value={block.stage}
+											placeholder="2"
+											data-insertable="true"
+										/>
+									</label>
+								{:else if block.type === 'bullets' || block.type === 'numbers' || block.type === 'details'}
+									{#if block.type === 'details'}
+										<label class="field">
+											<span class="field__label">Card title <em>optional</em></span>
+											<input
+												class="input"
+												type="text"
+												bind:value={block.title}
+												placeholder="Assigned to you"
+												data-insertable="true"
+											/>
+										</label>
+									{/if}
 									<ul class="items">
 										{#each block.items as item, n (n)}
 											<li class="item">
 												<span class="item__marker">
-													{block.type === 'numbers' ? `${n + 1}.` : '•'}
+													{block.type === 'numbers'
+														? `${n + 1}.`
+														: block.type === 'details'
+															? '▤'
+															: '•'}
 												</span>
 												<input
 													class="input"
 													type="text"
 													value={item}
 													oninput={(e) => setItem(block, n, e.currentTarget.value)}
-													placeholder="One point"
+													placeholder={block.type === 'details' ? 'Label: {{value}}' : 'One point'}
 													data-insertable="true"
 												/>
 												<button
@@ -1466,11 +1526,6 @@
 	}
 
 	.palette {
-		position: absolute;
-		top: 26px;
-		left: 50%;
-		transform: translateX(-50%);
-		z-index: $z-dropdown;
 		width: min(420px, calc(100vw - 48px));
 		max-height: 330px;
 		overflow-y: auto;

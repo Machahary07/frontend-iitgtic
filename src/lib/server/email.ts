@@ -10,7 +10,7 @@ import {
 	templateDef,
 	type EmailTemplateDef
 } from '$lib/utils/emailTemplates';
-import { attachmentsFor, type EmailBlock } from '$lib/utils/emailBlocks';
+import { attachmentsFor, parseBlocks, renderBlocks, type EmailBlock } from '$lib/utils/emailBlocks';
 import { unsubscribeUrl } from '$lib/server/newsletter';
 import {
 	allowance,
@@ -181,11 +181,23 @@ async function overrides(): Promise<Map<string, TemplateRow>> {
 	return map;
 }
 
+// A {{stage}} progress block compiles to one set of dots per step, each gated
+// on stage_<n>. Callers pass `stage` as a number; this sets the flag that picks.
+function stageFlags(variables: Record<string, string>): Record<string, string> {
+	const stage = Number(variables.stage);
+	if (!Number.isInteger(stage) || stage < 0 || stage > 6) return variables;
+	return { ...variables, [`stage_${stage}`]: '1' };
+}
+
 function merge(def: EmailTemplateDef, row: TemplateRow | undefined): ResolvedTemplate {
+	// A saved block list is recompiled rather than trusting its stored HTML, so a
+	// customised template picks up the current house style. A row saved from the
+	// HTML tab has no blocks and keeps its hand-written body.
+	const savedBlocks = row?.blocks ? parseBlocks(row.blocks) : null;
 	return {
 		...def,
 		subject: row?.subject ?? def.subject,
-		body: row?.body ?? def.body,
+		body: savedBlocks ? renderBlocks(savedBlocks) : (row?.body ?? def.body),
 		// An override replaces the bundled blocks outright rather than merging with
 		// them: a row saved from the HTML tab carries none, and falling back to the
 		// bundled list there would show the editor a composition its body no longer
@@ -487,12 +499,13 @@ export async function sendTemplateEmail(options: SendOptions): Promise<SendResul
 	// password reset or an application decision is not. So the link is signed and
 	// passed for the newsletter alone; every other send leaves it unset and the
 	// footer omits it.
-	const isNewsletter = options.templateKey === 'newsletter';
+	const isNewsletter =
+		options.templateKey === 'newsletter' || options.templateKey === 'newsletter-welcome';
 
 	const { subject, html, text } = renderEmail(template, layout, {
 		...defaultVariables(config),
 		...(isNewsletter ? { unsubscribeUrl: unsubscribeUrl(config.siteUrl, options.to) } : {}),
-		...(options.variables ?? {})
+		...stageFlags(options.variables ?? {})
 	});
 
 	if (!config.configured) {

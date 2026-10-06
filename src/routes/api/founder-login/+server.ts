@@ -51,6 +51,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
 		toName: (profile?.full_name as string) || '',
 		variables: {
 			fullName: (profile?.full_name as string) ?? '',
+			email: to,
 			loginTime: formatEventTime()
 		},
 		context: { table: 'profiles', recordId: auth.user.id }

@@ -58,6 +58,26 @@ export async function loadCompanies(db: SupabaseClient) {
 	return ((data ?? []) as CompanyRow[]).map(toAccount);
 }
 
+/** The Companies tab: only startups TIC has accepted for incubation. A company
+ *  a founder has registered but whose application is still in review (or was
+ *  never sent) is not an incubated company yet, so it does not appear. */
+export async function loadIncubatedCompanies(db: SupabaseClient) {
+	const { data: accepted } = await db
+		.from('applications')
+		.select('company_id')
+		.eq('status', 'accepted')
+		.not('company_id', 'is', null);
+	const ids = [...new Set((accepted ?? []).map((row) => row.company_id as string))];
+	if (ids.length === 0) return [];
+
+	const { data } = await db
+		.from('companies')
+		.select(COMPANY_COLUMNS)
+		.in('id', ids)
+		.order('created_at', { ascending: false });
+	return ((data ?? []) as CompanyRow[]).map(toAccount);
+}
+
 export async function loadJobs(db: SupabaseClient) {
 	const { data } = await db
 		.from('jobs')
@@ -73,16 +93,6 @@ export async function loadJobApplications(db: SupabaseClient) {
 		.from('job_applications')
 		.select(
 			'id, job_slug, job_role, job_company, job_source, company_id, full_name, email, applicant_role, status, review_note, reviewed_at, created_at'
-		)
-		.order('created_at', { ascending: false });
-	return data ?? [];
-}
-
-export async function loadApplications(db: SupabaseClient) {
-	const { data } = await db
-		.from('applications')
-		.select(
-			'id, user_id, status, full_name, email, startup_name, applicant_message, review_note, reviewed_at, created_at, updated_at'
 		)
 		.order('created_at', { ascending: false });
 	return data ?? [];
