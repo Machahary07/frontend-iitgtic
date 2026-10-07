@@ -120,7 +120,6 @@
 	let step = $state(1);
 	let attempted = $state(false);
 	let submitted = $state(false);
-	let submittedId = $state('');
 	let submitting = $state(false);
 	let submitError = $state('');
 	// Email-confirmation gate for step 8. Defaults to true so the consent boxes are
@@ -398,7 +397,6 @@
 
 		completedSteps = new Set(completedSteps).add(step);
 		submitted = true;
-		submittedId = result.id;
 		// The row in public.applications is the record now, so the draft is done.
 		if (companyId) clearDraft(userId, companyId);
 		restoredFrom = '';
@@ -416,15 +414,14 @@
 		submitError = '';
 	}
 
-	function goSignUp() {
-		goto(resolve('/apply'));
+	function goHome() {
+		goto(resolve('/founder'));
 	}
 
 	function viewApplication() {
-		// Runtime path carrying the new application's id, so there is no route id to
-		// resolve it against.
-		// eslint-disable-next-line svelte/no-navigation-without-resolve
-		goto(`/account/${submittedId}`);
+		// The console's application page shows the submitted record once the
+		// startup has one, so re-running its loader is what swaps this form out.
+		goto(resolve('/founder/application'), { invalidateAll: true });
 	}
 
 	async function discardDraft() {
@@ -503,7 +500,7 @@
 				</p>
 				<div class="success__actions">
 					<ButtonReveal text="View your application" class="view" onclick={viewApplication} />
-					<ButtonReveal text="Back to home" class="btn btn--ghost" onclick={goSignUp} />
+					<ButtonReveal text="Back to home" class="btn btn--ghost" onclick={goHome} />
 				</div>
 			</div>
 		{:else}

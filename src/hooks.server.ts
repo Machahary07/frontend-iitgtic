@@ -82,7 +82,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const editMatch = event.url.pathname.match(/^\/opportunities\/job-posting-admin\/edit\/([^/]+)$/);
 	if (editMatch) redirect(308, `/founder/jobs/${editMatch[1]}`);
 
-	// /account/<id> showed one submitted application; the console lists them all.
+	// /account/<id> showed one submitted application; the console's application page now does.
 	if (/^\/account\/[^/]+$/.test(event.url.pathname)) redirect(308, '/founder/application');
 
 	const startedAt = Date.now();
