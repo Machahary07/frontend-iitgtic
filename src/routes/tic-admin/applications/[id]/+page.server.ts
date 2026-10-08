@@ -2,8 +2,11 @@ import { error } from '@sveltejs/kit';
 import { adminDb } from '$lib/server/adminData';
 import {
 	APPLICATION_COLUMNS,
+	canScore,
 	canSeeApplication,
+	loadAllScores,
 	loadAssignable,
+	loadMyScores,
 	loadReviewers,
 	reviewScope
 } from '$lib/server/applicationReview';
@@ -34,15 +37,23 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 
 	// The CEO opening it is the CEO review starting.
 	if (scope === 'ceo' && data.review_stage === 1 && data.status !== 'rejected') {
-		await db.from('applications').update({ review_stage: 2 }).eq('id', data.id).eq('review_stage', 1);
+		await db
+			.from('applications')
+			.update({ review_stage: 2 })
+			.eq('id', data.id)
+			.eq('review_stage', 1);
 		data.review_stage = 2;
 	}
 
 	const assigns = scope === 'admin' || scope === 'ceo';
-	const [reviewers, coordinators, heads] = await Promise.all([
+	const [reviewers, coordinators, heads, myScores, allScores, scoring] = await Promise.all([
 		loadReviewers(db, data.id),
 		assigns ? loadAssignable(db, 'coordinator') : Promise.resolve([]),
-		assigns ? loadAssignable(db, 'head') : Promise.resolve([])
+		assigns ? loadAssignable(db, 'head') : Promise.resolve([]),
+		loadMyScores(db, data.id, admin!.userId),
+		// Everyone's marks go to admin and nobody else — not even as a total.
+		scope === 'admin' ? loadAllScores(db, data.id) : Promise.resolve(null),
+		canScore(db, admin!, data)
 	]);
 
 	const documents = (data.documents ?? {}) as Record<string, DocumentEntry>;
@@ -62,6 +73,7 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 		scope,
 		me: admin!.userId,
 		reviewers,
-		assignable: { coordinators, heads }
+		assignable: { coordinators, heads },
+		scores: { mine: myScores, all: allScores, canScore: scoring }
 	};
 };

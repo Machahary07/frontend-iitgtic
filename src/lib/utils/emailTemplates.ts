@@ -8,6 +8,7 @@
 // the live preview in the browser with the sample values below.
 
 import { escapeHtml, renderBlocks, type EmailBlock } from '$lib/utils/emailBlocks';
+import { SCORED_STEPS } from '$lib/utils/applicationScores';
 
 export type TemplateVariable = {
 	name: string;
@@ -242,6 +243,30 @@ const LAYOUT_BODY = `<!doctype html>
 // not a message anyone composes.
 function fromBlocks(blocks: EmailBlock[]): { blocks: EmailBlock[]; body: string } {
 	return { blocks, body: renderBlocks(blocks) };
+}
+
+// The panel's average mark per step. A step nobody marked passes an empty
+// variable and its row is dropped; the whole card goes if nothing was marked.
+const SCORE_VARIABLES: TemplateVariable[] = [
+	...SCORED_STEPS.map((s) => ({
+		name: `score_${s.step}`,
+		description: `Average score for ${s.title} — row dropped if empty`,
+		sample: '72/100'
+	})),
+	{ name: 'scoreOverall', description: 'Average across the steps', sample: '70/100' }
+];
+
+function scoreCard(extra: string[] = []): EmailBlock {
+	return {
+		type: 'details',
+		title: 'Your scores',
+		items: [
+			...extra,
+			...SCORED_STEPS.map((s) => `${s.title}: {{score_${s.step}}}`),
+			'Overall: {{scoreOverall}}'
+		],
+		showIf: 'scoreOverall'
+	};
 }
 
 const SIGN_OFF: EmailBlock = {
@@ -544,7 +569,8 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		variables: [
 			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
 			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
-			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' }
+			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' },
+			...SCORE_VARIABLES
 		],
 		subject: 'Congratulations — {{startupName}} is in',
 		...fromBlocks([
@@ -568,6 +594,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				text: '{{note}}',
 				showIf: 'note'
 			},
+			scoreCard(),
 			{ type: 'subheading', text: 'Your first steps' },
 			{
 				type: 'numbers',
@@ -590,7 +617,10 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		variables: [
 			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
 			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
-			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' }
+			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' },
+			{ name: 'decidedAt', description: 'Review step it was declined at', sample: 'CEO review' },
+			{ name: 'decidedBy', description: 'Role that declined it', sample: 'TIC CEO' },
+			...SCORE_VARIABLES
 		],
 		subject: 'About your {{siteName}} application',
 		...fromBlocks([
@@ -607,6 +637,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				text: '{{note}}',
 				showIf: 'note'
 			},
+			scoreCard(['Review step: {{decidedAt}}', 'Decided by: {{decidedBy}}']),
 			{
 				type: 'text',
 				text: 'This is not a judgement on you or the idea’s future. Many of our incubated founders applied more than once — we would genuinely like to hear from you again.'

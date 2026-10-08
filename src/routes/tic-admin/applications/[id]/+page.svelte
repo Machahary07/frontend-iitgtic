@@ -20,6 +20,8 @@
 		DOCUMENT_LABELS,
 		formatAnswer
 	} from '$lib/utils/applicationSchema';
+	import { isScoredStep } from '$lib/utils/applicationScores';
+	import { roleLabel } from '$lib/utils/roles';
 
 	let { data }: { data: PageData } = $props();
 
@@ -141,6 +143,42 @@
 		return kb < 1024 ? `${Math.round(kb)} KB` : `${(kb / 1024).toFixed(1)} MB`;
 	}
 
+	// ---- scores --------------------------------------------------------------
+	// Your own marks only; admin also gets everyone's in `scores.all`.
+	const scores = $derived(data.scores);
+	let savingStep = $state<number | null>(null);
+
+	async function saveScore(step: number, input: HTMLInputElement) {
+		const raw = input.value.trim();
+		const score = raw === '' ? null : Math.round(Number(raw));
+		if (score !== null && (!Number.isFinite(score) || score < 0 || score > 100)) {
+			showToast('A score is a whole number from 0 to 100.', 'err');
+			input.value = String(scores.mine[step] ?? '');
+			return;
+		}
+		if (score === (scores.mine[step] ?? null)) return;
+
+		savingStep = step;
+		const res = await fetch('/api/tic-admin/applications/scores', {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ id: application.id, step, score })
+		});
+		savingStep = null;
+		if (!res.ok) {
+			const body = (await res.json().catch(() => ({}))) as { message?: string };
+			showToast(body.message ?? 'Could not save the score.', 'err');
+			input.value = String(scores.mine[step] ?? '');
+			return;
+		}
+		await invalidateAll();
+		showToast(score === null ? 'Score cleared.' : 'Score saved.');
+	}
+
+	function average(list: { score: number }[]) {
+		return Math.round(list.reduce((sum, e) => sum + e.score, 0) / list.length);
+	}
+
 	const documentFields = $derived(Object.keys(documentLinks));
 
 	// Documents are step 7, but they live in their own column rather than in
@@ -201,6 +239,41 @@
 	{/if}
 {/snippet}
 
+{#snippet scoreBox(step: number)}
+	{#if isScoredStep(step)}
+		{#if scores.canScore}
+			<label class="score" class:score--busy={savingStep === step}>
+				<input
+					type="number"
+					min="0"
+					max="100"
+					step="1"
+					inputmode="numeric"
+					placeholder="—"
+					value={scores.mine[step] ?? ''}
+					aria-label="Your score for step {step}, out of 100"
+					disabled={savingStep === step}
+					onchange={(event) => saveScore(step, event.currentTarget)}
+				/>
+				<span>/100</span>
+			</label>
+		{:else if scores.mine[step] !== undefined}
+			<span class="score score--read" title="Your score">{scores.mine[step]}<span>/100</span></span>
+		{/if}
+	{/if}
+{/snippet}
+
+{#snippet allScores(step: number)}
+	{#if scores.all?.[step]?.length}
+		<p class="marks">
+			<span class="marks__avg">Avg {average(scores.all[step])}</span>
+			{#each scores.all[step] as entry (entry.userId)}
+				<span class="marks__one">{entry.name} · {roleLabel(entry.role)} <b>{entry.score}</b></span>
+			{/each}
+		</p>
+	{/if}
+{/snippet}
+
 <AdminShell
 	brand="TIC Team Admin"
 	navItems={TIC_ADMIN_NAV}
@@ -223,7 +296,9 @@
 							<span class="card__step">Step {section.step}</span>
 							{section.title}
 						</h2>
+						{@render scoreBox(section.step)}
 					</header>
+					{@render allScores(section.step)}
 					<dl class="answers">
 						{#each section.fields as field (field.key)}
 							<div class="answer" class:answer--long={field.long}>
@@ -238,7 +313,9 @@
 			<section class="card">
 				<header class="card__head">
 					<h2><span class="card__step">Step 7</span> Documents</h2>
+					{@render scoreBox(7)}
 				</header>
+				{@render allScores(7)}
 				{#if documentFields.length === 0}
 					<p class="none">No documents were attached.</p>
 				{:else}
@@ -284,7 +361,9 @@
 							<span class="card__step">Step {section.step}</span>
 							{section.title}
 						</h2>
+						{@render scoreBox(section.step)}
 					</header>
+					{@render allScores(section.step)}
 					<dl class="answers">
 						{#each section.fields as field (field.key)}
 							<div class="answer" class:answer--long={field.long}>
@@ -506,6 +585,10 @@
 	}
 
 	.card__head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
 		margin-bottom: 14px;
 		padding-bottom: 12px;
 		border-bottom: 1px solid $admin-line-soft;
@@ -523,6 +606,94 @@
 
 	.card--sticky .card__head {
 		margin-bottom: 0;
+	}
+
+	.score {
+		flex: none;
+		display: inline-flex;
+		align-items: baseline;
+		gap: 2px;
+		padding: 4px 10px;
+		font-size: 12px;
+		color: $admin-ink-3;
+		background: $admin-sunken;
+		border: 1px solid $admin-line;
+		border-radius: 999px;
+
+		input {
+			width: 34px;
+			padding: 0;
+			font: inherit;
+			font-family: $font-family-base;
+			font-size: 14px;
+			font-weight: $font-weight-semibold;
+			text-align: right;
+			color: #111;
+			background: transparent;
+			border: 0;
+			appearance: textfield;
+			-moz-appearance: textfield;
+
+			&::-webkit-outer-spin-button,
+			&::-webkit-inner-spin-button {
+				appearance: none;
+				margin: 0;
+			}
+
+			&:focus {
+				outline: none;
+			}
+		}
+
+		&:focus-within {
+			border-color: #111;
+			box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
+		}
+
+		&--busy {
+			opacity: 0.55;
+		}
+
+		&--read {
+			font-size: 14px;
+			font-weight: $font-weight-semibold;
+			color: #111;
+
+			span {
+				font-size: 12px;
+				font-weight: 400;
+				color: $admin-ink-3;
+			}
+		}
+	}
+
+	.marks {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+		margin: -4px 0 14px;
+		font-size: 11px;
+		color: $admin-ink-2;
+
+		b {
+			margin-left: 2px;
+			color: #111;
+		}
+	}
+
+	.marks__avg,
+	.marks__one {
+		padding: 3px 9px;
+		border-radius: 999px;
+		background: $admin-sunken;
+		border: 1px solid $admin-line-soft;
+	}
+
+	.marks__avg {
+		font-weight: $font-weight-semibold;
+		color: #fff;
+		background: #111;
+		border-color: #111;
 	}
 
 	.card__step {

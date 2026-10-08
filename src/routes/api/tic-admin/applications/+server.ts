@@ -2,7 +2,9 @@ import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
 import { sendTemplateEmail } from '$lib/server/email';
-import { canSeeApplication, reviewScope } from '$lib/server/applicationReview';
+import { canSeeApplication, reviewScope, scoreEmailVariables } from '$lib/server/applicationReview';
+import { REVIEW_STEP_NAMES } from '$lib/utils/emailBlocks';
+import { roleLabel } from '$lib/utils/roles';
 import type { RequestHandler } from './$types';
 
 // Application review. Applicants can read only their own rows and cannot touch
@@ -63,7 +65,8 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 			.eq('application_id', body.id)
 			.eq('kind', 'head')
 			.is('done_at', null);
-		if (stage < 5 || !heads || pending) error(409, 'Every assigned TIC head has to sign off first.');
+		if (stage < 5 || !heads || pending)
+			error(409, 'Every assigned TIC head has to sign off first.');
 	}
 
 	const { data: application, error: dbError } = await ctx.db
@@ -102,6 +105,10 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 	let email: { status: string; error: string | null } | null = null;
 
 	if (templateKey && application?.email) {
+		// The panel's marks go out with the decision only — never while it is
+		// still being reviewed — as per-step averages with no names attached.
+		const decided = rejecting || body.status === 'accepted';
+		const scoreVars = decided ? await scoreEmailVariables(ctx.db, body.id) : {};
 		const result = await sendTemplateEmail({
 			templateKey,
 			to: application.email as string,
@@ -109,7 +116,14 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 			variables: {
 				fullName: (application.full_name as string) ?? '',
 				startupName: (application.startup_name as string) ?? '',
-				note: (application.applicant_message as string) ?? ''
+				note: (application.applicant_message as string) ?? '',
+				...scoreVars,
+				...(rejecting
+					? {
+							decidedAt: stage === 0 ? 'Admin check' : (REVIEW_STEP_NAMES[stage - 1] ?? ''),
+							decidedBy: roleLabel(ctx.admin.role)
+						}
+					: {})
 			},
 			context: { table: 'applications', recordId: body.id, status: body.status },
 			sentBy: ctx.admin.userId

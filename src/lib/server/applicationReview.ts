@@ -148,3 +148,102 @@ export async function loadAssignable(db: SupabaseClient, kind: ReviewerKind) {
 		email: (row.email as string) || ''
 	}));
 }
+
+// ---- scores ------------------------------------------------------------------
+
+/** Whether this person may mark the application right now: admin until the
+ *  decision, the CEO at its own steps, and an assigned reviewer at their step
+ *  until they sign off. */
+export async function canScore(
+	db: SupabaseClient,
+	admin: Pick<ConsoleSession, 'role' | 'userId'>,
+	app: { id: string; status: string; review_stage: number }
+): Promise<boolean> {
+	if (app.status === 'rejected' || app.status === 'accepted') return false;
+	const scope = reviewScope(admin);
+	const stage = app.review_stage;
+	if (scope === 'admin') return true;
+	if (scope === 'ceo') return stage === 1 || stage === 2 || stage === 4;
+	if (scope !== 'coordinator' && scope !== 'head') return false;
+	if (stage !== (scope === 'coordinator' ? 3 : 5)) return false;
+
+	const { data } = await db
+		.from('application_reviewers')
+		.select('id')
+		.eq('application_id', app.id)
+		.eq('user_id', admin.userId)
+		.eq('kind', scope)
+		.is('done_at', null)
+		.maybeSingle();
+	return Boolean(data);
+}
+
+export type ScoreEntry = { userId: string; name: string; role: string; score: number };
+
+/** Everyone's marks, by step. Only ever sent to admin. */
+export async function loadAllScores(db: SupabaseClient, applicationId: string) {
+	const { data } = await db
+		.from('application_scores')
+		.select(
+			'user_id, role, step, score, profile:profiles!application_scores_user_id_fkey(full_name, email)'
+		)
+		.eq('application_id', applicationId)
+		.order('updated_at');
+	const byStep: Record<number, ScoreEntry[]> = {};
+	for (const row of data ?? []) {
+		const profile = (Array.isArray(row.profile) ? row.profile[0] : row.profile) as {
+			full_name: string | null;
+			email: string | null;
+		} | null;
+		(byStep[row.step as number] ??= []).push({
+			userId: row.user_id as string,
+			name: profile?.full_name || profile?.email || 'Someone',
+			role: row.role as string,
+			score: row.score as number
+		});
+	}
+	return byStep;
+}
+
+/** This person's own marks, by step. */
+export async function loadMyScores(db: SupabaseClient, applicationId: string, userId: string) {
+	const { data } = await db
+		.from('application_scores')
+		.select('step, score')
+		.eq('application_id', applicationId)
+		.eq('user_id', userId);
+	return Object.fromEntries(
+		(data ?? []).map((r) => [r.step as number, r.score as number])
+	) as Record<number, number>;
+}
+
+/** The per-step averages for the decision email: `score_<step>` and
+ *  `scoreOverall`, as "72/100". Steps nobody marked are left out, and the
+ *  template drops their rows. */
+export async function scoreEmailVariables(
+	db: SupabaseClient,
+	applicationId: string
+): Promise<Record<string, string>> {
+	const { data } = await db
+		.from('application_scores')
+		.select('step, score')
+		.eq('application_id', applicationId);
+	const byStep = new Map<number, number[]>();
+	for (const row of data ?? []) {
+		const list = byStep.get(row.step as number) ?? [];
+		list.push(row.score as number);
+		byStep.set(row.step as number, list);
+	}
+
+	const out: Record<string, string> = {};
+	const averages: number[] = [];
+	for (const [step, scores] of byStep) {
+		const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+		averages.push(avg);
+		out[`score_${step}`] = `${Math.round(avg)}/100`;
+	}
+	if (averages.length) {
+		out.scoreOverall = `${Math.round(averages.reduce((a, b) => a + b, 0) / averages.length)}/100`;
+	}
+	return out;
+}
