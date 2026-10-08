@@ -14,6 +14,7 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { removeApplicationDocuments } from '$lib/server/storageCleanup';
 import { AFTER_PASSWORD_RESET, AUTH_CALLBACK_PATH } from '$lib/utils/authRedirect';
 import { isValidPhone } from '$lib/utils/phone';
+import { sendTemplateEmail } from '$lib/server/email';
 import type { RequestHandler } from './$types';
 
 // Account management. Roles, sign-in state and password resets all live here;
@@ -213,13 +214,33 @@ export const PUT: RequestHandler = async ({ cookies, request, url }) => {
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
 	const ctx = await requireAdmin(cookies);
+
+	// Clearing the note a founder left by closing their own account. The account
+	// itself is already gone; this only tidies the Users page.
+	const logId = url.searchParams.get('log');
+	if (logId) {
+		const { data: removedLog, error: logError } = await ctx.db
+			.from('deleted_accounts')
+			.delete()
+			.eq('id', logId)
+			.select('email')
+			.maybeSingle();
+		if (logError) error(500, logError.message);
+		if (!removedLog) error(404, 'No such record.');
+		await logAdminAction(ctx, `cleared the deleted-account record of ${removedLog.email}`, {
+			table: 'deleted_accounts',
+			recordId: logId
+		});
+		return json({ ok: true });
+	}
+
 	const id = url.searchParams.get('id');
 	if (!id) error(400, 'Missing user id.');
 	if (id === ctx.admin.userId) error(400, 'You cannot delete your own account.');
 
 	const { data: profile } = await ctx.db
 		.from('profiles')
-		.select('role, email')
+		.select('role, email, full_name')
 		.eq('id', id)
 		.maybeSingle();
 
@@ -242,6 +263,22 @@ export const DELETE: RequestHandler = async ({ cookies, url }) => {
 
 	const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
 	if (deleteError) error(500, deleteError.message);
+
+	// A courtesy, so a login that suddenly stops working is explained. Never
+	// fails the delete, which has already happened.
+	if (profile?.email) {
+		await sendTemplateEmail({
+			templateKey: 'account-deleted',
+			to: profile.email as string,
+			toName: (profile.full_name as string) ?? '',
+			variables: {
+				fullName: ((profile.full_name as string) ?? '').split(' ')[0] ?? '',
+				email: profile.email as string
+			},
+			context: { table: 'profiles', recordId: id },
+			sentBy: ctx.admin.userId
+		});
+	}
 
 	if (removed > 0) {
 		await logAdminAction(ctx, `removed ${removed} uploaded document(s) with the account`, {

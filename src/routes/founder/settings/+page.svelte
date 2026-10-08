@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { phoneInput } from '$lib/utils/phone';
 	import { untrack } from 'svelte';
-	import { goto, invalidateAll } from '$app/navigation';
-	import { resolve } from '$app/paths';
+	import { invalidateAll } from '$app/navigation';
 	import FounderShell from '$lib/components/FounderShell.svelte';
-	import { changePassword, deleteMyAccount } from '$lib/utils/accountActions';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 	import { showToast } from '$lib/utils/toast.svelte';
 	import type { PageData } from './$types';
@@ -43,11 +41,6 @@
 	let phone = $state(loaded?.phone ?? '');
 	let saving = $state(false);
 	let saveError = $state('');
-
-	let currentPassword = $state('');
-	let newPassword = $state('');
-	let changingPassword = $state(false);
-	let closing = $state(false);
 
 	async function requestChange(e: Event) {
 		e.preventDefault();
@@ -102,43 +95,6 @@
 			return;
 		}
 		await invalidateAll();
-	}
-
-	async function closeAccount() {
-		const ok = await askConfirm({
-			title: 'Close your account?',
-			body: 'Every startup you registered goes with it: their roles come off the board and their teams lose access. Your login stops working. This cannot be undone.',
-			confirmLabel: 'Close the account',
-			tone: 'danger'
-		});
-		if (!ok) return;
-
-		closing = true;
-		const done = await deleteMyAccount();
-		if (!done) {
-			closing = false;
-			showToast('Could not close the account. Ask TIC on the Support page.', 'err');
-			return;
-		}
-		await goto(resolve('/'));
-	}
-
-	async function handlePassword(e: Event) {
-		e.preventDefault();
-		if (changingPassword) return;
-		changingPassword = true;
-		try {
-			const result = await changePassword(currentPassword, newPassword);
-			if (!result.ok) {
-				showToast(result.error, 'err');
-				return;
-			}
-			showToast('Password changed.', 'ok');
-			currentPassword = '';
-			newPassword = '';
-		} finally {
-			changingPassword = false;
-		}
 	}
 </script>
 
@@ -216,45 +172,6 @@
 			{/if}
 		</form>
 	</section>
-
-	<section class="card">
-		<h2 class="card__title">Your password</h2>
-		<p class="card__sub">
-			This one takes effect immediately — it is your own login, not public copy.
-		</p>
-
-		<form onsubmit={handlePassword} novalidate>
-			<label class="field">
-				<span>Current password</span>
-				<input
-					type="password"
-					bind:value={currentPassword}
-					autocomplete="current-password"
-					required
-				/>
-			</label>
-			<label class="field">
-				<span>New password</span>
-				<input type="password" bind:value={newPassword} autocomplete="new-password" required />
-			</label>
-			<button type="submit" class="btn" disabled={changingPassword}>
-				{changingPassword ? 'Changing…' : 'Change password'}
-			</button>
-		</form>
-	</section>
-
-	{#if isOwner}
-		<section class="card card--danger">
-			<h2 class="card__title">Close your account</h2>
-			<p class="card__sub">
-				This closes the whole account, not one startup — to remove a single one, use Startups.
-				Submitted incubation applications stay with TIC. There is no way back from this.
-			</p>
-			<button type="button" class="btn-danger" onclick={closeAccount} disabled={closing}>
-				{closing ? 'Closing…' : 'Close account'}
-			</button>
-		</section>
-	{/if}
 </FounderShell>
 
 <style lang="scss">
@@ -314,10 +231,6 @@
 		@include admin-card;
 		max-width: 620px;
 		margin-bottom: 18px;
-
-		&--danger {
-			border-left: 3px solid admin-tone-fg('bad');
-		}
 	}
 
 	.card__title {
@@ -386,14 +299,5 @@
 
 	.btn-primary {
 		@include admin-btn-primary;
-	}
-
-	.btn {
-		@include admin-btn-base;
-	}
-
-	.btn-danger {
-		@include admin-btn-danger;
-		align-self: flex-start;
 	}
 </style>

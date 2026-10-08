@@ -7,12 +7,18 @@ export const load: PageServerLoad = async ({ parent }) => {
 	const { admin } = await parent();
 	const db = adminDb(admin!);
 
-	const [authResult, profileResult, companyResult] = await Promise.all([
+	const [authResult, profileResult, companyResult, deletedResult] = await Promise.all([
 		supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
 		db
 			.from('profiles')
 			.select('id, role, full_name, email, phone, responsibility, department, created_at'),
-		db.from('companies').select('id, owner_id, company_name, status')
+		db.from('companies').select('id, owner_id, company_name, status'),
+		// Accounts their owners closed themselves — gone from auth, so this note is
+		// all that is left to show.
+		db
+			.from('deleted_accounts')
+			.select('id, email, full_name, role, companies, joined_at, deleted_at')
+			.order('deleted_at', { ascending: false })
 	]);
 
 	const byId = new Map((profileResult.data ?? []).map((p) => [p.id as string, p]));
@@ -56,5 +62,15 @@ export const load: PageServerLoad = async ({ parent }) => {
 		: users.filter((u) => u.role !== 'developer');
 
 	visible.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-	return { users: visible, currentAdminId: admin!.userId };
+	const deletedAccounts = (deletedResult.data ?? []).map((row) => ({
+		id: row.id as string,
+		email: row.email as string,
+		fullName: row.full_name as string,
+		role: row.role as AccountRole,
+		companies: (row.companies as string[]) ?? [],
+		joinedAt: (row.joined_at as string | null) ?? null,
+		deletedAt: row.deleted_at as string
+	}));
+
+	return { users: visible, deletedAccounts, currentAdminId: admin!.userId };
 };

@@ -6,9 +6,15 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import UserFormDialog from '$lib/components/UserFormDialog.svelte';
 	import Pencil from '@lucide/svelte/icons/pencil';
+	import Trash from '@lucide/svelte/icons/trash-2';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import { adminDeleteUser, adminSetUserBanned, type ManagedUser } from '$lib/utils/ticAdmin';
+	import {
+		adminClearDeletedAccount,
+		adminDeleteUser,
+		adminSetUserBanned,
+		type ManagedUser
+	} from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 	import { showToast } from '$lib/utils/toast.svelte';
@@ -23,13 +29,14 @@
 	} from '$lib/utils/roles';
 	import { viewAs } from '$lib/utils/viewAs';
 
-	type Filter = 'all' | 'staff' | 'founder' | 'never' | 'deactivated';
+	type Filter = 'all' | 'staff' | 'founder' | 'never' | 'deactivated' | 'deleted';
 
 	let { data }: { data: PageData } = $props();
 
 	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
 	const users = $derived(data.users as ManagedUser[]);
 	const currentAdminId = $derived(data.currentAdminId);
+	const deletedAccounts = $derived(data.deletedAccounts);
 
 	// What the real person may do — while viewing as someone, the rank that
 	// counts is still the developer's own, the same rule the server applies.
@@ -38,6 +45,8 @@
 
 	let filter = $state<Filter>('all');
 	let busyId = $state<string | null>(null);
+	// Accounts their owners deleted show under every view a founder belongs in.
+	const showDeleted = $derived(filter === 'all' || filter === 'founder' || filter === 'deleted');
 
 	// The account open in the popup: null with formOpen adds a new one.
 	let formOpen = $state(false);
@@ -62,7 +71,8 @@
 		staff: users.filter((u) => isStaffRole(u.role)).length,
 		founder: users.filter((u) => u.role === 'founder').length,
 		never: users.filter((u) => !u.lastSignInAt).length,
-		deactivated: users.filter((u) => u.banned).length
+		deactivated: users.filter((u) => u.banned).length,
+		deleted: deletedAccounts.length
 	});
 
 	const filtered = $derived.by(() => {
@@ -134,6 +144,17 @@
 		});
 		if (!ok) return false;
 		return run(user.id, () => adminDeleteUser(user.id), `${user.email} deleted.`);
+	}
+
+	async function clearDeleted(entry: (typeof deletedAccounts)[number]) {
+		const ok = await askConfirm({
+			title: `Remove the record of ${entry.email}?`,
+			body: 'The account is already gone; this only removes the note that it was deleted.',
+			confirmLabel: 'Remove record',
+			tone: 'danger'
+		});
+		if (!ok) return;
+		run(entry.id, () => adminClearDeletedAccount(entry.id), 'Record removed.');
 	}
 
 	async function openAs(user: ManagedUser) {
@@ -218,100 +239,166 @@
 		>
 			Deactivated <span class="tab__count">{counts.deactivated}</span>
 		</button>
+		<button
+			class="tab"
+			class:tab--active={filter === 'deleted'}
+			onclick={() => (filter = 'deleted')}
+		>
+			Deleted <span class="tab__count">{counts.deleted}</span>
+		</button>
 	</div>
 
-	<div class="panel">
-		{#if filtered.length === 0}
-			<p class="empty">No accounts in this view.</p>
-		{:else}
-			<div class="table-wrap">
-				<table class="table">
-					<thead>
-						<tr>
-							<th>Account</th>
-							<th>Role</th>
-							<th>Last signed in</th>
-							<th>Joined</th>
-							<th class="actions-col">Actions</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each pager.rows as user (user.id)}
-							<!-- The whole row opens the account; the buttons in it stop the
-							     click so they still do only their own thing. -->
-							<tr
-								class="row"
-								class:row--busy={busyId === user.id}
-								onclick={() => openUser(user)}
-								onkeydown={(event) => {
-									if (event.key === 'Enter' && event.target === event.currentTarget) openUser(user);
-								}}
-								tabindex="0"
-								aria-label="Open {user.fullName || user.email}"
-							>
-								<td>
-									<p class="cell__name">
-										{user.fullName || user.email}
-										{#if user.id === currentAdminId}
-											<span class="you">you</span>
-										{/if}
-									</p>
-									<p class="cell__sub">{user.email}</p>
-									{#if user.phone}<p class="cell__meta">{user.phone}</p>{/if}
-									{#each user.companies as company (company.name)}
-										<p class="cell__sub">
-											{company.name} ·
-											<span class="dot dot--{company.status}"></span>{company.status}
-										</p>
-									{/each}
-								</td>
-								<td>
-									<p class="cell__name">{roleLabel(user.role)}</p>
-									{#if user.department || user.responsibility}
-										<p class="cell__sub">
-											{[user.department, user.responsibility].filter(Boolean).join(' · ')}
-										</p>
-									{/if}
-									<div class="flags">
-										{#if user.banned}<span class="badge badge--bad">deactivated</span>{/if}
-										{#if !user.emailConfirmed}
-											<span class="badge badge--warn">unconfirmed</span>
-										{/if}
-									</div>
-								</td>
-								<td>
-									<p class="cell__name" class:muted={!user.lastSignInAt}>
-										{fmtRelative(user.lastSignInAt)}
-									</p>
-									{#if user.lastSignInAt}
-										<p class="cell__sub">{fmtDate(user.lastSignInAt)}</p>
-									{/if}
-								</td>
-								<td><p class="cell__sub">{fmtDate(user.createdAt)}</p></td>
-								<td class="actions-col">
-									<!-- Opens the same popup as the row, straight into editing. View
-									     as, Deactivate and Delete live in the popup. -->
-									<button
-										type="button"
-										class="pencil"
-										title="Edit {user.fullName || user.email}"
-										aria-label="Edit {user.fullName || user.email}"
-										onclick={(event) => {
-											event.stopPropagation();
-											openUser(user, true);
-										}}
-									>
-										<Pencil size={15} strokeWidth={2} />
-									</button>
-								</td>
+	{#if filter !== 'deleted'}
+		<div class="panel">
+			{#if filtered.length === 0}
+				<p class="empty">No accounts in this view.</p>
+			{:else}
+				<div class="table-wrap">
+					<table class="table">
+						<thead>
+							<tr>
+								<th>Account</th>
+								<th>Role</th>
+								<th>Last signed in</th>
+								<th>Joined</th>
+								<th class="actions-col">Actions</th>
 							</tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
-			<Pagination {pager} noun="accounts" />
-		{/if}
-	</div>
+						</thead>
+						<tbody>
+							{#each pager.rows as user (user.id)}
+								<!-- The whole row opens the account; the buttons in it stop the
+							     click so they still do only their own thing. -->
+								<tr
+									class="row"
+									class:row--busy={busyId === user.id}
+									onclick={() => openUser(user)}
+									onkeydown={(event) => {
+										if (event.key === 'Enter' && event.target === event.currentTarget)
+											openUser(user);
+									}}
+									tabindex="0"
+									aria-label="Open {user.fullName || user.email}"
+								>
+									<td>
+										<p class="cell__name">
+											{user.fullName || user.email}
+											{#if user.id === currentAdminId}
+												<span class="you">you</span>
+											{/if}
+										</p>
+										<p class="cell__sub">{user.email}</p>
+										{#if user.phone}<p class="cell__meta">{user.phone}</p>{/if}
+										{#each user.companies as company (company.name)}
+											<p class="cell__sub">
+												{company.name} ·
+												<span class="dot dot--{company.status}"></span>{company.status}
+											</p>
+										{/each}
+									</td>
+									<td>
+										<p class="cell__name">{roleLabel(user.role)}</p>
+										{#if user.department || user.responsibility}
+											<p class="cell__sub">
+												{[user.department, user.responsibility].filter(Boolean).join(' · ')}
+											</p>
+										{/if}
+										<div class="flags">
+											{#if user.banned}<span class="badge badge--bad">deactivated</span>{/if}
+											{#if !user.emailConfirmed}
+												<span class="badge badge--warn">unconfirmed</span>
+											{/if}
+										</div>
+									</td>
+									<td>
+										<p class="cell__name" class:muted={!user.lastSignInAt}>
+											{fmtRelative(user.lastSignInAt)}
+										</p>
+										{#if user.lastSignInAt}
+											<p class="cell__sub">{fmtDate(user.lastSignInAt)}</p>
+										{/if}
+									</td>
+									<td><p class="cell__sub">{fmtDate(user.createdAt)}</p></td>
+									<td class="actions-col">
+										<!-- Opens the same popup as the row, straight into editing. View
+									     as, Deactivate and Delete live in the popup. -->
+										<button
+											type="button"
+											class="pencil"
+											title="Edit {user.fullName || user.email}"
+											aria-label="Edit {user.fullName || user.email}"
+											onclick={(event) => {
+												event.stopPropagation();
+												openUser(user, true);
+											}}
+										>
+											<Pencil size={15} strokeWidth={2} />
+										</button>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+				<Pagination {pager} noun="accounts" />
+			{/if}
+		</div>
+	{/if}
+
+	{#if showDeleted && (deletedAccounts.length || filter === 'deleted')}
+		<div class="panel panel--deleted">
+			{#if deletedAccounts.length === 0}
+				<p class="empty">No one has deleted their account.</p>
+			{:else}
+				<div class="table-wrap">
+					<table class="table">
+						<thead>
+							<tr>
+								<th>Deleted by the account holder</th>
+								<th>Role</th>
+								<th>Deleted</th>
+								<th>Joined</th>
+								<th class="actions-col">Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each deletedAccounts as entry (entry.id)}
+								<!-- Not clickable: there is no account left to open. -->
+								<tr class="row--deleted" class:row--busy={busyId === entry.id}>
+									<td>
+										<p class="cell__name">{entry.fullName || entry.email}</p>
+										<p class="cell__sub">{entry.email}</p>
+										{#each entry.companies as company (company)}
+											<p class="cell__sub">{company}</p>
+										{/each}
+									</td>
+									<td>
+										<p class="cell__name">{roleLabel(entry.role)}</p>
+										<div class="flags">
+											<span class="badge badge--bad">deleted their account</span>
+										</div>
+									</td>
+									<td><p class="cell__sub">{fmtDate(entry.deletedAt)}</p></td>
+									<td><p class="cell__sub">{fmtDate(entry.joinedAt) ?? '—'}</p></td>
+									<td class="actions-col">
+										<button
+											type="button"
+											class="pencil"
+											title="Remove this record"
+											aria-label="Remove the record of {entry.email}"
+											disabled={busyId === entry.id}
+											onclick={() => clearDeleted(entry)}
+										>
+											<Trash size={15} strokeWidth={2} />
+										</button>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			{/if}
+		</div>
+	{/if}
 </AdminShell>
 
 <UserFormDialog
@@ -367,6 +454,15 @@
 	}
 	.empty {
 		@include admin-empty;
+	}
+
+	.panel--deleted {
+		margin-top: 18px;
+	}
+
+	.row--deleted td {
+		color: $admin-ink-3;
+		background: $admin-sunken;
 	}
 
 	.table-wrap {

@@ -283,6 +283,16 @@ export async function adminDeleteUser(
 	return res.ok ? { ok: true } : { ok: false, error: await readError(res) };
 }
 
+/** Clears the note left by an account its owner deleted. */
+export async function adminClearDeletedAccount(
+	logId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+	const res = await fetch(`/api/tic-admin/users?log=${encodeURIComponent(logId)}`, {
+		method: 'DELETE'
+	});
+	return res.ok ? { ok: true } : { ok: false, error: await readError(res) };
+}
+
 export async function adminCreateAdmin(input: {
 	email: string;
 	password: string;

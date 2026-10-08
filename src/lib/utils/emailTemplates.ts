@@ -352,6 +352,67 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		])
 	},
 
+	{
+		key: 'account-deleted',
+		name: 'Account deleted by TIC',
+		description:
+			'Tells the person their account has been removed by the TIC team, so a login that stops working is never a mystery.',
+		trigger: 'An admin deletes the account from /tic-admin/users',
+		group: 'Founder accounts',
+		variables: [
+			{ name: 'fullName', description: 'Account holder name', sample: 'Rahul Bora' },
+			{ name: 'email', description: 'The deleted account email', sample: 'rahul@example.com' }
+		],
+		subject: 'Your {{siteName}} account has been deleted',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'bad', text: 'Account deleted' },
+			{ type: 'heading', text: 'Goodbye, _{{fullName}}_', showIf: 'fullName' },
+			{ type: 'heading', text: 'Your account was _deleted_', hideIf: 'fullName' },
+			{
+				type: 'lede',
+				text: 'The TIC team has deleted your account ({{email}}). You can no longer sign in with it, and the startups registered under it have been removed from the console.'
+			},
+			{
+				type: 'text',
+				text: 'If you think this was a mistake, reply to this email or reach us through the contact page and we will look into it.'
+			},
+			{ type: 'button', label: 'Contact TIC', href: '{{siteUrl}}/contact' },
+			SIGN_OFF
+		])
+	},
+
+	{
+		key: 'account-self-deleted',
+		name: 'Account deleted by its owner',
+		description:
+			'Confirms to a founder that the account they deleted from Settings is gone, and flags it if they did not do it.',
+		trigger: 'A founder deletes their own account from /founder/account',
+		group: 'Founder accounts',
+		variables: [
+			{ name: 'fullName', description: 'Account holder name', sample: 'Rahul Bora' },
+			{ name: 'email', description: 'The deleted account email', sample: 'rahul@example.com' }
+		],
+		subject: 'Your {{siteName}} account has been deleted',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'bad', text: 'Account deleted' },
+			{ type: 'heading', text: 'Goodbye, _{{fullName}}_', showIf: 'fullName' },
+			{ type: 'heading', text: 'Your account is _deleted_', hideIf: 'fullName' },
+			{
+				type: 'lede',
+				text: 'As you asked, your account ({{email}}) has been deleted, along with the startups registered under it. You can no longer sign in with it.'
+			},
+			{
+				type: 'text',
+				text: 'Thank you for being part of TIC IITG. You are always welcome to sign up again and apply in a future cycle.'
+			},
+			{
+				type: 'note',
+				text: 'Did not do this yourself? Reply to this email right away and we will look into it.'
+			},
+			SIGN_OFF
+		])
+	},
+
 	// --- startups -----------------------------------------------------------
 	{
 		key: 'startup-registered',

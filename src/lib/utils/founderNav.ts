@@ -16,6 +16,7 @@ import Activity from '@lucide/svelte/icons/activity';
 import Building2 from '@lucide/svelte/icons/building-2';
 import Rocket from '@lucide/svelte/icons/rocket';
 import LifeBuoy from '@lucide/svelte/icons/life-buoy';
+import Settings from '@lucide/svelte/icons/settings';
 
 import type { NavItem } from '$lib/utils/adminNavTypes';
 
@@ -31,5 +32,6 @@ export const FOUNDER_NAV: NavItem[] = [
 	{ label: 'Details', href: '/founder/settings', icon: Building2, tone: 'info' },
 	{ label: 'Activity', href: '/founder/activity', icon: Activity, tone: 'warn' },
 	{ separator: true as const },
+	{ label: 'Settings', href: '/founder/account', icon: Settings, tone: 'neutral' },
 	{ label: 'Support', href: '/founder/support', icon: LifeBuoy, tone: 'neutral' }
 ];
