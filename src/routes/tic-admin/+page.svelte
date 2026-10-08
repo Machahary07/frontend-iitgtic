@@ -4,69 +4,38 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
+	import Inbox from '@lucide/svelte/icons/inbox';
 	import Clock from '@lucide/svelte/icons/clock';
+	import Video from '@lucide/svelte/icons/video';
+	import Send from '@lucide/svelte/icons/send';
+	import Rocket from '@lucide/svelte/icons/rocket';
 	import BadgeCheck from '@lucide/svelte/icons/badge-check';
+	import Users from '@lucide/svelte/icons/users';
+	import CircleCheck from '@lucide/svelte/icons/circle-check';
 	import CircleX from '@lucide/svelte/icons/circle-x';
-	import Briefcase from '@lucide/svelte/icons/briefcase';
-	import FileText from '@lucide/svelte/icons/file-text';
-	import UserSearch from '@lucide/svelte/icons/user-search';
+	import Search from '@lucide/svelte/icons/search';
 	import ArrowRight from '@lucide/svelte/icons/arrow-right';
 	import type { PageData } from './$types';
 
-	// Everything here arrives from +page.server.ts, so the section renders on the
-	// first paint instead of flashing empty while the browser fetches.
+	// Everything arrives from +page.server.ts, already cut to what this person's
+	// role acts on ($lib/server/overview), so the page only lays it out.
 	let { data }: { data: PageData } = $props();
 
 	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
-	const companies = $derived(data.companies);
-	const applications = $derived(data.applications);
+	const overview = $derived(data.overview);
 
-	const userJobs = $derived(data.jobs);
-	const newApplications = $derived(applications.filter((a) => a.status === 'submitted'));
-	const inReview = $derived(applications.filter((a) => a.status === 'under-review'));
-	const rejected = $derived(applications.filter((a) => a.status === 'rejected'));
-	const jobApplicants = $derived(data.jobApplications);
-	const newApplicants = $derived(jobApplicants.filter((a) => a.status === 'new'));
-
-	// The six headline counts, described once so the tile markup stays a loop.
-	// `tone` picks a tint from the shared admin palette.
-	const tiles = $derived([
-		{
-			label: 'New applications',
-			value: newApplications.length,
-			tone: 'warn',
-			icon: FileText,
-			href: resolve('/tic-admin/applications'),
-			cta: 'Review'
-		},
-		{ label: 'In review', value: inReview.length, tone: 'info', icon: Clock },
-		{
-			// Companies only count once their application is accepted.
-			label: 'Incubated companies',
-			value: companies.length,
-			tone: 'good',
-			icon: BadgeCheck,
-			href: '/tic-admin/companies',
-			cta: 'View all'
-		},
-		{ label: 'Rejected applications', value: rejected.length, tone: 'bad', icon: CircleX },
-		{
-			label: 'User-posted jobs',
-			value: userJobs.length,
-			tone: 'info',
-			icon: Briefcase,
-			href: '/tic-admin/jobs',
-			cta: 'View all'
-		},
-		{
-			label: 'New role applicants',
-			value: newApplicants.length,
-			tone: 'violet',
-			icon: UserSearch,
-			href: resolve('/tic-admin/job-applications'),
-			cta: 'Review'
-		}
-	]);
+	const ICONS = {
+		inbox: Inbox,
+		clock: Clock,
+		video: Video,
+		send: Send,
+		rocket: Rocket,
+		badge: BadgeCheck,
+		users: Users,
+		check: CircleCheck,
+		x: CircleX,
+		search: Search
+	};
 
 	async function handleLogout() {
 		await logoutTicAdmin();
@@ -87,9 +56,11 @@
 	user={adminName}
 	onLogout={handleLogout}
 >
+	<p class="intro">{overview.intro}</p>
+
 	<div class="stats">
-		{#each tiles as tile (tile.label)}
-			{@const Icon = tile.icon}
+		{#each overview.tiles as tile (tile.label)}
+			{@const Icon = ICONS[tile.icon]}
 			<div
 				class="stat"
 				style="--tile-bg: var(--admin-tone-{tile.tone}-bg); --tile-fg: var(--admin-tone-{tile.tone}-fg);"
@@ -98,6 +69,8 @@
 				<p class="stat__label">{tile.label}</p>
 				<p class="stat__value">{tile.value}</p>
 				{#if tile.href}
+					<!-- Console paths built on the server. -->
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 					<a href={tile.href} class="stat__link">
 						{tile.cta}
 						<ArrowRight size={13} strokeWidth={2.2} />
@@ -107,90 +80,38 @@
 		{/each}
 	</div>
 
-	<section class="panel">
-		<header class="panel__head">
-			<h2>New applications</h2>
-			<a href={resolve('/tic-admin/applications')} class="panel__more">All applications →</a>
-		</header>
-		{#if newApplications.length === 0}
-			<p class="empty">No applications waiting for an admin check.</p>
-		{:else}
-			<ul class="rows">
-				{#each newApplications.slice(0, 5) as application (application.id)}
-					<li class="row">
-						<div class="row__main">
-							<p class="row__title">{application.startup_name || 'Untitled startup'}</p>
-							<p class="row__meta">
-								{application.email} · {new Date(application.created_at).toLocaleDateString()}
-							</p>
-						</div>
-						<a
-							href={resolve('/tic-admin/applications/[id]', { id: application.id })}
-							class="row__cta">Review</a
-						>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</section>
-
-	<section class="panel">
-		<header class="panel__head">
-			<h2>New role applicants</h2>
-			<a href={resolve('/tic-admin/job-applications')} class="panel__more">All applicants →</a>
-		</header>
-		{#if newApplicants.length === 0}
-			<p class="empty">No one is waiting on a role application.</p>
-		{:else}
-			<ul class="rows">
-				{#each newApplicants.slice(0, 5) as applicant (applicant.id)}
-					<li class="row">
-						<div class="row__main">
-							<p class="row__title">{applicant.full_name}</p>
-							<p class="row__meta">
-								{applicant.job_role} · {applicant.job_company} · {new Date(
-									applicant.created_at
-								).toLocaleDateString()}
-							</p>
-						</div>
-						<a
-							href={resolve('/tic-admin/job-applications/[id]', { id: applicant.id })}
-							class="row__cta">Open</a
-						>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</section>
-
-	<section class="panel">
-		<header class="panel__head">
-			<h2>New applications</h2>
-			<a href={resolve('/tic-admin/applications')} class="panel__more">All applications →</a>
-		</header>
-		{#if newApplications.length === 0}
-			<p class="empty">No applications waiting for review.</p>
-		{:else}
-			<ul class="rows">
-				{#each newApplications.slice(0, 5) as application (application.id)}
-					<li class="row">
-						<div class="row__main">
-							<p class="row__title">{application.startup_name || 'Untitled startup'}</p>
-							<p class="row__meta">
-								{application.full_name || application.email} · {new Date(
-									application.created_at
-								).toLocaleDateString()}
-							</p>
-						</div>
-						<a
-							href={resolve('/tic-admin/applications/[id]', { id: application.id })}
-							class="row__cta">Open</a
-						>
-					</li>
-				{/each}
-			</ul>
-		{/if}
-	</section>
+	{#each overview.lists as list (list.title)}
+		<section class="panel">
+			<header class="panel__head">
+				<h2>{list.title}</h2>
+				{#if list.more}
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a href={list.more.href} class="panel__more">{list.more.label}</a>
+				{/if}
+			</header>
+			{#if list.rows.length === 0}
+				<p class="empty">{list.empty}</p>
+			{:else}
+				<ul class="rows">
+					{#each list.rows as row (row.id + row.cta)}
+						<li class="row">
+							<div class="row__main">
+								<p class="row__title">{row.title}</p>
+								<p class="row__meta">{row.meta}</p>
+							</div>
+							{#if row.note}
+								<span class="row__note" class:row__note--done={row.note === 'Scored'}
+									>{row.note}</span
+								>
+							{/if}
+							<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+							<a href={row.href} class="row__cta">{row.cta}</a>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</section>
+	{/each}
 </AdminShell>
 
 <style lang="scss">
@@ -198,21 +119,18 @@
 	@use '$styles/mixins' as *;
 	@use '$styles/admin' as *;
 
+	.intro {
+		margin: 0 0 16px;
+		font-size: 13px;
+		color: $admin-ink-2;
+	}
+
 	.stats {
 		display: grid;
-		// Six tiles: one row on wide screens, then an even three-up and two-up so
-		// the rows below never end ragged.
-		grid-template-columns: repeat(6, minmax(0, 1fr));
+		// Each role has its own number of tiles; they share the row evenly.
+		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
 		gap: 16px;
 		margin-bottom: 28px;
-
-		@include breakpoint-down($bp-lg) {
-			grid-template-columns: repeat(3, 1fr);
-		}
-
-		@include breakpoint-down($bp-md) {
-			grid-template-columns: repeat(2, 1fr);
-		}
 
 		@include breakpoint-down($bp-xs) {
 			grid-template-columns: 1fr;
@@ -331,6 +249,21 @@
 		margin: 2px 0 0;
 		font-size: 12px;
 		color: $admin-ink-3;
+	}
+
+	.row__note {
+		flex: none;
+		padding: 3px 9px;
+		font-size: 11px;
+		font-weight: $font-weight-semibold;
+		color: #6a4f00;
+		background: #fff4d4;
+		border-radius: $admin-radius-pill;
+
+		&--done {
+			color: #0e6b2c;
+			background: #d6f5e1;
+		}
 	}
 
 	.row__cta {

@@ -21,7 +21,7 @@
 		DOCUMENT_LABELS,
 		formatAnswer
 	} from '$lib/utils/applicationSchema';
-	import { isScoredStep } from '$lib/utils/applicationScores';
+	import { isScoredStep, SCORED_STEPS } from '$lib/utils/applicationScores';
 	import { roleLabel } from '$lib/utils/roles';
 
 	let { data }: { data: PageData } = $props();
@@ -85,6 +85,12 @@
 		showToast(done);
 	}
 
+	// Every hand-off asks first: once it moves on, the next person is emailed.
+	async function passOn(title: string, body: string, confirmLabel: string, go: () => unknown) {
+		const ok = await askConfirm({ title, body, confirmLabel });
+		if (ok) await go();
+	}
+
 	async function setStatus(status: ApplicationStatus) {
 		saving = true;
 		const ok = await adminSetApplicationStatus(
@@ -146,6 +152,13 @@
 	// ---- scores --------------------------------------------------------------
 	// Your own marks only; admin also gets everyone's in `scores.all`.
 	const scores = $derived(data.scores);
+
+	// Nobody passes an application on until they have scored every step
+	// themselves; the server refuses it too.
+	const unscored = $derived(
+		SCORED_STEPS.filter((s) => scores.mine[s.step] === undefined).map((s) => s.title)
+	);
+	const scoredAll = $derived(unscored.length === 0);
 	let savingStep = $state<number | null>(null);
 
 	async function saveScore(step: number, input: HTMLInputElement) {
@@ -193,6 +206,15 @@
 	>
 </svelte:head>
 
+{#snippet scoreGate()}
+	{#if !scoredAll}
+		<p class="gate">
+			Score every step before passing it on — {SCORED_STEPS.length - unscored.length} of {SCORED_STEPS.length}
+			done. Still to score: {unscored.join(', ')}.
+		</p>
+	{/if}
+{/snippet}
+
 {#snippet picker(
 	kind: 'coordinator' | 'head',
 	people: { id: string; name: string; email: string }[]
@@ -222,14 +244,24 @@
 				</li>
 			{/each}
 		</ul>
+		{@render scoreGate()}
 		<button
 			class="btn btn--primary"
-			disabled={saving || picked.length === 0}
+			disabled={saving || picked.length === 0 || !scoredAll}
 			onclick={() =>
-				step(
-					'assign',
-					{ kind, userIds: picked },
-					kind === 'coordinator' ? 'Coordinators assigned.' : 'Heads assigned.'
+				passOn(
+					`Pass it on to ${picked.length} ${kind === 'coordinator' ? 'coordinator' : 'TIC head'}${picked.length === 1 ? '' : 's'}?`,
+					`${people
+						.filter((p) => picked.includes(p.id))
+						.map((p) => p.name)
+						.join(', ')} will be emailed and can start reviewing.`,
+					'Yes, pass it on',
+					() =>
+						step(
+							'assign',
+							{ kind, userIds: picked },
+							kind === 'coordinator' ? 'Coordinators assigned.' : 'Heads assigned.'
+						)
 				)}
 		>
 			Assign {kind === 'coordinator' ? 'coordinators' : 'heads'}{picked.length
@@ -411,10 +443,17 @@
 						{#if stage === 0}
 							{#if isAdmin}
 								<p class="step__hint">Checked it? Pass it to the CEO to start the review.</p>
+								{@render scoreGate()}
 								<button
 									class="btn btn--primary"
-									disabled={saving}
-									onclick={() => step('forward', {}, 'Passed to the CEO.')}>Pass to CEO</button
+									disabled={saving || !scoredAll}
+									onclick={() =>
+										passOn(
+											'Pass this application to the CEO?',
+											'The CEO is emailed and the applicant hears it is under review. It cannot be pulled back to the admin check.',
+											'Yes, pass to CEO',
+											() => step('forward', {}, 'Passed to the CEO.')
+										)}>Pass to CEO</button
 								>
 							{:else}
 								<p class="step__hint">Waiting for admin to check it.</p>
@@ -450,7 +489,13 @@
 								<button
 									class="btn btn--primary"
 									disabled={saving}
-									onclick={() => step('live', {}, 'Marked live.')}>Mark live</button
+									onclick={() =>
+										passOn(
+											'Mark this startup live?',
+											'The founder is emailed that their startup is now listed among the incubated startups.',
+											'Yes, mark live',
+											() => step('live', {}, 'Marked live.')
+										)}>Mark live</button
 								>
 							{:else if headsDone}
 								<p class="step__hint">
@@ -474,11 +519,17 @@
 									placeholder="What you found, seen by admin and the CEO."
 								></textarea>
 							</label>
+							{@render scoreGate()}
 							<button
 								class="btn btn--primary"
-								disabled={saving}
-								onclick={() => step('sign-off', { note: signOffNote }, 'Signed off.')}
-								>Sign off</button
+								disabled={saving || !scoredAll}
+								onclick={() =>
+									passOn(
+										'Sign off this application?',
+										'Your scores and review are final once you sign off. When every head has signed off, it goes back to admin for the final email.',
+										'Yes, sign off',
+										() => step('sign-off', { note: signOffNote }, 'Signed off.')
+									)}>Sign off</button
 							>
 						{/if}
 					</div>
@@ -534,10 +585,17 @@
 
 					<div class="decision">
 						{#if isAdmin && !rejected && stage === 5 && headsDone && application.status !== 'accepted'}
+							{@render scoreGate()}
 							<button
 								class="btn btn--primary"
-								disabled={saving}
-								onclick={() => setStatus('accepted')}>Accept and send final email</button
+								disabled={saving || !scoredAll}
+								onclick={() =>
+									passOn(
+										`Accept ${application.startup_name || 'this startup'}?`,
+										'The final acceptance email goes to the applicant with the panel’s average scores, and their company is verified. This cannot be unsent.',
+										'Yes, accept and send',
+										() => setStatus('accepted')
+									)}>Accept and send final email</button
 							>
 						{/if}
 						{#if rejected}
@@ -918,6 +976,16 @@
 		font-size: 12px;
 		line-height: 1.45;
 		color: $admin-ink-2;
+	}
+
+	.gate {
+		margin: 0;
+		padding: 8px 10px;
+		font-size: 12px;
+		line-height: 1.45;
+		color: #6a4f00;
+		background: #fff4d4;
+		border-radius: $admin-radius-sm;
 	}
 
 	.step__empty {

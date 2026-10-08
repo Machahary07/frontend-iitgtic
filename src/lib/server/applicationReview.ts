@@ -1,4 +1,6 @@
+import { error } from '@sveltejs/kit';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { SCORED_STEPS } from '$lib/utils/applicationScores';
 import type { ConsoleSession } from '$lib/server/sessionValidation';
 
 // The review chain, server side: who sees an application at which step, and
@@ -246,4 +248,27 @@ export async function scoreEmailVariables(
 		out.scoreOverall = `${Math.round(averages.reduce((a, b) => a + b, 0) / averages.length)}/100`;
 	}
 	return out;
+}
+
+/** The steps this person has not scored yet on this application, by title.
+ *  Nobody passes an application on until this is empty. */
+export async function unscoredSteps(
+	db: SupabaseClient,
+	applicationId: string,
+	userId: string
+): Promise<string[]> {
+	const mine = await loadMyScores(db, applicationId, userId);
+	return SCORED_STEPS.filter((s) => mine[s.step] === undefined).map((s) => s.title);
+}
+
+/** Refuses with the list of what is left when the caller has not scored every step. */
+export async function requireAllScored(
+	db: SupabaseClient,
+	applicationId: string,
+	userId: string,
+	doing: string
+): Promise<void> {
+	const missing = await unscoredSteps(db, applicationId, userId);
+	if (missing.length)
+		error(409, `Score every step before you ${doing}. Still to score: ${missing.join(', ')}.`);
 }

@@ -156,43 +156,11 @@ export function htmlToText(html: string): string {
 
 // --- bundled copy -----------------------------------------------------------
 
-// The TIC symbol's dot grid, blue melting into green: the strip under the logo.
-// Built once here so the layout stays a plain string an admin can edit.
-function dotStrip(): string {
-	const rows = 3;
-	const cols = 26;
-	const mix = (f: number) => {
-		const a = [0x00, 0x4e, 0xbc];
-		const b = [0x00, 0xb4, 0x51];
-		return (
-			'#' +
-			a
-				.map((x, i) =>
-					Math.round(x + (b[i] - x) * f)
-						.toString(16)
-						.padStart(2, '0')
-				)
-				.join('')
-		);
-	};
-	let out = '';
-	for (let r = 0; r < rows; r++) {
-		let cells = '';
-		for (let c = 0; c < cols; c++) {
-			const reach = cols * (0.32 - 0.12 * (Math.abs(r - 1) - 1));
-			const show = r === 1 || (Math.abs(c - (cols - 1) / 2) <= reach && c % 2 === 1);
-			cells += `<td style="padding:0 2px;"><div style="width:6px;height:6px;border-radius:6px;background:${show ? mix(c / (cols - 1)) : 'transparent'};font-size:0;line-height:0;">&nbsp;</div></td>`;
-		}
-		out += `<tr><td style="padding:2px 0;"><table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr>${cells}</tr></table></td></tr>`;
-	}
-	return `<table role="presentation" cellpadding="0" cellspacing="0" align="center">${out}</table>`;
-}
-
 const FONT_SANS = `'Open Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif`;
 const FONT_SERIF = `'Anek Latin','Mukta',Georgia,'Times New Roman',serif`;
 
 // The shared chrome. Every other template renders into `{{{content}}}`, so the
-// logo, the dot strip, the black footer band and the table scaffolding email
+// logo, the black footer band and the table scaffolding email
 // clients still need are written once. Inline styles throughout — Gmail strips
 // <style> blocks. The logo is a PNG: no major inbox renders SVG.
 const LAYOUT_BODY = `<!doctype html>
@@ -210,12 +178,9 @@ const LAYOUT_BODY = `<!doctype html>
 				<td align="center">
 					<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#FFFFFF;border-radius:24px;overflow:hidden;">
 						<tr>
-							<td align="center" style="padding:34px 40px 8px;">
+							<td align="center" style="padding:34px 40px 30px;">
 								<a href="{{siteUrl}}"><img src="{{siteUrl}}/brand/tic-iitg-horizontal-color.png" width="200" alt="TIC IITG — Technology Incubation Centre, IIT Guwahati" style="display:block;border:0;width:200px;height:auto;" /></a>
 							</td>
-						</tr>
-						<tr>
-							<td align="center" style="padding:18px 40px 30px;">${dotStrip()}</td>
 						</tr>
 						<tr>
 							<td style="padding:0 44px 40px;font:400 16px/1.7 ${FONT_SANS};color:#2E3036;">
@@ -302,7 +267,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		key: EMAIL_LAYOUT_KEY,
 		name: 'Shared layout',
 		description:
-			'Logo, dot strip, black footer band and table scaffolding wrapped around every other template. Edit it to change the branding on all mail at once.',
+			'Logo, black footer band and table scaffolding wrapped around every other template. Edit it to change the branding on all mail at once.',
 		trigger: 'Wraps every outgoing message',
 		group: 'Layout',
 		variables: [

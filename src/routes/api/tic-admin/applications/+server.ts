@@ -2,7 +2,12 @@ import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
 import { sendTemplateEmail } from '$lib/server/email';
-import { canSeeApplication, reviewScope, scoreEmailVariables } from '$lib/server/applicationReview';
+import {
+	canSeeApplication,
+	requireAllScored,
+	reviewScope,
+	scoreEmailVariables
+} from '$lib/server/applicationReview';
 import { screeningEmailVariables } from '$lib/server/evaluation';
 import { REVIEW_STEP_NAMES } from '$lib/utils/emailBlocks';
 import { roleLabel } from '$lib/utils/roles';
@@ -68,6 +73,7 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 			.is('done_at', null);
 		if (stage < 5 || !heads || pending)
 			error(409, 'Every assigned TIC head has to sign off first.');
+		await requireAllScored(ctx.db, body.id, ctx.admin.userId, 'accept it');
 	}
 
 	const { data: application, error: dbError } = await ctx.db

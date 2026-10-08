@@ -1,7 +1,12 @@
 import { error, json } from '@sveltejs/kit';
 import { actorId, logAdminAction, requireAdmin } from '$lib/server/adminGuard';
 import { sendTemplateEmail } from '$lib/server/email';
-import { canSeeApplication, reviewScope, type ReviewerKind } from '$lib/server/applicationReview';
+import {
+	canSeeApplication,
+	requireAllScored,
+	reviewScope,
+	type ReviewerKind
+} from '$lib/server/applicationReview';
 import { notifyReviewers } from '$lib/server/reviewMail';
 import type { RequestHandler } from './$types';
 
@@ -67,6 +72,7 @@ export const POST: RequestHandler = async ({ cookies, request, url }) => {
 		case 'forward': {
 			if (scope !== 'admin') error(403, 'Only admin passes an application to the CEO.');
 			if (stage !== 0) error(409, 'Already passed on.');
+			await requireAllScored(ctx.db, app.id, ctx.admin.userId, 'pass it to the CEO');
 			await setStage(1, { status: 'under-review' });
 			await logAdminAction(ctx, 'passed application to the CEO', {
 				table: 'applications',
@@ -106,6 +112,12 @@ export const POST: RequestHandler = async ({ cookies, request, url }) => {
 			if (kind === 'coordinator' && stage !== 1 && stage !== 2)
 				error(409, 'Coordinators are assigned after the CEO review.');
 			if (kind === 'head' && stage !== 4) error(409, 'Heads are assigned after the CEO recheck.');
+			await requireAllScored(
+				ctx.db,
+				app.id,
+				ctx.admin.userId,
+				kind === 'coordinator' ? 'assign coordinators' : 'assign TIC heads'
+			);
 
 			// Only people who actually hold the role can be handed it.
 			const role = kind === 'coordinator' ? 'tic_coordinator' : 'tic_head';
@@ -150,6 +162,7 @@ export const POST: RequestHandler = async ({ cookies, request, url }) => {
 			if (scope === 'coordinator') error(403, 'Coordinators submit their scores from Evaluation.');
 			if (scope !== 'head') error(403, 'Only an assigned TIC head signs off.');
 			if (stage !== 5) error(409, 'It is not at your step.');
+			await requireAllScored(ctx.db, app.id, ctx.admin.userId, 'sign off');
 
 			const { data: mine, error: updateError } = await ctx.db
 				.from('application_reviewers')
