@@ -11,6 +11,15 @@ const compiled = ts.transpileModule(source, {
 	compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
 }).outputText;
 
+// The real role table, so the staff/founder split under test is the live one.
+const roles = {};
+runInNewContext(
+	ts.transpileModule(readFileSync(new URL('../src/lib/utils/roles.ts', import.meta.url), 'utf8'), {
+		compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+	}).outputText,
+	{ exports: roles }
+);
+
 function fixture() {
 	const state = {
 		user: { id: 'dummy-user', email: 'dummy@example.invalid' },
@@ -35,6 +44,8 @@ function fixture() {
 			readTicAdminSession: () => state.session,
 			clearTicAdminSession: () => state.cleared.push('admin')
 		},
+		'$lib/server/viewAs': { readViewAs: () => null },
+		'$lib/utils/roles': roles,
 		'$lib/server/founderSession': {
 			readFounderSession: () => state.session,
 			clearFounderSession: () => state.cleared.push('founder')

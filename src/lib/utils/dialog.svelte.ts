@@ -14,6 +14,10 @@ export type ConfirmRequest = {
 	confirmLabel?: string;
 	cancelLabel?: string;
 	tone?: DialogTone;
+	/** Bullet list of consequences, shown under the body. */
+	points?: string[];
+	/** Confirm stays disabled until this exact text is typed (case-insensitive). */
+	typeToConfirm?: string;
 };
 
 type Active = ConfirmRequest & { settle: (answer: boolean) => void };

@@ -73,10 +73,19 @@
 
 	async function closeAccount() {
 		const ok = await askConfirm({
-			title: 'Delete your account?',
-			body: ownsAny
-				? 'Every startup you registered goes with it: their roles come off the board and their teams lose access. Your login stops working. This cannot be undone.'
-				: 'Your login stops working and you leave any startup you were added to. This cannot be undone.',
+			title: 'Delete your account permanently?',
+			body: 'This cannot be undone. Here is what happens:',
+			points: [
+				'You are signed out and can never sign in with this account again.',
+				...(ownsAny
+					? [
+							'Every startup you registered is deleted, with its job postings.',
+							'Anyone you added to those startups loses access.'
+						]
+					: ['You leave the startup you were added to.']),
+				'Submitted incubation applications stay with TIC.'
+			],
+			typeToConfirm: data.me.email,
 			confirmLabel: 'Delete my account',
 			tone: 'danger'
 		});

@@ -9,6 +9,16 @@
 
 	const active = $derived(dialog.active);
 
+	// What has been typed toward typeToConfirm, cleared for every new request.
+	let typed = $state('');
+	$effect(() => {
+		if (active) typed = '';
+	});
+	const locked = $derived(
+		Boolean(active?.typeToConfirm) &&
+			typed.trim().toLowerCase() !== active!.typeToConfirm!.trim().toLowerCase()
+	);
+
 	$effect(() => {
 		if (!el) return;
 		if (active && !el.open) el.showModal();
@@ -72,8 +82,29 @@
 				<div class="dlg__copy">
 					<h2 class="dlg__title">{active.title}</h2>
 					{#if active.body}<p class="dlg__body">{active.body}</p>{/if}
+					{#if active.points?.length}
+						<ul class="dlg__points">
+							{#each active.points as point (point)}<li>{point}</li>{/each}
+						</ul>
+					{/if}
 				</div>
 			</div>
+
+			{#if active.typeToConfirm}
+				<label class="dlg__type">
+					<span>Type <strong>{active.typeToConfirm}</strong> to confirm</span>
+					<input
+						type="text"
+						bind:value={typed}
+						autocomplete="off"
+						autocapitalize="off"
+						spellcheck="false"
+						onkeydown={(event) => {
+							if (event.key === 'Enter' && !locked) dialog.answer(true);
+						}}
+					/>
+				</label>
+			{/if}
 
 			<div class="dlg__actions">
 				<button type="button" class="dlg__btn" onclick={() => dialog.answer(false)}>
@@ -83,6 +114,7 @@
 					type="button"
 					class="dlg__btn dlg__btn--go"
 					class:dlg__btn--danger={active.tone === 'danger'}
+					disabled={locked}
 					onclick={() => dialog.answer(true)}
 				>
 					{active.confirmLabel ?? 'Confirm'}
@@ -172,6 +204,47 @@
 		color: #565b63;
 	}
 
+	.dlg__points {
+		margin: 10px 0 0;
+		padding-left: 18px;
+		font-size: 13px;
+		line-height: 1.55;
+		color: #565b63;
+
+		li + li {
+			margin-top: 4px;
+		}
+	}
+
+	.dlg__type {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		margin-top: 18px;
+		font-size: 12.5px;
+		color: #565b63;
+
+		strong {
+			color: #111;
+			word-break: break-all;
+		}
+
+		input {
+			min-height: 40px;
+			padding: 0 12px;
+			font: inherit;
+			font-size: 14px;
+			color: #111;
+			border: 1px solid #d8dbe0;
+			border-radius: 9px;
+
+			&:focus-visible {
+				outline: 2px solid #b0181c;
+				outline-offset: 1px;
+			}
+		}
+	}
+
 	.dlg__actions {
 		display: flex;
 		justify-content: flex-end;
@@ -203,6 +276,11 @@
 		&:focus-visible {
 			outline: 2px solid #111;
 			outline-offset: 2px;
+		}
+
+		&:disabled {
+			opacity: 0.45;
+			cursor: not-allowed;
 		}
 
 		&--go {
