@@ -6,6 +6,7 @@
 	import FounderShell from '$lib/components/FounderShell.svelte';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 	import { showToast } from '$lib/utils/toast.svelte';
+	import { isExpired, type JobStatus } from '$lib/utils/jobPostings';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -14,43 +15,64 @@
 		id: string;
 		slug: string;
 		role: string;
-		location: string;
 		type: string;
+		work_mode: string;
+		location: string;
 		sector: string;
-		status: 'pending' | 'approved' | 'rejected';
-		review_note: string | null;
-		submitted_at: string;
+		posted: string;
+		closes_on: string | null;
+		max_applicants: number;
+		status: JobStatus;
+		removed_reason: string | null;
 	};
 
 	const jobs = $derived(data.jobs as JobRow[]);
-	const pending = $derived(jobs.filter((j) => j.status === 'pending'));
+	const applied = $derived(data.applied as Record<string, number>);
 
-	const STATUS: Record<string, { label: string; tone: string }> = {
-		pending: { label: 'Waiting for TIC', tone: 'warn' },
-		approved: { label: 'Live on the board', tone: 'good' },
-		rejected: { label: 'Sent back', tone: 'bad' }
-	};
+	// What the board shows for each role, which is not always its stored status:
+	// an open role past its closing date is off the board all the same.
+	function state(job: JobRow): { label: string; tone: string } {
+		if (job.status === 'removed') return { label: 'Removed by TIC', tone: 'bad' };
+		if (job.status === 'closed') return { label: 'Closed', tone: 'neutral' };
+		if (isExpired(job.closes_on)) return { label: 'Past closing date', tone: 'warn' };
+		return { label: 'Live', tone: 'good' };
+	}
+
+	async function call(method: string, query: string, body?: object) {
+		const res = await fetch(`/api/founder/jobs${query}`, {
+			method,
+			headers: body ? { 'content-type': 'application/json' } : undefined,
+			body: body ? JSON.stringify(body) : undefined
+		});
+		const out = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+		if (!res.ok || !out.ok) {
+			showToast(out.error ?? 'That did not go through.', 'err');
+			return false;
+		}
+		return true;
+	}
+
+	async function setOpen(job: JobRow, open: boolean) {
+		const ok = await call('PATCH', '', {
+			companyId: data.activeCompanyId,
+			id: job.id,
+			action: open ? 'reopen' : 'close'
+		});
+		if (!ok) return;
+		showToast(open ? 'Role reopened.' : 'Role closed.', 'ok');
+		await invalidateAll();
+	}
 
 	async function remove(job: JobRow) {
 		const ok = await askConfirm({
-			title: `Withdraw "${job.role}"?`,
-			body:
-				job.status === 'approved'
-					? 'The role comes off the public board straight away. This cannot be undone.'
-					: 'The role leaves the approval queue and is deleted. This cannot be undone.',
-			confirmLabel: 'Withdraw role',
+			title: `Delete "${job.role}"?`,
+			body: 'The role is deleted for good. Applicants you already have stay in your inbox.',
+			confirmLabel: 'Delete role',
 			tone: 'danger'
 		});
 		if (!ok) return;
-
-		const res = await fetch(`/api/founder/jobs?companyId=${data.activeCompanyId}&id=${job.id}`, {
-			method: 'DELETE'
-		});
-		if (!res.ok) {
-			showToast('Could not withdraw the role.', 'err');
-			return;
-		}
-		showToast('Role withdrawn.', 'ok');
+		if (!(await call('DELETE', `?companyId=${data.activeCompanyId}&id=${job.id}`))) return;
+		showToast('Role deleted.', 'ok');
 		await invalidateAll();
 	}
 
@@ -86,12 +108,8 @@
 	{/snippet}
 
 	<p class="lede">
-		A role you write here goes into TIC's approval queue. It appears on the public Opportunities
-		board once an admin approves it, and an edit to a live role sends it back to the queue until
-		that edit is approved too.
-		{#if pending.length > 0}
-			<strong>{pending.length} waiting right now.</strong>
-		{/if}
+		A role goes live on the Opportunities board the moment you post it, and stays up until you close
+		it, its closing date passes, or TIC removes it. Everyone who applies lands in Applicants.
 	</p>
 
 	{#if jobs.length === 0}
@@ -109,33 +127,41 @@
 						<tr>
 							<th>Role</th>
 							<th>Type</th>
-							<th>Location</th>
 							<th>Status</th>
-							<th>Submitted</th>
+							<th>Applied</th>
+							<th>Posted</th>
 							<th class="actions-col"></th>
 						</tr>
 					</thead>
 					<tbody>
 						{#each pager.rows as job (job.id)}
+							{@const st = state(job)}
 							<tr>
 								<td>
 									<p class="cell__name">{job.role}</p>
-									<p class="cell__sub">{job.sector}</p>
-									{#if job.status === 'rejected' && job.review_note}
-										<p class="cell__note">TIC said: {job.review_note}</p>
+									<p class="cell__sub">{job.location}{job.sector ? ` · ${job.sector}` : ''}</p>
+									{#if job.status === 'removed'}
+										<p class="cell__note">TIC said: {job.removed_reason || 'No reason given.'}</p>
 									{/if}
 								</td>
-								<td><span class="type">{job.type}</span></td>
-								<td><p class="cell__sub">{job.location}</p></td>
 								<td>
-									<span class="badge badge--{STATUS[job.status].tone}">
-										{STATUS[job.status].label}
-									</span>
+									<span class="type">{job.type}</span>
+									<p class="cell__sub">{job.work_mode}</p>
 								</td>
-								<td><p class="cell__sub">{formatDate(job.submitted_at)}</p></td>
+								<td>
+									<span class="badge badge--{st.tone}">{st.label}</span>
+									{#if job.closes_on && job.status === 'open'}
+										<p class="cell__sub">Closes {formatDate(job.closes_on)}</p>
+									{/if}
+								</td>
+								<td>
+									<a class="link" href={resolve('/founder/applicants')}>{applied[job.id] ?? 0}</a>
+									<span class="cell__sub"> / {job.max_applicants}</span>
+								</td>
+								<td><p class="cell__sub">{formatDate(job.posted)}</p></td>
 								<td class="actions-col">
 									<div class="actions">
-										{#if job.status === 'approved'}
+										{#if st.label === 'Live'}
 											<a
 												class="link"
 												href={resolve('/opportunities/[id]', { id: job.slug })}
@@ -143,9 +169,14 @@
 												rel="noopener noreferrer">View</a
 											>
 										{/if}
-										<a class="link" href={resolve('/founder/jobs/[id]', { id: job.id })}>Edit</a>
+										{#if job.status !== 'removed'}
+											<a class="link" href={resolve('/founder/jobs/[id]', { id: job.id })}>Edit</a>
+											<button type="button" class="link" onclick={() => setOpen(job, job.status === 'closed')}>
+												{job.status === 'closed' ? 'Reopen' : 'Close'}
+											</button>
+										{/if}
 										<button type="button" class="link link--danger" onclick={() => remove(job)}>
-											Withdraw
+											Delete
 										</button>
 									</div>
 								</td>
@@ -170,9 +201,6 @@
 		color: $admin-ink-2;
 		max-width: 76ch;
 
-		strong {
-			color: admin-tone-fg('warn');
-		}
 	}
 
 	.empty {
@@ -233,6 +261,10 @@
 		}
 		&--bad {
 			@include admin-badge-tone('bad');
+		}
+		&--neutral {
+			background: $admin-sunken;
+			color: $admin-ink-2;
 		}
 	}
 

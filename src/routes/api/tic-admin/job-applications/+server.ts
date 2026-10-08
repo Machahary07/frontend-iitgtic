@@ -1,78 +1,15 @@
 import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
-import { sendTemplateEmail } from '$lib/server/email';
+import { signResumes } from '$lib/server/resumes';
 import type { RequestHandler } from './$types';
 
-// Role applicants. public.job_applications has RLS on with no policies, so this
-// service-role route is the only way the table is read back or moved along.
-
-const STATUSES = ['new', 'shortlisted', 'forwarded', 'rejected'] as const;
-type Status = (typeof STATUSES)[number];
+// Applicants to TIC's own roles, received and read — there are no stages. A
+// startup's applicants are the startup's alone, so every query here is held to
+// rows with no company: TIC cannot read or delete someone who applied to a
+// startup.
 
 const BUCKET = 'job-applications';
-
-// 'new' is where an application starts, so moving one back to it is an internal
-// correction and nothing is sent.
-const TEMPLATE_FOR: Partial<Record<Status, string>> = {
-	shortlisted: 'job-applicant-shortlisted',
-	forwarded: 'job-applicant-forwarded',
-	rejected: 'job-applicant-rejected'
-};
-
-export const PATCH: RequestHandler = async ({ cookies, request }) => {
-	const ctx = await requireAdmin(cookies);
-
-	const body = (await request.json().catch(() => ({}))) as {
-		id?: string;
-		status?: string;
-		reviewNote?: string;
-	};
-	if (!body.id) error(400, 'Missing application id.');
-	if (!STATUSES.includes(body.status as Status)) error(400, 'Unknown status.');
-
-	const { data: applicant, error: dbError } = await ctx.db
-		.from('job_applications')
-		.update({
-			status: body.status,
-			review_note: body.reviewNote?.trim() || null,
-			reviewed_at: new Date().toISOString()
-		})
-		.eq('id', body.id)
-		.select('email, full_name, job_role, job_company, review_note')
-		.maybeSingle();
-	if (dbError) error(500, dbError.message);
-
-	await logAdminAction(ctx, `moved role applicant to ${body.status}`, {
-		table: 'job_applications',
-		recordId: body.id
-	});
-
-	// Applicants have no account to check, so the email is the only way they
-	// learn where they stand. It cannot fail the request — sendTemplateEmail()
-	// resolves either way and records what happened in email_log.
-	const templateKey = TEMPLATE_FOR[body.status as Status];
-	let email: { status: string; error: string | null } | null = null;
-
-	if (templateKey && applicant?.email) {
-		const result = await sendTemplateEmail({
-			templateKey,
-			to: applicant.email as string,
-			toName: (applicant.full_name as string) ?? '',
-			variables: {
-				fullName: (applicant.full_name as string) ?? '',
-				role: (applicant.job_role as string) ?? '',
-				company: (applicant.job_company as string) ?? '',
-				note: (applicant.review_note as string) ?? ''
-			},
-			context: { table: 'job_applications', recordId: body.id, status: body.status },
-			sentBy: ctx.admin.userId
-		});
-		email = { status: result.status, error: result.error };
-	}
-
-	return json({ ok: true, email });
-};
 
 // Full rows for the CSV export. The page loader deliberately selects a summary —
 // it renders a table, and shipping every applicant's resume path and free-text
@@ -82,11 +19,25 @@ export const GET: RequestHandler = async ({ cookies, url }) => {
 	const ctx = await requireAdmin(cookies);
 	const jobSlug = url.searchParams.get('jobSlug');
 
+	// ?resumes=1: ten-minute links to every resume in view, zipped in the browser.
+	if (url.searchParams.get('resumes')) {
+		let rows = ctx.db.from('job_applications').select('full_name, resume').is('company_id', null);
+		if (jobSlug) rows = rows.eq('job_slug', jobSlug);
+		const { data, error: readError } = await rows;
+		if (readError) error(500, readError.message);
+		const files = await signResumes(data ?? []);
+		await logAdminAction(ctx, `downloaded resumes${jobSlug ? ` for ${jobSlug}` : ''}`, {
+			table: 'job_applications'
+		});
+		return json({ files });
+	}
+
 	let query = ctx.db
 		.from('job_applications')
 		.select(
-			'id, job_slug, job_role, job_company, job_source, full_name, email, phone, applicant_role, portfolio_link, why, start_date, onsite_ok, status, review_note, reviewed_at, created_at'
+			'id, job_slug, job_role, job_company, job_source, full_name, email, phone, applicant_role, portfolio_link, why, start_date, onsite_ok, created_at'
 		)
+		.is('company_id', null)
 		.order('created_at', { ascending: false });
 
 	if (jobSlug) query = query.eq('job_slug', jobSlug);
@@ -113,7 +64,8 @@ export const POST: RequestHandler = async ({ cookies, url }) => {
 	const { data: rows, error: readError } = await ctx.db
 		.from('job_applications')
 		.select('id, resume')
-		.eq('job_slug', jobSlug);
+		.eq('job_slug', jobSlug)
+		.is('company_id', null);
 	if (readError) error(500, readError.message);
 	if (!rows || rows.length === 0) return json({ ok: true, deleted: 0 });
 
@@ -131,7 +83,11 @@ export const POST: RequestHandler = async ({ cookies, url }) => {
 		table: 'job_applications'
 	});
 
-	const { error: dbError } = await ctx.db.from('job_applications').delete().eq('job_slug', jobSlug);
+	const { error: dbError } = await ctx.db
+		.from('job_applications')
+		.delete()
+		.eq('job_slug', jobSlug)
+		.is('company_id', null);
 	if (dbError) error(500, dbError.message);
 
 	return json({ ok: true, deleted: rows.length });
@@ -148,7 +104,9 @@ export const DELETE: RequestHandler = async ({ cookies, url }) => {
 		.from('job_applications')
 		.select('resume')
 		.eq('id', id)
+		.is('company_id', null)
 		.maybeSingle();
+	if (!row) error(404, 'Application not found.');
 
 	const path = (row?.resume as { path?: string } | null)?.path;
 	if (path) await supabaseAdmin.storage.from(BUCKET).remove([path]);
@@ -158,7 +116,11 @@ export const DELETE: RequestHandler = async ({ cookies, url }) => {
 		recordId: id
 	});
 
-	const { error: dbError } = await ctx.db.from('job_applications').delete().eq('id', id);
+	const { error: dbError } = await ctx.db
+		.from('job_applications')
+		.delete()
+		.eq('id', id)
+		.is('company_id', null);
 	if (dbError) error(500, dbError.message);
 
 	return json({ ok: true });

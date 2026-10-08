@@ -1,9 +1,5 @@
 <script lang="ts">
 	import { phoneInput } from '$lib/utils/phone';
-	import { page } from '$app/state';
-	import { getContent } from '$lib/content';
-	import { getJob, type AnyJob } from '$lib/utils/jobPostings';
-	import { onMount } from 'svelte';
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
 	import Turnstile from '$lib/components/Turnstile.svelte';
@@ -16,55 +12,25 @@
 		resumeExtension,
 		submitJobApplication
 	} from '$lib/utils/jobApplications';
-	import { verifyTurnstileToken } from '$lib/utils/turnstile';
+	import type { PageData } from './$types';
 
-	const content = getContent();
+	let { data }: { data: PageData } = $props();
 
-	const slug = $derived(page.params.id ?? '');
+	const job = $derived(data.job);
+	const slug = $derived(job.slug);
 
-	function seedBySlug(s: string): AnyJob | null {
-		const p = [...content.pages.ticJobs.posts, ...content.pages.startupJobs.posts].find(
-			(x) => x.slug === s
-		);
-		if (!p) return null;
-		return {
-			id: `seed_${p.slug}`,
-			slug: p.slug,
-			companyId: '',
-			role: p.role,
-			company: p.company,
-			companySlug: p.companySlug,
-			location: p.location,
-			type: p.type,
-			sector: p.sector,
-			posted: p.posted,
-			description: p.description,
-			applyLink: p.applyLink,
-			createdAt: p.posted,
-			updatedAt: p.posted,
-			source: 'seed' as const
-		};
-	}
-
-	let userJob = $state<AnyJob | null>(null);
-	let resolved = $state(false);
-
-	const job = $derived<AnyJob | null>(userJob ?? seedBySlug(slug));
-
-	onMount(async () => {
-		userJob = await getJob(slug);
-		resolved = true;
-	});
-
-	function formatPosted(iso: string) {
-		const d = new Date(iso);
-		return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+	function formatDate(iso: string) {
+		return new Date(iso).toLocaleDateString('en-GB', {
+			day: 'numeric',
+			month: 'short',
+			year: 'numeric'
+		});
 	}
 
 	// Application panel. A submission posts to /api/job-applications, which
 	// re-runs the human check server-side, stores the resume in the private
-	// job-applications bucket and writes the row the TIC console reviews.
-	const requiresOnsite = $derived(/in-person|on-site|onsite/i.test(job?.location ?? ''));
+	// job-applications bucket and writes the row whoever posted the role reviews.
+	const requiresOnsite = $derived(job.workMode === 'On-site');
 
 	let fullName = $state('');
 	let email = $state('');
@@ -109,8 +75,8 @@
 		if (!currentRole.trim()) e.currentRole = 'Tell us what you do right now.';
 
 		if (!resume) e.resume = 'Attach your resume.';
-		else if (!resumeExtension(resume.name)) e.resume = 'PDF or Word documents only.';
-		else if (resume.size > RESUME_MAX_BYTES) e.resume = 'Your resume must be 5 MB or smaller.';
+		else if (!resumeExtension(resume.name)) e.resume = 'PDF only, please.';
+		else if (resume.size > RESUME_MAX_BYTES) e.resume = 'Your resume must be 2 MB or smaller.';
 
 		if (!why.trim()) e.why = 'A short note is required.';
 		else if (why.trim().length < WHY_MIN) e.why = 'A little more detail, please.';
@@ -176,223 +142,214 @@
 </script>
 
 <svelte:head>
-	<title>{job ? `${job.role} · ${job.company}` : 'Role · IITG TIC'}</title>
+	<title>{job.role} · {job.company}</title>
 </svelte:head>
 
-<section class="detail">
-	<div class="detail__inner">
-		<LinkReveal href="/opportunities" text="← All roles" class="back" />
+<section class="role">
+	<LinkReveal href="/opportunities" text="← All roles" class="back" />
 
-		<div class="layout">
-			<article class="card">
-				{#if !job && resolved}
-					<header class="detail__header">
-						<h1>Role not found</h1>
-						<p>This role may have been filled or removed.</p>
-					</header>
-				{:else if job}
-					<header class="detail__header">
-						<div class="meta-top">
-							<span class="type-pill" class:type-pill--intern={job.type.startsWith('Internship')}
-								>{job.type}</span
+	<header class="head">
+		<p class="tags">
+			<span class="tag" class:tag--intern={job.type === 'Internship'}>{job.type}</span>
+			<span class="tag tag--plain">{job.workMode}</span>
+		</p>
+		<h1>{job.role}</h1>
+		<p class="company">{job.company}</p>
+	</header>
+
+	<dl class="facts">
+		<div>
+			<dt>Location</dt>
+			<dd>{job.location}</dd>
+		</div>
+		{#if job.pay}
+			<div>
+				<dt>Pay</dt>
+				<dd>{job.pay}</dd>
+			</div>
+		{/if}
+		{#if job.sector}
+			<div>
+				<dt>Sector</dt>
+				<dd>{job.sector}</dd>
+			</div>
+		{/if}
+		<div>
+			<dt>{job.closesOn ? 'Apply by' : 'Posted'}</dt>
+			<dd>{formatDate(job.closesOn ?? job.posted)}</dd>
+		</div>
+	</dl>
+
+	<p class="description">{job.description}</p>
+
+	<div class="apply" id="apply">
+		<h2>Apply</h2>
+
+		{#if sent}
+			<div class="sent">
+				<p class="sent__line">Application sent.</p>
+				<p class="sent__note">
+					{job.company} has it. If they want to take it further they will write to {email}.
+				</p>
+			</div>
+		{:else}
+			<form class="form" onsubmit={handleSubmit} novalidate>
+				<label class="field" class:has-error={errors.fullName}>
+					<span class="field__label">
+						<span class="field__name">Full name <em class="req">*</em></span>
+						{#if errors.fullName}<span class="field__error">{errors.fullName}</span>{/if}
+					</span>
+					<input
+						type="text"
+						bind:value={fullName}
+						autocomplete="name"
+						oninput={revalidate}
+						aria-invalid={!!errors.fullName}
+					/>
+				</label>
+
+				<label class="field" class:has-error={errors.email}>
+					<span class="field__label">
+						<span class="field__name">Email <em class="req">*</em></span>
+						{#if errors.email}<span class="field__error">{errors.email}</span>{/if}
+					</span>
+					<input
+						type="email"
+						bind:value={email}
+						autocomplete="email"
+						oninput={revalidate}
+						aria-invalid={!!errors.email}
+					/>
+				</label>
+
+				<label class="field">
+					<span class="field__label">
+						<span class="field__name">Phone <span class="opt">(optional)</span></span>
+					</span>
+					<input type="tel" bind:value={phone} autocomplete="tel" use:phoneInput />
+				</label>
+
+				<label class="field" class:has-error={errors.currentRole}>
+					<span class="field__label">
+						<span class="field__name">Current role or institution <em class="req">*</em></span
+						>
+						{#if errors.currentRole}<span class="field__error">{errors.currentRole}</span
+							>{/if}
+					</span>
+					<input
+						type="text"
+						bind:value={currentRole}
+						placeholder="Final-year M.Tech, IIT Guwahati"
+						oninput={revalidate}
+						aria-invalid={!!errors.currentRole}
+					/>
+				</label>
+
+				<div class="field" class:has-error={errors.resume}>
+					<span class="field__label">
+						<span class="field__name">Resume <em class="req">*</em></span>
+						{#if errors.resume}<span class="field__error">{errors.resume}</span>{/if}
+					</span>
+					<label class="file">
+						<input
+							type="file"
+							class="file__input"
+							accept={RESUME_ACCEPT}
+							onchange={onResume}
+						/>
+						<span class="file__btn">Choose file</span>
+						<span class="file__name">{resume ? resume.name : 'PDF, up to 2 MB'}</span>
+					</label>
+				</div>
+
+				<label class="field">
+					<span class="field__label">
+						<span class="field__name">
+							Portfolio or LinkedIn <span class="opt">(optional)</span>
+						</span>
+					</span>
+					<input type="url" bind:value={link} placeholder="https://" />
+				</label>
+
+				<label class="field" class:has-error={errors.why}>
+					<span class="field__label">
+						<span class="field__name">Why this role <em class="req">*</em></span>
+						{#if errors.why}<span class="field__error">{errors.why}</span>{/if}
+					</span>
+					<textarea
+						rows="4"
+						maxlength={WHY_MAX}
+						bind:value={why}
+						oninput={revalidate}
+						aria-invalid={!!errors.why}
+					></textarea>
+					<span class="field__count">{why.length}/{WHY_MAX}</span>
+				</label>
+
+				<label class="field" class:has-error={errors.startDate}>
+					<span class="field__label">
+						<span class="field__name">Earliest start date <em class="req">*</em></span>
+						{#if errors.startDate}<span class="field__error">{errors.startDate}</span>{/if}
+					</span>
+					<input
+						type="date"
+						bind:value={startDate}
+						onchange={revalidate}
+						aria-invalid={!!errors.startDate}
+					/>
+				</label>
+
+				{#if requiresOnsite}
+					<div class="check-wrap" class:has-error={errors.onsite}>
+						<label class="check">
+							<input type="checkbox" bind:checked={onsite} onchange={revalidate} />
+							<span class="check__text"
+								>I can work from {job.location.split('·')[0].trim()}.</span
 							>
-							<span class="date">Posted {formatPosted(job.posted)}</span>
-						</div>
-						<h1>{job.role}</h1>
-						<p class="company">{job.company}</p>
-						<div class="meta-row">
-							<span>{job.location}</span>
-							<span class="dot" aria-hidden="true">·</span>
-							<span>{job.sector}</span>
-						</div>
-					</header>
-
-					<div class="body">
-						<h2>About the role</h2>
-						<p>{job.description}</p>
+						</label>
+						{#if errors.onsite}<span class="field__error field__error--block"
+								>{errors.onsite}</span
+							>{/if}
 					</div>
 				{/if}
-			</article>
 
-			<aside class="panel">
-				{#if job}
-					<p class="panel__eyebrow">Apply</p>
-					<h2 class="panel__title">Apply for this role</h2>
+				<div class="check-wrap" class:has-error={errors.consent}>
+					<label class="check">
+						<input type="checkbox" bind:checked={consent} onchange={revalidate} />
+						<span class="check__text">
+							I agree that my details and resume may be shared with {job.company}.
+							<em class="req">*</em>
+						</span>
+					</label>
+					{#if errors.consent}<span class="field__error field__error--block"
+							>{errors.consent}</span
+						>{/if}
+				</div>
 
-					{#if sent}
-						<div class="sent">
-							<p class="sent__line">Application received.</p>
-							<p class="sent__note">
-								It is with the IITG-TIC team, who pass it to {job.company}. If they want to take it
-								further they will write to {email} themselves.
-							</p>
-						</div>
-					{:else}
-						<p class="panel__note">
-							Your application reaches {job.company} through IITG-TIC, who pass it on as sent.
-							{job.company} reviews and replies themselves — IITG-TIC does not screen candidates.
-						</p>
+				<div class="captcha-wrap" class:has-error={errors.captcha}>
+					<Turnstile bind:token={turnstileToken} bind:this={captcha} />
+					{#if errors.captcha}<span class="field__error field__error--block"
+							>{errors.captcha}</span
+						>{/if}
+				</div>
 
-						<form class="form" onsubmit={handleSubmit} novalidate>
-							<label class="field" class:has-error={errors.fullName}>
-								<span class="field__label">
-									<span class="field__name">Full name <em class="req">*</em></span>
-									{#if errors.fullName}<span class="field__error">{errors.fullName}</span>{/if}
-								</span>
-								<input
-									type="text"
-									bind:value={fullName}
-									autocomplete="name"
-									oninput={revalidate}
-									aria-invalid={!!errors.fullName}
-								/>
-							</label>
-
-							<label class="field" class:has-error={errors.email}>
-								<span class="field__label">
-									<span class="field__name">Email <em class="req">*</em></span>
-									{#if errors.email}<span class="field__error">{errors.email}</span>{/if}
-								</span>
-								<input
-									type="email"
-									bind:value={email}
-									autocomplete="email"
-									oninput={revalidate}
-									aria-invalid={!!errors.email}
-								/>
-							</label>
-
-							<label class="field">
-								<span class="field__label">
-									<span class="field__name">Phone <span class="opt">(optional)</span></span>
-								</span>
-								<input type="tel" bind:value={phone} autocomplete="tel" use:phoneInput />
-							</label>
-
-							<label class="field" class:has-error={errors.currentRole}>
-								<span class="field__label">
-									<span class="field__name">Current role or institution <em class="req">*</em></span
-									>
-									{#if errors.currentRole}<span class="field__error">{errors.currentRole}</span
-										>{/if}
-								</span>
-								<input
-									type="text"
-									bind:value={currentRole}
-									placeholder="Final-year M.Tech, IIT Guwahati"
-									oninput={revalidate}
-									aria-invalid={!!errors.currentRole}
-								/>
-							</label>
-
-							<div class="field" class:has-error={errors.resume}>
-								<span class="field__label">
-									<span class="field__name">Resume <em class="req">*</em></span>
-									{#if errors.resume}<span class="field__error">{errors.resume}</span>{/if}
-								</span>
-								<label class="file">
-									<input
-										type="file"
-										class="file__input"
-										accept={RESUME_ACCEPT}
-										onchange={onResume}
-									/>
-									<span class="file__btn">Choose file</span>
-									<span class="file__name">{resume ? resume.name : 'PDF or DOC, up to 5 MB'}</span>
-								</label>
-							</div>
-
-							<label class="field">
-								<span class="field__label">
-									<span class="field__name">
-										Portfolio or LinkedIn <span class="opt">(optional)</span>
-									</span>
-								</span>
-								<input type="url" bind:value={link} placeholder="https://" />
-							</label>
-
-							<label class="field" class:has-error={errors.why}>
-								<span class="field__label">
-									<span class="field__name">Why this role <em class="req">*</em></span>
-									{#if errors.why}<span class="field__error">{errors.why}</span>{/if}
-								</span>
-								<textarea
-									rows="4"
-									maxlength={WHY_MAX}
-									bind:value={why}
-									oninput={revalidate}
-									aria-invalid={!!errors.why}
-								></textarea>
-								<span class="field__count">{why.length}/{WHY_MAX}</span>
-							</label>
-
-							<label class="field" class:has-error={errors.startDate}>
-								<span class="field__label">
-									<span class="field__name">Earliest start date <em class="req">*</em></span>
-									{#if errors.startDate}<span class="field__error">{errors.startDate}</span>{/if}
-								</span>
-								<input
-									type="date"
-									bind:value={startDate}
-									onchange={revalidate}
-									aria-invalid={!!errors.startDate}
-								/>
-							</label>
-
-							{#if requiresOnsite}
-								<div class="check-wrap" class:has-error={errors.onsite}>
-									<label class="check">
-										<input type="checkbox" bind:checked={onsite} onchange={revalidate} />
-										<span class="check__text"
-											>I can work from {job.location.split('·')[0].trim()}.</span
-										>
-									</label>
-									{#if errors.onsite}<span class="field__error field__error--block"
-											>{errors.onsite}</span
-										>{/if}
-								</div>
-							{/if}
-
-							<div class="check-wrap" class:has-error={errors.consent}>
-								<label class="check">
-									<input type="checkbox" bind:checked={consent} onchange={revalidate} />
-									<span class="check__text">
-										I agree that my details and resume may be shared with {job.company}.
-										<em class="req">*</em>
-									</span>
-								</label>
-								{#if errors.consent}<span class="field__error field__error--block"
-										>{errors.consent}</span
-									>{/if}
-							</div>
-
-							<div class="captcha-wrap" class:has-error={errors.captcha}>
-								<Turnstile bind:token={turnstileToken} bind:this={captcha} />
-								{#if errors.captcha}<span class="field__error field__error--block"
-										>{errors.captcha}</span
-									>{/if}
-							</div>
-
-							{#if submitError}
-								<p class="form__error" role="alert">{submitError}</p>
-							{/if}
-
-							<ButtonReveal
-								type="submit"
-								text={submitting ? 'Sending…' : 'Send application'}
-								class="submit"
-								loading={submitting}
-							/>
-
-							<p class="form__hint">
-								{job.company} replies to the email above. Nothing else is shared.
-							</p>
-							<p class="form__hint">You'll get a copy at the email above.</p>
-						</form>
-					{/if}
+				{#if submitError}
+					<p class="form__error" role="alert">{submitError}</p>
 				{/if}
-			</aside>
-		</div>
+
+				<ButtonReveal
+					type="submit"
+					text={submitting ? 'Sending…' : 'Send application'}
+					class="submit"
+					loading={submitting}
+				/>
+
+				<p class="form__hint">
+					{job.company} replies to the email above. Nothing else is shared.
+				</p>
+				<p class="form__hint">You'll get a copy at the email above.</p>
+			</form>
+		{/if}
 	</div>
 </section>
 
@@ -400,256 +357,122 @@
 	@use '$styles/variables' as *;
 	@use '$styles/mixins' as *;
 
-	.detail {
-		background: $color-white;
-		color: $color-black;
-		padding: calc(var(--page-shell-top, 104px) + #{$space-8}) $space-8 $space-10;
-		font-family: $font-family-serif;
+	$color-error: #d62828;
 
-		@include breakpoint-down($bp-sm) {
-			padding: calc(var(--page-shell-top, 100px) + #{$space-6}) $space-5 $space-8;
-		}
-	}
-
-	.detail__inner {
-		width: min(100%, $container-lg);
+	.role {
+		width: min(100%, 760px);
 		margin: 0 auto;
-		display: flex;
-		flex-direction: column;
-		gap: $space-5;
-	}
-
-	.layout {
-		display: grid;
-		grid-template-columns: 1.6fr 1fr;
-		gap: $space-5;
-		align-items: start;
-
-		@include breakpoint-down($bp-md) {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	.card {
-		display: flex;
-		flex-direction: column;
-		gap: $space-6;
-		padding: $space-6;
-		border: 1px solid $color-black;
-		background: $color-white;
+		padding: calc(var(--page-shell-top, 104px) + #{$space-8}) $space-6 $space-10;
+		color: $color-black;
+		font-family: $font-family-base;
 
 		@include breakpoint-down($bp-sm) {
-			border: 0;
-			padding: 0;
-			gap: $space-6;
+			padding: calc(var(--page-shell-top, 100px) + #{$space-6}) $space-4 $space-8;
 		}
 	}
 
 	:global(.back) {
 		@include eyebrow;
 		color: $color-black;
-		align-self: flex-start;
 	}
 
-	.detail__header {
+	.head {
+		margin: $space-6 0 $space-6;
+	}
+
+	.tags {
 		display: flex;
-		flex-direction: column;
-		gap: $space-3;
-		padding-bottom: $space-5;
-		border-bottom: 1px solid rgba($color-black, 0.12);
+		flex-wrap: wrap;
+		gap: $space-2;
+		margin: 0 0 $space-4;
 	}
 
-	.meta-top {
-		display: flex;
-		align-items: center;
-		gap: $space-3;
-	}
-
-	.type-pill {
+	.tag {
 		padding: 4px 10px;
 		background: $color-black;
 		color: $color-white;
-		font-family: $font-family-base;
 		font-size: $font-size-xs;
-		font-weight: $font-weight-semibold;
-		letter-spacing: 0.16em;
+		font-weight: $font-weight-bold;
+		letter-spacing: 0.14em;
 		text-transform: uppercase;
 		border-radius: $radius-sm;
 
 		&--intern {
 			background: $color-primary-green;
 		}
+
+		&--plain {
+			background: transparent;
+			color: $color-black;
+			box-shadow: inset 0 0 0 1px $color-black;
+		}
 	}
 
-	.date {
-		font-family: $font-family-base;
-		font-size: $font-size-xs;
-		font-weight: $font-weight-semibold;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		color: rgba($color-black, 0.55);
-	}
-
-	.detail__header h1 {
+	h1 {
 		margin: 0;
-		font-size: clamp(2rem, 5vw, #{$font-size-4xl});
-		line-height: $line-height-tight;
-		font-weight: $font-weight-regular;
-		font-style: italic;
+		font-size: clamp(2.25rem, 7vw, 3.5rem);
+		font-weight: $font-weight-black;
+		line-height: 1.02;
+		letter-spacing: -0.02em;
+		overflow-wrap: anywhere;
 	}
 
 	.company {
+		margin: $space-3 0 0;
+		font-size: $font-size-xl;
+		font-weight: $font-weight-bold;
+	}
+
+	.facts {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+		gap: $space-4;
 		margin: 0;
-		font-family: $font-family-base;
+		padding: $space-5 0;
+		border-top: 2px solid $color-black;
+		border-bottom: 1px solid rgba($color-black, 0.12);
+
+		dt {
+			font-size: $font-size-xs;
+			font-weight: $font-weight-bold;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			color: rgba($color-black, 0.55);
+		}
+
+		dd {
+			margin: 4px 0 0;
+			font-size: $font-size-md;
+			font-weight: $font-weight-semibold;
+			overflow-wrap: anywhere;
+		}
+	}
+
+	.description {
+		margin: $space-6 0 0;
 		font-size: $font-size-lg;
-		font-weight: $font-weight-semibold;
+		line-height: 1.65;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
 	}
 
-	.meta-row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: $space-2;
-		font-family: $font-family-base;
-		font-size: $font-size-sm;
-		color: rgba($color-black, 0.72);
-	}
-
-	.dot {
-		color: rgba($color-black, 0.4);
-	}
-
-	.body {
-		display: flex;
-		flex-direction: column;
-		gap: $space-3;
+	.apply {
+		margin-top: $space-9;
+		padding-top: $space-6;
+		border-top: 2px solid $color-black;
 
 		h2 {
-			@include eyebrow;
+			margin: 0 0 $space-5;
+			font-size: clamp(1.75rem, 5vw, 2.5rem);
+			font-weight: $font-weight-black;
+			letter-spacing: -0.01em;
 		}
-
-		p {
-			margin: 0;
-			font-size: $font-size-md;
-			line-height: $line-height-relaxed;
-			white-space: pre-wrap;
-			max-width: 64ch;
-		}
-	}
-
-	/* ---------------------------------------------------------------- panel */
-
-	$color-error: #d62828;
-
-	.panel {
-		position: sticky;
-		top: calc(var(--page-shell-top, 104px) + #{$space-6});
-		display: flex;
-		flex-direction: column;
-		gap: $space-3;
-		padding: $space-6;
-		border: 1px solid $color-black;
-		background: $color-white;
-
-		@include breakpoint-down($bp-md) {
-			position: static;
-		}
-
-		// On phone the panel becomes an inverted card: black ground, white
-		// text, and every control below flips so it reads on the dark ground.
-		@include breakpoint-down($bp-sm) {
-			background: $color-black;
-			color: $color-white;
-			border-color: $color-black;
-			border-radius: $radius-md;
-			padding: $space-6 $space-5;
-
-			.panel__note {
-				border-bottom-color: rgba($color-white, 0.18);
-				color: rgba($color-white, 0.72);
-			}
-
-			.field__name {
-				color: rgba($color-white, 0.8);
-			}
-
-			.opt {
-				color: rgba($color-white, 0.45);
-			}
-
-			.field input,
-			.field textarea {
-				color: $color-white;
-				border-bottom-color: rgba($color-white, 0.3);
-
-				&::placeholder {
-					color: rgba($color-white, 0.35);
-				}
-
-				&:focus {
-					border-bottom-color: $color-white;
-				}
-			}
-
-			// date pickers render a dark glyph that vanishes on black
-			.field input[type='date']::-webkit-calendar-picker-indicator {
-				filter: invert(1);
-			}
-
-			.field__count,
-			.file__name,
-			.form__hint {
-				color: rgba($color-white, 0.55);
-			}
-
-			.file__btn {
-				border-color: $color-white;
-			}
-
-			.check__text {
-				color: rgba($color-white, 0.8);
-			}
-
-			.check input {
-				accent-color: $color-white;
-			}
-
-			.sent {
-				border-top-color: rgba($color-white, 0.18);
-			}
-
-			.sent__note {
-				color: rgba($color-white, 0.72);
-			}
-		}
-	}
-
-	.panel__eyebrow {
-		@include eyebrow;
-	}
-
-	.panel__title {
-		margin: 0;
-		font-size: $font-size-2xl;
-		line-height: $line-height-tight;
-		font-weight: $font-weight-regular;
-		font-style: italic;
-	}
-
-	.panel__note {
-		margin: 0 0 $space-2;
-		padding-bottom: $space-4;
-		border-bottom: 1px solid rgba($color-black, 0.12);
-		font-family: $font-family-base;
-		font-size: $font-size-sm;
-		line-height: $line-height-relaxed;
-		color: rgba($color-black, 0.72);
 	}
 
 	.form {
 		display: flex;
 		flex-direction: column;
-		gap: $space-4;
-		font-family: $font-family-base;
+		gap: $space-5;
 	}
 
 	.field {
@@ -661,9 +484,9 @@
 		textarea {
 			appearance: none;
 			width: 100%;
-			padding: 8px 2px;
+			padding: 10px 2px;
 			font: inherit;
-			font-size: $font-size-base;
+			font-size: $font-size-md;
 			color: $color-black;
 			background: transparent;
 			border: 0;
@@ -700,8 +523,8 @@
 	}
 
 	.field__name {
-		font-size: $font-size-xs;
-		font-weight: $font-weight-semibold;
+		font-size: $font-size-sm;
+		font-weight: $font-weight-bold;
 		letter-spacing: $letter-spacing-wide;
 		text-transform: uppercase;
 		color: rgba($color-black, 0.8);
@@ -814,16 +637,6 @@
 		--reveal-ray: #{$color-black};
 	}
 
-	// Inverted panel on phone: flip the submit button to white-on-black's opposite
-	@include breakpoint-down($bp-sm) {
-		:global(button.button-reveal.submit) {
-			border-color: $color-white;
-			background: $color-white;
-			color: $color-black;
-			--reveal-ray: #{$color-white};
-		}
-	}
-
 	.form__hint {
 		margin: 0;
 		font-size: $font-size-xs;
@@ -844,20 +657,17 @@
 		display: flex;
 		flex-direction: column;
 		gap: $space-2;
-		padding-top: $space-4;
-		border-top: 1px solid rgba($color-black, 0.12);
 	}
 
 	.sent__line {
 		margin: 0;
-		font-size: $font-size-lg;
-		font-style: italic;
+		font-size: $font-size-2xl;
+		font-weight: $font-weight-black;
 	}
 
 	.sent__note {
 		margin: 0;
-		font-family: $font-family-base;
-		font-size: $font-size-sm;
+		font-size: $font-size-md;
 		line-height: $line-height-relaxed;
 		color: rgba($color-black, 0.72);
 	}

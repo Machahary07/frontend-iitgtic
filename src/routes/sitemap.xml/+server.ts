@@ -1,4 +1,5 @@
 import { getSiteContent } from '$lib/server/siteContent';
+import { listOpenJobs } from '$lib/server/jobs';
 import type { SiteContent } from '$lib/content';
 import type { RequestHandler } from './$types';
 
@@ -30,7 +31,7 @@ const STATIC_ROUTES = [
 	'/terms'
 ];
 
-function buildUrls(content: SiteContent): string[] {
+function buildUrls(content: SiteContent, jobSlugs: string[]): string[] {
 	const urls = [...STATIC_ROUTES];
 
 	for (const p of content.pages.events.posts) urls.push(`/events/${p.slug}`);
@@ -42,17 +43,23 @@ function buildUrls(content: SiteContent): string[] {
 		for (const s of cat.startups) urls.push(`/incubated-startups/${cat.slug}/${s.slug}`);
 	}
 
-	for (const p of content.pages.ticJobs.posts) urls.push(`/opportunities/${p.slug}`);
-	for (const p of content.pages.startupJobs.posts) urls.push(`/opportunities/${p.slug}`);
+	for (const slug of jobSlugs) urls.push(`/opportunities/${slug}`);
 
 	return urls;
 }
 
 export const GET: RequestHandler = async () => {
-	const content = await getSiteContent();
+	const [content, ticJobs, startupJobs] = await Promise.all([
+		getSiteContent(),
+		listOpenJobs('tic'),
+		listOpenJobs('incubatee')
+	]);
 
 	const today = new Date().toISOString().split('T')[0];
-	const urls = buildUrls(content);
+	const urls = buildUrls(
+		content,
+		[...ticJobs, ...startupJobs].map((j) => j.slug)
+	);
 
 	const body = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

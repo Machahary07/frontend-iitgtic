@@ -1,79 +1,39 @@
 import { error, json } from '@sveltejs/kit';
 import { logFounderAction, requireFounder } from '$lib/server/founderGuard';
+import { applicationCount } from '$lib/server/jobs';
+import { cleanJob, type JobFields } from '$lib/utils/jobPostings';
 import type { RequestHandler } from './$types';
 
-// Job postings, written on the server rather than straight from the browser.
-//
-// A founder used to insert into public.jobs with their own session, which was
-// fine while "verified company" was the only gate. It no longer is: a posting
-// now carries an approval state that its author must not be able to set, and
-// that state is easier to keep honest in one place than in a column grant the
-// browser can try its luck against.
-//
-// The queue itself is what tells TIC there is something to look at: it surfaces
-// on /tic-admin/approvals and in the overview counts. No mail is sent from here.
+// A startup's job postings. A role goes live the moment it is saved — the
+// startup is already verified by TIC, so there is nothing left to approve. TIC
+// can still take a role down with a reason (/api/tic-admin/jobs), and a removed
+// role is TIC's: the founder can read why, or delete it, but not edit or reopen it.
 //
 // Every call names the company it is for, and requireFounder checks that against
 // the caller's own — a founder with three startups must not be able to post a
 // role for someone else's by changing one field.
 //
-// POST   { companyId, job }        create, queued for approval
-// PATCH  { companyId, id, job }    edit; queued again
-// DELETE ?companyId=&id=           withdraw a posting
+// POST   { companyId, ...fields }                 create, live straight away
+// PATCH  { companyId, id, ...fields }             edit
+// PATCH  { companyId, id, action: close|reopen }  stop or restart applications
+// DELETE ?companyId=&id=                          delete the role
 
-type JobInput = {
+type Body = Partial<JobFields> & {
 	companyId?: string;
-	role?: string;
-	company?: string;
-	location?: string;
-	type?: string;
-	sector?: string;
-	description?: string;
-	applyLink?: string;
+	id?: string;
+	action?: 'close' | 'reopen';
 };
 
-function isSafeApplyLink(value: string): boolean {
-	const v = value.trim().toLowerCase();
-	return v.startsWith('https://') || v.startsWith('http://') || v.startsWith('mailto:');
-}
-
-function clean(
-	input: JobInput
-): { ok: true; row: Record<string, string> } | { ok: false; error: string } {
-	const role = (input.role ?? '').trim();
-	const company = (input.company ?? '').trim();
-	const description = (input.description ?? '').trim();
-	const applyLink = (input.applyLink ?? '').trim();
-
-	if (!role || !company || !description) {
-		return { ok: false, error: 'Role, company and description are required.' };
-	}
-	if (!isSafeApplyLink(applyLink)) {
-		return { ok: false, error: 'Apply link must start with https://, http:// or mailto:.' };
-	}
-
-	return {
-		ok: true,
-		row: {
-			role,
-			company,
-			location: (input.location ?? '').trim(),
-			type: input.type === 'Internship' ? 'Internship' : 'Full-time',
-			sector: (input.sector ?? '').trim(),
-			description,
-			apply_link: applyLink
-		}
-	};
+function mustBeVerified(status: string) {
+	if (status !== 'verified') error(403, 'TIC has not verified this startup yet.');
 }
 
 export const POST: RequestHandler = async ({ cookies, request }) => {
-	const body = (await request.json().catch(() => ({}))) as JobInput;
+	const body = (await request.json().catch(() => ({}))) as Body;
 	const ctx = await requireFounder(cookies, body.companyId);
-	if (ctx.company.status !== 'verified') {
-		return json({ ok: false, error: 'TIC has not verified this startup yet.' }, { status: 403 });
-	}
+	mustBeVerified(ctx.company.status);
 
-	const parsed = clean(body);
+	const parsed = cleanJob(body, { requireCompany: true });
 	if (!parsed.ok) return json({ ok: false, error: parsed.error }, { status: 400 });
 
 	const { data: company } = await ctx.db
@@ -86,16 +46,16 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 		.from('jobs')
 		.insert({
 			...parsed.row,
+			owner: 'incubatee',
 			company_id: ctx.companyId,
 			company_slug: (company?.company_slug as string) || 'company',
-			status: 'pending'
+			status: 'open'
 		})
-		.select('id, role, slug, status')
+		.select('id, role, slug')
 		.single();
-
 	if (dbError) error(500, dbError.message);
 
-	await logFounderAction(ctx, `submitted the role "${parsed.row.role}" for approval`, {
+	await logFounderAction(ctx, `posted the role "${parsed.row.role}"`, {
 		table: 'jobs',
 		recordId: data.id as string,
 		after: parsed.row
@@ -104,47 +64,68 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 };
 
 export const PATCH: RequestHandler = async ({ cookies, request }) => {
-	const body = (await request.json().catch(() => ({}))) as JobInput & { id?: string };
+	const body = (await request.json().catch(() => ({}))) as Body;
 	const ctx = await requireFounder(cookies, body.companyId);
+	mustBeVerified(ctx.company.status);
 	if (!body.id) error(400, 'Missing job id.');
-
-	const parsed = clean(body);
-	if (!parsed.ok) return json({ ok: false, error: parsed.error }, { status: 400 });
 
 	// The company filter is the whole boundary here — the service key would
 	// otherwise happily edit another startup's posting.
-	// Queued explicitly rather than left to the database trigger: this route holds
-	// the service key, and the trigger exempts the service role so that an admin
-	// approving a posting — or renaming a company across every posting — does not
-	// read as a founder's edit.
-	const { data, error: dbError } = await ctx.db
+	const { data: current } = await ctx.db
 		.from('jobs')
-		.update({
-			...parsed.row,
-			status: 'pending',
-			review_note: null,
-			reviewed_at: null,
-			reviewed_by: null,
-			submitted_at: new Date().toISOString()
-		})
+		.select('id, role, status, max_applicants')
 		.eq('id', body.id)
 		.eq('company_id', ctx.companyId)
-		.select('id, role, slug, status')
 		.maybeSingle();
+	if (!current) return json({ ok: false, error: 'Role not found.' }, { status: 404 });
+	if (current.status === 'removed') {
+		return json(
+			{ ok: false, error: 'TIC removed this role, so it cannot be changed.' },
+			{ status: 409 }
+		);
+	}
 
-	if (dbError) error(500, dbError.message);
-	if (!data) return json({ ok: false, error: 'Role not found.' }, { status: 404 });
-
-	await logFounderAction(
-		ctx,
-		`edited the role "${parsed.row.role}", sending it back for approval`,
-		{
-			table: 'jobs',
-			recordId: body.id,
-			after: parsed.row
+	if (body.action === 'close' || body.action === 'reopen') {
+		const status = body.action === 'close' ? 'closed' : 'open';
+		if (
+			status === 'open' &&
+			(await applicationCount(body.id)) >= (current.max_applicants as number)
+		) {
+			return json(
+				{ ok: false, error: 'This role has reached its application limit, so it stays closed.' },
+				{ status: 409 }
+			);
 		}
-	);
-	return json({ ok: true, job: data });
+		// closed_at starts the 90-day resume clock; reopening stops it.
+		const { error: dbError } = await ctx.db
+			.from('jobs')
+			.update({
+				status,
+				closed_at: status === 'closed' ? new Date().toISOString() : null,
+				resumes_warned_at: null
+			})
+			.eq('id', body.id);
+		if (dbError) error(500, dbError.message);
+		await logFounderAction(
+			ctx,
+			`${body.action === 'close' ? 'closed' : 'reopened'} the role "${current.role as string}"`,
+			{ table: 'jobs', recordId: body.id, after: { status } }
+		);
+		return json({ ok: true });
+	}
+
+	const parsed = cleanJob(body, { requireCompany: true });
+	if (!parsed.ok) return json({ ok: false, error: parsed.error }, { status: 400 });
+
+	const { error: dbError } = await ctx.db.from('jobs').update(parsed.row).eq('id', body.id);
+	if (dbError) error(500, dbError.message);
+
+	await logFounderAction(ctx, `edited the role "${parsed.row.role}"`, {
+		table: 'jobs',
+		recordId: body.id,
+		after: parsed.row
+	});
+	return json({ ok: true });
 };
 
 export const DELETE: RequestHandler = async ({ cookies, url }) => {
@@ -163,7 +144,7 @@ export const DELETE: RequestHandler = async ({ cookies, url }) => {
 	if (dbError) error(500, dbError.message);
 	if (!data) return json({ ok: false, error: 'Role not found.' }, { status: 404 });
 
-	await logFounderAction(ctx, `withdrew the role "${data.role as string}"`, {
+	await logFounderAction(ctx, `deleted the role "${data.role as string}"`, {
 		table: 'jobs',
 		recordId: id
 	});

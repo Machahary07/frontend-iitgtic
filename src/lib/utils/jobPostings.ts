@@ -1,171 +1,163 @@
-// Job postings as the public boards read them.
+// Job postings: one table, two owners.
 //
-// Startup Jobs is the union of the seed posts in content.json and every approved
-// company posting. RLS does the gatekeeping: a row is visible here only once TIC
-// has both verified the company and approved the posting, so a pending or
-// rejected role cannot leak onto the board through this path.
+// owner 'tic' is the centre's own roles, written in the TIC console. owner
+// 'incubatee' is a startup's roles, written in the founder console. Both go live
+// the moment they are saved; the public boards read them server-side
+// (src/lib/server/jobs.ts) and everyone applies through the same form.
 //
-// TIC Jobs is the centre's own openings, which are curated content rather than
-// company submissions and never touch the table.
-//
-// Writing a posting lives in the founder console instead — /api/founder/jobs —
-// because a posting's approval state must not be settable by its author.
+// This file is shared by both consoles and the server routes: the shape of a
+// posting, its fixed choices, and the one validation every write goes through.
 
-import { getContent } from '$lib/content';
-import { supabase } from '$lib/supabaseClient';
+export const JOB_TYPES = ['Full-time', 'Part-time', 'Internship'] as const;
+export const WORK_MODES = ['On-site', 'Hybrid', 'Remote'] as const;
 
-export type JobType = 'Full-time' | 'Internship';
+export type JobType = (typeof JOB_TYPES)[number];
+export type WorkMode = (typeof WORK_MODES)[number];
+export type JobOwner = 'tic' | 'incubatee';
+export type JobStatus = 'open' | 'closed' | 'removed';
 
-export type PostedJob = {
+/** A posting as the public sees it. */
+export type PublicJob = {
 	id: string;
 	slug: string;
-	companyId: string;
+	owner: JobOwner;
 	role: string;
 	company: string;
-	companySlug: string;
 	location: string;
-	type: string;
+	type: JobType;
+	workMode: WorkMode;
+	pay: string;
+	closesOn: string | null;
 	sector: string;
 	posted: string;
 	description: string;
-	applyLink: string;
-	createdAt: string;
-	updatedAt: string;
 };
 
-export type AnyJob = PostedJob & { source: 'seed' | 'user' };
+export const PUBLIC_JOB_COLUMNS =
+	'id, slug, owner, role, company, location, type, work_mode, pay, closes_on, sector, posted, description';
 
-type JobRow = {
+export type PublicJobRow = {
 	id: string;
-	company_id: string;
 	slug: string;
+	owner: JobOwner;
 	role: string;
 	company: string;
-	company_slug: string;
 	location: string;
-	type: string;
+	type: JobType;
+	work_mode: WorkMode;
+	pay: string;
+	closes_on: string | null;
 	sector: string;
 	posted: string;
 	description: string;
-	apply_link: string;
-	created_at: string;
-	updated_at: string;
 };
 
-const COLUMNS =
-	'id, company_id, slug, role, company, company_slug, location, type, sector, posted, description, apply_link, created_at, updated_at';
-
-function toJob(row: JobRow): PostedJob {
+export function toPublicJob(row: PublicJobRow): PublicJob {
 	return {
 		id: row.id,
 		slug: row.slug,
-		companyId: row.company_id,
+		owner: row.owner,
 		role: row.role,
 		company: row.company,
-		companySlug: row.company_slug,
 		location: row.location,
 		type: row.type,
+		workMode: row.work_mode,
+		pay: row.pay,
+		closesOn: row.closes_on,
 		sector: row.sector,
 		posted: row.posted,
-		description: row.description,
-		applyLink: row.apply_link,
-		createdAt: row.created_at,
-		updatedAt: row.updated_at
+		description: row.description
 	};
 }
 
-// A content-authored post (seed startup roles, and every TIC role) in the same
-// shape the boards render.
-type ContentPost = {
-	slug: string;
+/** What the posting form edits. */
+export type JobFields = {
 	role: string;
 	company: string;
-	companySlug: string;
+	type: JobType;
+	workMode: WorkMode;
 	location: string;
-	type: string;
 	sector: string;
-	posted: string;
+	pay: string;
+	closesOn: string;
+	maxApplicants: number;
 	description: string;
-	applyLink: string;
 };
 
-function fromContent(p: ContentPost): AnyJob {
+/** Every role closes itself at this many applicants; a poster may set fewer. */
+export const MAX_APPLICANTS = 200;
+
+export const EMPTY_JOB: JobFields = {
+	role: '',
+	company: '',
+	type: 'Full-time',
+	workMode: 'On-site',
+	location: '',
+	sector: '',
+	pay: '',
+	closesOn: '',
+	maxApplicants: MAX_APPLICANTS,
+	description: ''
+};
+
+/** Today in the site's time zone, as YYYY-MM-DD — what a closing date compares to. */
+export function today(): string {
+	return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+}
+
+/** Past its closing date: off the board, though nobody closed it. */
+export function isExpired(closesOn: string | null): boolean {
+	return Boolean(closesOn) && (closesOn as string) < today();
+}
+
+/**
+ * The one check every write goes through, TIC's and founders' alike. Returns
+ * the columns to write, or the first thing wrong with the input.
+ */
+export function cleanJob(
+	input: Partial<Record<keyof JobFields, unknown>>,
+	{ requireCompany }: { requireCompany: boolean }
+): { ok: true; row: Record<string, string | number | null> } | { ok: false; error: string } {
+	const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '');
+
+	const role = str(input.role);
+	const company = str(input.company);
+	const description = str(input.description);
+	const location = str(input.location);
+	const closesOn = str(input.closesOn);
+	const type = str(input.type) as JobType;
+	const workMode = str(input.workMode) as WorkMode;
+	const maxApplicants = Number(input.maxApplicants ?? MAX_APPLICANTS);
+
+	if (!role) return { ok: false, error: 'Give the role a title.' };
+	if (requireCompany && !company) return { ok: false, error: 'Company name is required.' };
+	if (!JOB_TYPES.includes(type)) return { ok: false, error: 'Choose a type.' };
+	if (!WORK_MODES.includes(workMode)) return { ok: false, error: 'Choose a work mode.' };
+	if (!location) return { ok: false, error: 'Location is required.' };
+	if (!description) return { ok: false, error: 'Describe the role.' };
+	if (closesOn && !/^\d{4}-\d{2}-\d{2}$/.test(closesOn)) {
+		return { ok: false, error: 'Closing date is not a valid date.' };
+	}
+	if (closesOn && closesOn < today()) {
+		return { ok: false, error: 'Closing date is already past.' };
+	}
+	if (!Number.isInteger(maxApplicants) || maxApplicants < 1 || maxApplicants > MAX_APPLICANTS) {
+		return { ok: false, error: `Application limit must be between 1 and ${MAX_APPLICANTS}.` };
+	}
+
 	return {
-		id: `seed_${p.slug}`,
-		slug: p.slug,
-		companyId: '',
-		role: p.role,
-		company: p.company,
-		companySlug: p.companySlug,
-		location: p.location,
-		type: p.type,
-		sector: p.sector,
-		posted: p.posted,
-		description: p.description,
-		applyLink: p.applyLink,
-		createdAt: p.posted,
-		updatedAt: p.posted,
-		source: 'seed' as const
+		ok: true,
+		row: {
+			role: role.slice(0, 160),
+			...(requireCompany ? { company: company.slice(0, 160) } : {}),
+			type,
+			work_mode: workMode,
+			location: location.slice(0, 160),
+			sector: str(input.sector).slice(0, 160),
+			pay: str(input.pay).slice(0, 120),
+			closes_on: closesOn || null,
+			max_applicants: maxApplicants,
+			description: description.slice(0, 5000)
+		}
 	};
-}
-
-// Roles at the incubation centre itself, edited in the admin console.
-export function ticJobs(): AnyJob[] {
-	return (getContent().pages.ticJobs.posts as ContentPost[]).map(fromContent).sort(byPostedDesc);
-}
-
-export function seedStartupJobs(): AnyJob[] {
-	return getContent().pages.startupJobs.posts.map((p) => ({
-		id: `seed_${p.slug}`,
-		slug: p.slug,
-		companyId: '',
-		role: p.role,
-		company: p.company,
-		companySlug: p.companySlug,
-		location: p.location,
-		type: p.type,
-		sector: p.sector,
-		posted: p.posted,
-		description: p.description,
-		applyLink: p.applyLink,
-		createdAt: p.posted,
-		updatedAt: p.posted,
-		source: 'seed' as const
-	}));
-}
-
-function byPostedDesc(a: AnyJob, b: AnyJob) {
-	return a.posted < b.posted ? 1 : a.posted > b.posted ? -1 : 0;
-}
-
-export async function getStartupJobs(): Promise<AnyJob[]> {
-	const { data, error } = await supabase.from('jobs').select(COLUMNS).order('posted', {
-		ascending: false
-	});
-
-	// A failed fetch should not blank the page — fall back to the seed posts.
-	if (error) return seedStartupJobs();
-
-	const live: AnyJob[] = (data as JobRow[]).map((row) => ({
-		...toJob(row),
-		source: 'user' as const
-	}));
-	return [...live, ...seedStartupJobs()].sort(byPostedDesc);
-}
-
-export async function getJob(slug: string): Promise<AnyJob | null> {
-	// Both boards share /opportunities/[id] for the detail page, so a slug is
-	// looked up across the centre's roles and the seed startup roles before the
-	// table is queried.
-	const authored = [...ticJobs(), ...seedStartupJobs()].find((j) => j.slug === slug);
-	if (authored) return authored;
-
-	const { data, error } = await supabase
-		.from('jobs')
-		.select(COLUMNS)
-		.eq('slug', slug)
-		.maybeSingle();
-
-	if (error || !data) return null;
-	return { ...toJob(data as JobRow), source: 'user' as const };
 }

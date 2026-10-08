@@ -10,17 +10,15 @@
 
 export const WHY_MIN = 40;
 export const WHY_MAX = 800;
-export const RESUME_MAX_BYTES = 5 * 1024 * 1024;
+// TIC stores every resume, so they are kept small: PDF only, 2 MB.
+export const RESUME_MAX_BYTES = 2 * 1024 * 1024;
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// The bucket only accepts these three types, and a .doc can arrive from the
-// browser as application/octet-stream — so the content type is decided by the
-// extension here rather than taken from the File.
+// The bucket accepts PDF only. The content type is decided by the extension
+// here rather than taken from the File, and the server checks the bytes too.
 export const RESUME_TYPES: Record<string, string> = {
-	'.pdf': 'application/pdf',
-	'.doc': 'application/msword',
-	'.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+	'.pdf': 'application/pdf'
 };
 
 export const RESUME_ACCEPT = Object.keys(RESUME_TYPES).join(',');

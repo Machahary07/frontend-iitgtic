@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { loadGsap, prefersReducedMotion } from '$lib/utils/animation';
-	import type { AnyJob } from '$lib/utils/jobPostings';
+	import type { PublicJob } from '$lib/utils/jobPostings';
 
 	// The shared job listing behind /opportunities/tic-jobs and
 	// /opportunities/startup-jobs. Both boards are the same thing — hero, type
@@ -16,9 +16,9 @@
 		page,
 		posts,
 		searchLabel = 'Search open roles'
-	}: { page: BoardContent; posts: AnyJob[]; searchLabel?: string } = $props();
+	}: { page: BoardContent; posts: PublicJob[]; searchLabel?: string } = $props();
 
-	const types = $derived(['All', ...Array.from(new Set(posts.map((p) => p.type.split(' ·')[0])))]);
+	const types = $derived(['All', ...Array.from(new Set(posts.map((p) => p.type)))]);
 	let activeType = $state<string>('All');
 	let query = $state('');
 
@@ -31,7 +31,7 @@
 	const visiblePosts = $derived.by(() => {
 		const q = query.trim().toLowerCase();
 		return posts.filter((p) => {
-			if (activeType !== 'All' && !p.type.startsWith(activeType)) return false;
+			if (activeType !== 'All' && p.type !== activeType) return false;
 			if (!q) return true;
 			return (
 				p.role.toLowerCase().includes(q) ||
@@ -39,6 +39,7 @@
 				p.location.toLowerCase().includes(q) ||
 				p.sector.toLowerCase().includes(q) ||
 				p.type.toLowerCase().includes(q) ||
+				p.workMode.toLowerCase().includes(q) ||
 				p.description.toLowerCase().includes(q)
 			);
 		});
@@ -162,7 +163,7 @@
 							onblur={() => animate(i, 0)}
 						>
 							<div class="row__top">
-								<span class="row__type" class:row__type--intern={post.type.startsWith('Internship')}
+								<span class="row__type" class:row__type--intern={post.type === 'Internship'}
 									>{post.type}</span
 								>
 								<span class="row__date">{formatPosted(post.posted)}</span>
@@ -182,7 +183,15 @@
 								<span class="row__dot" aria-hidden="true">·</span>
 								<span class="row__location">{post.location}</span>
 								<span class="row__dot" aria-hidden="true">·</span>
-								<span class="row__sector">{post.sector}</span>
+								<span>{post.workMode}</span>
+								{#if post.pay}
+									<span class="row__dot" aria-hidden="true">·</span>
+									<span>{post.pay}</span>
+								{/if}
+								{#if post.sector}
+									<span class="row__dot" aria-hidden="true">·</span>
+									<span class="row__sector">{post.sector}</span>
+								{/if}
 							</div>
 
 							<p class="row__description">{post.description}</p>

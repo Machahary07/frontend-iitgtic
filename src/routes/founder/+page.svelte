@@ -4,7 +4,6 @@
 	import Clock from '@lucide/svelte/icons/clock';
 	import CheckCircle from '@lucide/svelte/icons/circle-check';
 	import XCircle from '@lucide/svelte/icons/circle-x';
-	import Briefcase from '@lucide/svelte/icons/briefcase';
 	import UserSearch from '@lucide/svelte/icons/user-search';
 	import Users from '@lucide/svelte/icons/users';
 	import FileText from '@lucide/svelte/icons/file-text';
@@ -25,27 +24,27 @@
 	const tiles = $derived([
 		{
 			label: 'Live roles',
-			value: data.jobs.approved,
+			value: data.jobs.live,
 			icon: CheckCircle,
 			tone: 'good',
 			href: resolve('/founder/jobs'),
 			cta: 'Manage'
 		},
 		{
-			label: 'Waiting for TIC approval',
-			value: data.jobs.pending,
+			label: 'Closed roles',
+			value: data.jobs.closed,
 			icon: Clock,
 			tone: 'warn',
 			href: resolve('/founder/jobs'),
 			cta: 'Review'
 		},
 		{
-			label: 'Sent back by TIC',
-			value: data.jobs.rejected,
+			label: 'Removed by TIC',
+			value: data.jobs.removed,
 			icon: XCircle,
 			tone: 'bad',
 			href: resolve('/founder/jobs'),
-			cta: 'Fix'
+			cta: 'See why'
 		},
 		{
 			label: 'Applicants',
@@ -155,14 +154,10 @@
 	<section class="panel">
 		<h2 class="panel__title">What needs TIC sign-off</h2>
 		<p class="lede">
-			Nothing from this console reaches the public site on its own. A TIC admin approves each of
-			these before anyone outside your team sees it.
+			A TIC admin approves each of these before it takes effect. Job postings go live straight
+			away.
 		</p>
 		<ul class="rules">
-			<li>
-				<span class="rules__icon"><Briefcase size={15} strokeWidth={1.9} /></span> A new job posting,
-				and every later edit to one
-			</li>
 			<li>
 				<span class="rules__icon"><Users size={15} strokeWidth={1.9} /></span> Anyone you add to your
 				team

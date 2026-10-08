@@ -808,43 +808,30 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 	},
 
 	{
-		key: 'role-decision',
-		name: 'Job posting approved / sent back',
-		description:
-			'Tells a founder whether TIC approved a role they posted, or sent it back with a reason.',
-		trigger: 'Admin approves or refuses a job posting in Approvals',
+		key: 'role-removed',
+		name: 'Job posting removed by TIC',
+		description: 'Tells a founder TIC took one of their roles off the board, and why.',
+		trigger: 'Admin removes a startup role in Job postings',
 		group: 'Founder console',
 		variables: [
 			{ name: 'contactName', description: 'Founder or contact name', sample: 'Rahul Bora' },
 			{ name: 'role', description: 'Role title', sample: 'Lab Research Intern' },
 			{ name: 'companyName', description: 'Startup name', sample: 'Brahmaputra Bio' },
-			{ name: 'approved', description: 'Set when approved, empty when sent back', sample: 'yes' },
-			{ name: 'reason', description: 'Why it was sent back (dropped if empty)', sample: '' }
+			{
+				name: 'reason',
+				description: 'Why it was removed',
+				sample: 'The stipend is below the centre minimum.'
+			}
 		],
-		subject:
-			'{{#if approved}}Your role “{{role}}” is live{{else}}Your role “{{role}}” needs a change{{/if}}',
+		subject: 'Your role “{{role}}” was taken down',
 		...fromBlocks([
-			{ type: 'sticker', tone: 'good', text: 'Approved', showIf: 'approved' },
-			{ type: 'sticker', tone: 'bad', text: 'Sent back', hideIf: 'approved' },
-			{ type: 'heading', text: 'Your role is _on the board_', showIf: 'approved' },
-			{ type: 'heading', text: 'Your role _needs a change_', hideIf: 'approved' },
+			{ type: 'sticker', tone: 'bad', text: 'Removed' },
+			{ type: 'heading', text: 'Your role is _off the board_' },
 			{
 				type: 'lede',
-				text: '“{{role}}” at {{companyName}} is now live on the opportunities page.',
-				showIf: 'approved'
+				text: 'TIC removed “{{role}}” at {{companyName}} from the opportunities page. Applicants already received stay in your console.'
 			},
-			{
-				type: 'lede',
-				text: 'TIC looked at “{{role}}” at {{companyName}} and sent it back before it goes public.',
-				hideIf: 'approved'
-			},
-			{
-				type: 'callout',
-				tone: 'bad',
-				label: 'What to change',
-				text: '{{reason}}',
-				showIf: 'reason'
-			},
+			{ type: 'callout', tone: 'bad', label: 'Reason', text: '{{reason}}' },
 			{ type: 'button', label: 'Manage your roles', href: '{{siteUrl}}/founder/jobs' },
 			SIGN_OFF
 		])
@@ -941,6 +928,35 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		])
 	},
 
+	{
+		key: 'new-tic-role-applicant',
+		name: 'New applicant for a TIC role',
+		description: 'Tells the operating inbox someone applied to one of the centre’s own roles.',
+		trigger: 'Someone applies to a role TIC posted',
+		group: 'Admin',
+		variables: [
+			{ name: 'role', description: 'Role title', sample: 'Programme Associate' },
+			{ name: 'applicantName', description: 'Applicant name', sample: 'Meera Das' },
+			{ name: 'applicantEmail', description: 'Applicant email', sample: 'meera@example.com' },
+			{ name: 'applicantRole', description: 'Applying as (dropped if empty)', sample: 'Analyst' }
+		],
+		subject: 'New applicant for {{role}}',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'info', text: 'New applicant' },
+			{ type: 'heading', text: 'Someone applied to _{{role}}_' },
+			{
+				type: 'details',
+				title: 'Applicant',
+				items: [
+					'Name: {{applicantName}}',
+					'Email: {{applicantEmail}}',
+					'Currently: {{applicantRole}}'
+				]
+			},
+			{ type: 'button', label: 'See responses', href: '{{siteUrl}}/tic-admin/job-applications' }
+		])
+	},
+
 	// --- role applicants ----------------------------------------------------
 	{
 		key: 'job-application-received',
@@ -960,7 +976,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 			{ type: 'heading', text: 'Thanks, _{{fullName}}_' },
 			{
 				type: 'lede',
-				text: 'Your application for **{{role}}** at **{{company}}** has reached us. We will be in touch if you are shortlisted.'
+				text: 'Your application for **{{role}}** at **{{company}}** has been received. If they want to take it further, they will write to you.'
 			},
 			{ type: 'button', label: 'View the role', href: '{{jobUrl}}' },
 			{ type: 'link', label: 'Browse more roles', href: '{{siteUrl}}/opportunities' },
@@ -968,85 +984,27 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		])
 	},
 	{
-		key: 'job-applicant-shortlisted',
-		name: 'Applicant shortlisted',
-		description: 'Tells a role applicant they are on the shortlist.',
-		trigger: 'An admin moves a role applicant to Shortlisted',
+		key: 'resumes-clearing-soon',
+		name: 'Resumes are about to be cleared',
+		description:
+			'Warns whoever posted a role that its applicants’ resumes are deleted in a week, so they can download them first.',
+		trigger: '83 days after a role ends (closed, removed, full or past its closing date)',
 		group: 'Role applicants',
 		variables: [
-			{ name: 'fullName', description: 'Applicant name', sample: 'Priya Das' },
-			{ name: 'role', description: 'Role applied for', sample: 'Embedded Systems Engineer' },
-			{ name: 'company', description: 'Hiring company', sample: 'Northeast Robotics' },
-			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' }
+			{ name: 'role', description: 'Role title', sample: 'Lab Research Intern' },
+			{ name: 'count', description: 'How many resumes', sample: '37' },
+			{ name: 'clearOn', description: 'The day they are deleted', sample: '18 Jan 2027' },
+			{ name: 'manageUrl', description: 'Where to download them', sample: '/founder/applicants' }
 		],
-		subject: 'You have been shortlisted for {{role}}',
+		subject: 'Resumes for “{{role}}” are deleted on {{clearOn}}',
 		...fromBlocks([
-			{ type: 'sticker', tone: 'good', text: 'Shortlisted' },
-			{ type: 'heading', text: 'You are on the _shortlist_' },
+			{ type: 'sticker', tone: 'bad', text: 'Download soon' },
+			{ type: 'heading', text: 'Resumes are cleared _in a week_' },
 			{
 				type: 'lede',
-				text: 'Hi {{fullName}}, you have been shortlisted for **{{role}}** at {{company}}. The next step is a conversation with the team.'
+				text: '“{{role}}” ended a while ago. Its {{count}} resumes are deleted on **{{clearOn}}** to keep storage in check. The applicants’ names and details stay.'
 			},
-			{
-				type: 'callout',
-				tone: 'info',
-				label: 'Next step',
-				text: 'Expect an email or a call from the startup within a few days.'
-			},
-			{ type: 'callout', tone: 'info', label: 'Note', text: '{{note}}', showIf: 'note' },
-			SIGN_OFF
-		])
-	},
-	{
-		key: 'job-applicant-forwarded',
-		name: 'Application sent to the company',
-		description: 'Tells a role applicant their application has gone directly to the startup.',
-		trigger: 'An admin moves a role applicant to Forwarded',
-		group: 'Role applicants',
-		variables: [
-			{ name: 'fullName', description: 'Applicant name', sample: 'Priya Das' },
-			{ name: 'role', description: 'Role applied for', sample: 'Embedded Systems Engineer' },
-			{ name: 'company', description: 'Hiring company', sample: 'Northeast Robotics' },
-			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' }
-		],
-		subject: 'Your application has gone to {{company}}',
-		...fromBlocks([
-			{ type: 'sticker', tone: 'info', text: 'With the startup' },
-			{ type: 'heading', text: 'Your application is _with the team_' },
-			{
-				type: 'lede',
-				text: 'We have passed your application for **{{role}}** directly to {{company}}. They will contact you if they would like to take it further.'
-			},
-			{ type: 'callout', tone: 'info', label: 'Note', text: '{{note}}', showIf: 'note' },
-			SIGN_OFF
-		])
-	},
-	{
-		key: 'job-applicant-rejected',
-		name: 'Applicant not taken forward',
-		description: 'Tells a role applicant the startup is not taking their application forward.',
-		trigger: 'An admin moves a role applicant to Rejected',
-		group: 'Role applicants',
-		variables: [
-			{ name: 'fullName', description: 'Applicant name', sample: 'Priya Das' },
-			{ name: 'role', description: 'Role applied for', sample: 'Embedded Systems Engineer' },
-			{ name: 'company', description: 'Hiring company', sample: 'Northeast Robotics' },
-			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' }
-		],
-		subject: 'Update on your {{role}} application',
-		...fromBlocks([
-			{ type: 'sticker', tone: 'bad', text: 'Update' },
-			{ type: 'heading', text: 'Thank you for _applying_' },
-			{
-				type: 'lede',
-				text: 'Hi {{fullName}}, the team has decided not to take your application for **{{role}}** forward this time.'
-			},
-			{ type: 'callout', tone: 'bad', label: 'Feedback', text: '{{note}}', showIf: 'note' },
-			{
-				type: 'text',
-				text: 'New roles open at our startups every month — we would love to see you apply again.'
-			},
-			{ type: 'button', label: 'See open roles', href: '{{siteUrl}}/opportunities' },
+			{ type: 'button', label: 'Download all resumes', href: '{{manageUrl}}' },
 			SIGN_OFF
 		])
 	},

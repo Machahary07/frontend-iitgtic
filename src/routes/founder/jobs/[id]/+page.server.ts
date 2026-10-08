@@ -15,7 +15,7 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 	const { data } = await founderDb(founder.userId)
 		.from('jobs')
 		.select(
-			'id, role, company, location, type, sector, description, apply_link, status, review_note'
+			'id, role, company, location, type, work_mode, sector, pay, closes_on, max_applicants, description, status, removed_reason'
 		)
 		.eq('id', params.id)
 		.eq('company_id', activeCompanyId)

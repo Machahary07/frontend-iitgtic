@@ -1777,8 +1777,7 @@
 				"intro": "Open positions and internships at startups currently being incubated at IITG-TIC. Hiring is small and specific — most teams are under twenty people. If something fits, apply directly to the team."
 			},
 			"listEyebrow": "Open roles",
-			"emptyMessage": "No open roles right now. Check back in a couple of weeks — the cohort hires in bursts.",
-			"posts": []
+			"emptyMessage": "No open roles right now. Check back in a couple of weeks — the cohort hires in bursts."
 		},
 		"ticJobs": {
 			"heading": "TIC Jobs",
@@ -1790,8 +1789,7 @@
 				"intro": "Positions, internships and project roles at the Technology Incubation Centre itself — the small team that runs programmes, partnerships and the day-to-day work of incubation."
 			},
 			"listEyebrow": "Open roles",
-			"emptyMessage": "No openings at the centre right now. New roles are posted here first — check back, or write to tic@iitg.ac.in with what you would like to work on.",
-			"posts": []
+			"emptyMessage": "No openings at the centre right now. New roles are posted here first — check back, or write to tic@iitg.ac.in with what you would like to work on."
 		},
 		"programs": {
 			"heading": "Schemes & Programs",

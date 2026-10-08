@@ -13,6 +13,7 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 		.from('job_applications')
 		.select('*')
 		.eq('id', params.id)
+		.is('company_id', null)
 		.maybeSingle();
 
 	if (dbError) error(500, dbError.message);

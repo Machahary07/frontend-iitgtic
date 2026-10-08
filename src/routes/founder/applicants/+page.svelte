@@ -5,30 +5,21 @@
 	import { resolve } from '$app/paths';
 	import FounderShell from '$lib/components/FounderShell.svelte';
 	import Select from '$lib/components/Select.svelte';
-	import {
-		getMyApplicants,
-		resumeUrl,
-		type ApplicantStatus,
-		type CompanyApplicant
-	} from '$lib/utils/jobApplicants';
+	import { getMyApplicants, resumeUrl, type CompanyApplicant } from '$lib/utils/jobApplicants';
+	import { supabase } from '$lib/supabaseClient';
+	import { downloadResumesZip } from '$lib/utils/resumeZip';
 	import { downloadCsv, stampedFileName, toCsv } from '$lib/utils/csv';
 	import { showToast } from '$lib/utils/toast.svelte';
 	import type { PageData } from './$types';
 
-	// The company's own applicants. Read-only by design: a status is TIC's to
-	// set, and the schema backs that up — the company has a select grant on this
-	// table and nothing else.
-	//
-	// Still read in the browser rather than in a load function, because RLS
-	// already scopes this table to the company that posted the role — there is no
-	// pending row here that the policy would hide from its owner.
+	// The company's own applicants, and only theirs — TIC sees how many applied,
+	// never who. Received and read: there are no stages to move people through.
+	// Read in the browser, because RLS already scopes this table to the company
+	// that posted the role.
 
 	let { data }: { data: PageData } = $props();
 
-	type Filter = 'all' | ApplicantStatus;
-
 	let applicants = $state<CompanyApplicant[]>([]);
-	let filter = $state<Filter>('all');
 	let role = $state('all');
 	let openId = $state('');
 
@@ -41,24 +32,37 @@
 	const byRole = $derived(
 		role === 'all' ? applicants : applicants.filter((a) => a.jobSlug === role)
 	);
-	const filtered = $derived(filter === 'all' ? byRole : byRole.filter((a) => a.status === filter));
+	const filtered = $derived(byRole);
 
-	const counts = $derived({
-		all: byRole.length,
-		new: byRole.filter((a) => a.status === 'new').length,
-		shortlisted: byRole.filter((a) => a.status === 'shortlisted').length,
-		forwarded: byRole.filter((a) => a.status === 'forwarded').length,
-		rejected: byRole.filter((a) => a.status === 'rejected').length
-	});
+	let zipping = $state(false);
 
-	// What each status means from the company's side. "new" and "shortlisted" are
-	// TIC's internal stages, so they read as one thing here: not sent on yet.
-	const STATUS_LABEL: Record<ApplicantStatus, string> = {
-		new: 'With TIC',
-		shortlisted: 'Shortlisted by TIC',
-		forwarded: 'Sent to you',
-		rejected: 'Not taken forward'
-	};
+	// Every resume in view as one zip — how a role's resumes are kept once the
+	// 90-day clear-out after the role ends has run.
+	async function downloadAll() {
+		const paths = filtered.filter((a) => a.resumePath);
+		if (paths.length === 0) {
+			showToast('No resumes to download in this view.', 'info');
+			return;
+		}
+		zipping = true;
+		try {
+			const { data: signed } = await supabase.storage.from('job-applications').createSignedUrls(
+				paths.map((a) => a.resumePath as string),
+				600
+			);
+			await downloadResumesZip(
+				(signed ?? []).map((link, i) => ({
+					url: link.signedUrl ?? '',
+					name: `${paths[i].fullName}.pdf`
+				})),
+				`resumes-${role === 'all' ? 'all-roles' : roleLabel(role).replace(/[^A-Za-z0-9]+/g, '-').toLowerCase()}`
+			);
+		} catch {
+			showToast('Could not build the zip. Try again.', 'err');
+		} finally {
+			zipping = false;
+		}
+	}
 
 	onMount(async () => {
 		if (data.company?.status === 'verified') applicants = await getMyApplicants();
@@ -90,7 +94,6 @@
 				'Earliest start',
 				'On site',
 				'Portfolio',
-				'Status',
 				'Why'
 			],
 			filtered.map((a) => [
@@ -103,7 +106,6 @@
 				a.startDate ?? '',
 				a.onsiteOk,
 				a.portfolioLink,
-				STATUS_LABEL[a.status],
 				a.why
 			])
 		);
@@ -121,7 +123,7 @@
 	// A page at a time; back to the first page whenever the view changes.
 	const pager = new Pager(
 		() => filtered,
-		() => [filter, role]
+		() => [role]
 	);
 </script>
 
@@ -139,6 +141,9 @@
 >
 	{#snippet pageActions()}
 		{#if filtered.length > 0}
+			<button class="btn" onclick={downloadAll} disabled={zipping}>
+				{zipping ? 'Zipping…' : 'Download resumes'}
+			</button>
 			<button class="btn" onclick={exportCsv}>Export CSV</button>
 		{/if}
 	{/snippet}
@@ -150,36 +155,6 @@
 		</div>
 	{:else}
 		<div class="controls">
-			<div class="tabs">
-				<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
-					All <span class="tab__count">{counts.all}</span>
-				</button>
-				<button
-					class="tab"
-					class:tab--active={filter === 'forwarded'}
-					onclick={() => (filter = 'forwarded')}
-				>
-					Sent to you <span class="tab__count">{counts.forwarded}</span>
-				</button>
-				<button
-					class="tab"
-					class:tab--active={filter === 'shortlisted'}
-					onclick={() => (filter = 'shortlisted')}
-				>
-					Shortlisted <span class="tab__count">{counts.shortlisted}</span>
-				</button>
-				<button class="tab" class:tab--active={filter === 'new'} onclick={() => (filter = 'new')}>
-					With TIC <span class="tab__count">{counts.new}</span>
-				</button>
-				<button
-					class="tab"
-					class:tab--active={filter === 'rejected'}
-					onclick={() => (filter = 'rejected')}
-				>
-					Not taken forward <span class="tab__count">{counts.rejected}</span>
-				</button>
-			</div>
-
 			{#if roles.length > 1}
 				<div class="picker">
 					<span class="picker__label">Role</span>
@@ -212,7 +187,6 @@
 								<th>Applicant</th>
 								<th>Role</th>
 								<th>Applied</th>
-								<th>Status</th>
 								<th class="actions-col"></th>
 							</tr>
 						</thead>
@@ -225,11 +199,6 @@
 									</td>
 									<td>{applicant.jobRole}</td>
 									<td>{fmtDate(applicant.createdAt)}</td>
-									<td>
-										<span class="badge badge--{applicant.status}">
-											{STATUS_LABEL[applicant.status]}
-										</span>
-									</td>
 									<td class="actions-col">
 										<button
 											class="btn-small"
@@ -243,7 +212,7 @@
 
 								{#if openId === applicant.id}
 									<tr class="detail-row">
-										<td colspan="5">
+										<td colspan="4">
 											<div class="detail">
 												<dl>
 													<div>
@@ -297,6 +266,10 @@
 													<button class="btn" onclick={() => openResume(applicant)}>
 														Open resume ({applicant.resumeName})
 													</button>
+												{:else}
+													<p class="cleared">
+														The resume was cleared 90 days after the role ended.
+													</p>
 												{/if}
 											</div>
 										</td>
@@ -326,18 +299,6 @@
 		margin-bottom: 16px;
 	}
 
-	.tabs {
-		@include admin-tabs;
-	}
-
-	.tab {
-		@include admin-tab;
-	}
-
-	.tab__count {
-		@include admin-tab-count;
-	}
-
 	.picker {
 		display: flex;
 		align-items: center;
@@ -354,6 +315,12 @@
 
 	.panel {
 		@include admin-panel;
+	}
+
+	.cleared {
+		margin: 0;
+		font-size: 12px;
+		color: $admin-ink-3;
 	}
 
 	.empty {
@@ -387,21 +354,6 @@
 	.actions-col {
 		text-align: right;
 		white-space: nowrap;
-	}
-
-	.badge {
-		@include admin-badge;
-
-		// 'new' keeps the base grey the mixin already sets.
-		&--shortlisted {
-			@include admin-badge-tone('info');
-		}
-		&--forwarded {
-			@include admin-badge-tone('good');
-		}
-		&--rejected {
-			@include admin-badge-tone('bad');
-		}
 	}
 
 	.btn {

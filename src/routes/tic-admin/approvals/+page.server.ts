@@ -1,7 +1,7 @@
 import { adminDb } from '$lib/server/adminData';
 import type { PageServerLoad } from './$types';
 
-// Everything a founder has sent up and is waiting on, in one queue. The three
+// Everything a founder has sent up and is waiting on, in one queue. The two
 // kinds are read separately because they live in different tables, and joined
 // only by the company they belong to.
 
@@ -11,14 +11,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 	// New startups are not verified here any more: accepting their incubation
 	// application verifies the company (see /api/tic-admin/applications).
-	const [jobs, members, changes, companies] = await Promise.all([
-		db
-			.from('jobs')
-			.select(
-				'id, company_id, role, company, location, type, sector, description, apply_link, submitted_at'
-			)
-			.eq('status', 'pending')
-			.order('submitted_at', { ascending: true }),
+	const [members, changes, companies] = await Promise.all([
 		db
 			.from('profiles')
 			.select('id, company_id, full_name, email, created_at')
@@ -34,7 +27,6 @@ export const load: PageServerLoad = async ({ parent }) => {
 	]);
 
 	return {
-		pendingJobs: jobs.data ?? [],
 		pendingMembers: members.data ?? [],
 		pendingChanges: changes.data ?? [],
 		companies: companies.data ?? []

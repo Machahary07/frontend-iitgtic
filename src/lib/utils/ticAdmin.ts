@@ -25,13 +25,6 @@ export async function adminDeleteCompany(id: string): Promise<boolean> {
 	return res.ok;
 }
 
-export async function adminDeleteJob(id: string): Promise<boolean> {
-	const res = await fetch(`/api/tic-admin/jobs?id=${encodeURIComponent(id)}`, {
-		method: 'DELETE'
-	});
-	return res.ok;
-}
-
 // --- applications ----------------------------------------------------------
 
 export type ApplicationStatus = 'submitted' | 'under-review' | 'accepted' | 'rejected';
@@ -103,21 +96,16 @@ export async function adminDeleteApplication(id: string): Promise<boolean> {
 
 // --- role applications -----------------------------------------------------
 
-export type JobApplicationStatus = 'new' | 'shortlisted' | 'forwarded' | 'rejected';
-
 export type JobApplicationSummary = {
 	id: string;
 	job_slug: string;
 	job_role: string;
 	job_company: string;
-	job_source: 'seed' | 'user';
+	job_source: 'seed' | 'user' | 'tic';
 	company_id: string | null;
 	full_name: string;
 	email: string;
 	applicant_role: string;
-	status: JobApplicationStatus;
-	review_note: string | null;
-	reviewed_at: string | null;
 	created_at: string;
 };
 
@@ -133,17 +121,14 @@ export type JobApplicationDetail = JobApplicationSummary & {
 	updated_at: string;
 };
 
-export async function adminSetJobApplicationStatus(
-	id: string,
-	status: JobApplicationStatus,
-	reviewNote?: string
-): Promise<boolean> {
-	const res = await fetch('/api/tic-admin/job-applications', {
-		method: 'PATCH',
-		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({ id, status, reviewNote })
-	});
-	return res.ok;
+/** Ten-minute links to every resume in a role (or all TIC roles), for the zip. */
+export async function adminResumeLinks(jobSlug?: string): Promise<{ url: string; name: string }[]> {
+	const query = new URLSearchParams({ resumes: '1' });
+	if (jobSlug) query.set('jobSlug', jobSlug);
+	const res = await fetch(`/api/tic-admin/job-applications?${query}`);
+	if (!res.ok) return [];
+	const body = (await res.json()) as { files?: { url: string; name: string }[] };
+	return body.files ?? [];
 }
 
 export async function adminDeleteJobApplication(id: string): Promise<boolean> {

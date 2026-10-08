@@ -1,0 +1,4 @@
+import { listOpenJobs } from '$lib/server/jobs';
+import type { PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async () => ({ posts: await listOpenJobs('incubatee') });

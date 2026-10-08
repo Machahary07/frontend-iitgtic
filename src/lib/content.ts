@@ -14,20 +14,6 @@ type ContentDoc = typeof fallback;
 // typed by JSON alone as never[], so every page reading them needs a cast. These
 // are the shapes the console fills them with; they follow LIST_TEMPLATES below.
 
-export type JobPost = {
-	slug: string;
-	role: string;
-	company: string;
-	companySlug: string;
-	location: string;
-	type: string;
-	sector: string;
-	posted: string;
-	description: string;
-	applyLink: string;
-	logo?: { src?: string; alt: string };
-};
-
 export type BlogPost = {
 	slug: string;
 	date: string;
@@ -89,9 +75,7 @@ type Pages = ContentDoc['pages'];
 type WithPosts<T, P> = Omit<T, 'posts'> & { posts: P[] };
 
 export type SiteContent = Omit<ContentDoc, 'pages'> & {
-	pages: Omit<Pages, 'ticJobs' | 'startupJobs' | 'blog' | 'incubatedStartups'> & {
-		ticJobs: WithPosts<Pages['ticJobs'], JobPost>;
-		startupJobs: WithPosts<Pages['startupJobs'], JobPost>;
+	pages: Omit<Pages, 'blog' | 'incubatedStartups'> & {
 		blog: WithPosts<Pages['blog'], BlogPost>;
 		incubatedStartups: Omit<Pages['incubatedStartups'], 'categories'> & {
 			categories: (Omit<Pages['incubatedStartups']['categories'][number], 'startups'> & {
@@ -156,32 +140,6 @@ export const CONTENT_SECTIONS: { key: string; label: string; group: string }[] =
 // gap. The key is the list's own path within the content document; the value
 // returns the shape of one item in it.
 export const LIST_TEMPLATES: Record<string, () => unknown> = {
-	// A role at the centre itself. Pre-filled with the parts that are the same on
-	// every TIC posting, so what is left to write is the role and the description.
-	'pages.ticJobs.posts': () => ({
-		slug: '',
-		role: '',
-		company: 'IITG TIC',
-		companySlug: 'iitg-tic',
-		location: 'IIT Guwahati · in-person',
-		type: 'Full-time',
-		sector: '',
-		posted: new Date().toISOString().slice(0, 10),
-		description: '',
-		applyLink: 'mailto:tic@iitg.ac.in'
-	}),
-	'pages.startupJobs.posts': () => ({
-		slug: '',
-		role: '',
-		company: '',
-		companySlug: '',
-		location: '',
-		type: 'Full-time',
-		sector: '',
-		posted: new Date().toISOString().slice(0, 10),
-		description: '',
-		applyLink: ''
-	}),
 	'pages.ticCoordinators.members': () => ({
 		name: '',
 		avatar: { src: '', alt: '' },

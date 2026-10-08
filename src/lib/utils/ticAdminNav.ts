@@ -30,9 +30,9 @@ export const TIC_ADMIN_NAV: NavItem[] = [
 	{ label: 'Companies', href: '/tic-admin/companies', icon: Building2, tone: 'info' },
 	{ label: 'Applications', href: '/tic-admin/applications', icon: FileText, tone: 'good' },
 	{ label: 'Evaluation', href: '/tic-admin/evaluation', icon: ClipboardCheck, tone: 'info' },
-	{ label: 'Posted jobs', href: '/tic-admin/jobs', icon: Briefcase, tone: 'warn' },
+	{ label: 'Job postings', href: '/tic-admin/jobs', icon: Briefcase, tone: 'warn' },
 	{
-		label: 'Role applicants',
+		label: 'Job responses',
 		href: '/tic-admin/job-applications',
 		icon: UserSearch,
 		tone: 'violet'

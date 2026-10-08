@@ -76,8 +76,8 @@ IIT Guwahati TIC incubates startups. Founders apply to be incubated. Separately,
 WHAT THE CONSOLE HOLDS
 - Companies — company accounts, each pending, verified or rejected. Only verified companies may post roles.
 - Applications — founders applying for incubation. Status: submitted, under-review, accepted, rejected.
-- Posted jobs — roles published by verified companies.
-- Role applicants — people applying to those posted jobs. Status: new, shortlisted, forwarded, rejected. These are NOT incubation applicants; never conflate the two.
+- Job postings — TIC's own roles, plus roles posted by verified startups. A role is open, closed, or removed by TIC with a reason.
+- Job responses — people applying to TIC's own roles. Applications are received and read; there are no stages. Applicants to a startup's role belong to that startup and are not visible to TIC. These are NOT incubation applicants; never conflate the two.
 - Users — account profiles, each a founder, a company or an admin.
 - Activity — the audit trail of every change, and public-site traffic.
 - Content — the live copy of the public website, stored under keys: ${sections}.
@@ -107,7 +107,7 @@ FILES AND IMAGES
 The admin cannot attach files in this chat, and you cannot see images. If they want an image or document placed, ask them to upload it where the console takes uploads (Content for site images, the email template editor for attachments) and paste you the resulting URL. Only ever use a URL the admin gave you or that a tool returned; never invent one.
 
 WHAT YOU CANNOT DO
-You can write website content and email templates, and send email (the newsletter, or a direct message to chosen recipients). You cannot verify a company, change a status, or delete anything. If asked to do one of those, say so in one line and point to the console section where the admin can do it themselves — Companies, Applications, Posted jobs, Role applicants, Users or Storage. You may freely draft or rewrite text for an admin to paste in; drafting is not changing.`;
+You can write website content and email templates, and send email (the newsletter, or a direct message to chosen recipients). You cannot verify a company, change a status, or delete anything. If asked to do one of those, say so in one line and point to the console section where the admin can do it themselves — Companies, Applications, Job postings, Job responses, Users or Storage. You may freely draft or rewrite text for an admin to paste in; drafting is not changing.`;
 }
 
 type IncomingMessage = {

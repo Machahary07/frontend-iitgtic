@@ -406,7 +406,7 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 	{
 		name: 'list_jobs',
 		description:
-			'Roles posted by companies and shown on the public opportunities page. Search matches the role title, company name, location or sector.',
+			'Every posted role: owner "tic" is the centre’s own, owner "incubatee" a startup’s. Status is open, closed or removed (taken down by TIC); an open role past closes_on is off the board too. Search matches the role title, company name, location or sector.',
 		parameters: {
 			type: 'object',
 			properties: {
@@ -419,7 +419,7 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			let query = db
 				.from('jobs')
 				.select(
-					'id, slug, role, company, company_slug, location, type, sector, posted, description, created_at'
+					'id, slug, owner, role, company, location, type, work_mode, pay, closes_on, sector, posted, status, description, created_at'
 				)
 				.order('posted', { ascending: false })
 				.limit(limitOf(args));
@@ -440,14 +440,10 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 	{
 		name: 'list_role_applicants',
 		description:
-			'People who applied to a posted job — the "Role applicants" section. Distinct from incubation applications: these are job seekers, not founders. Status is new, shortlisted, forwarded (passed to the company) or rejected.',
+			'People who applied to one of TIC’s own posted jobs — the "Job responses" section. Applicants to a startup’s role belong to that startup and are not visible here. Distinct from incubation applications: these are job seekers, not founders.',
 		parameters: {
 			type: 'object',
 			properties: {
-				status: {
-					type: 'string',
-					enum: ['new', 'shortlisted', 'forwarded', 'rejected']
-				},
 				job_slug: { type: 'string', description: 'Restrict to one posted job, by its slug.' },
 				search: {
 					type: 'string',
@@ -461,13 +457,11 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 			let query = db
 				.from('job_applications')
 				.select(
-					'id, job_slug, job_role, job_company, full_name, email, applicant_role, status, review_note, reviewed_at, created_at'
+					'id, job_slug, job_role, job_company, full_name, email, applicant_role, created_at'
 				)
+				.is('company_id', null)
 				.order('created_at', { ascending: false })
 				.limit(limitOf(args));
-
-			const status = textOf(args, 'status');
-			if (status) query = query.eq('status', status);
 
 			const slug = textOf(args, 'job_slug');
 			if (slug) query = query.eq('job_slug', slug);

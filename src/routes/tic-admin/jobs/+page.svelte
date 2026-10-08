@@ -6,85 +6,127 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import { seedStartupJobs, ticJobs, type AnyJob } from '$lib/utils/jobPostings';
-	import type { CompanyAccount } from '$lib/utils/companies';
-	import { adminDeleteJob } from '$lib/utils/ticAdmin';
-	import type { PageData } from './$types';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
+	import { showToast } from '$lib/utils/toast.svelte';
+	import { isExpired, type JobOwner, type JobStatus } from '$lib/utils/jobPostings';
+	import type { PageData } from './$types';
 
-	type Filter = 'all' | 'user' | 'seed';
+	// Two tabs over one table. TIC: the centre's own roles, run end to end here.
+	// Incubatees: every startup's roles, read-only apart from taking one down with
+	// a reason — and only a count of who applied, since the applicants are the
+	// startup's.
 
 	let { data }: { data: PageData } = $props();
 
-	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
-	const companies = $derived(data.companies as CompanyAccount[]);
-
-	// A company posting also carries its approval state, which content-authored
-	// posts have no equivalent of — they are written here, so they are live by
-	// definition. 'approved' stands in for them so one column reads for all three
-	// sources.
-	type ListedJob = AnyJob & { approval: 'pending' | 'approved' | 'rejected' };
-
-	// Seed startup posts and every TIC role live in content.json rather than the
-	// database, so the admin list is the union of all three sources — the same
-	// thing the two public job boards show between them.
-	const jobs = $derived<ListedJob[]>(
-		[
-			...data.jobs.map((row) => ({
-				id: row.id,
-				slug: row.slug,
-				companyId: row.company_id,
-				role: row.role,
-				company: row.company,
-				companySlug: row.company_slug,
-				location: row.location,
-				type: row.type,
-				sector: row.sector,
-				posted: row.posted,
-				description: row.description,
-				applyLink: row.apply_link,
-				createdAt: row.created_at,
-				updatedAt: row.updated_at,
-				source: 'user' as const,
-				approval: row.status as 'pending' | 'approved' | 'rejected'
-			})),
-			...ticJobs().map((j) => ({ ...j, approval: 'approved' as const })),
-			...seedStartupJobs().map((j) => ({ ...j, approval: 'approved' as const }))
-		].sort((a, b) => (a.posted < b.posted ? 1 : a.posted > b.posted ? -1 : 0))
-	);
-
-	let filter = $state<Filter>('all');
-
-	const filtered = $derived(filter === 'all' ? jobs : jobs.filter((j) => j.source === filter));
-	const counts = $derived({
-		all: jobs.length,
-		user: jobs.filter((j) => j.source === 'user').length,
-		seed: jobs.filter((j) => j.source === 'seed').length
-	});
-
-	const waiting = $derived(jobs.filter((j) => j.approval === 'pending').length);
-
-	const APPROVAL: Record<string, { label: string; tone: string }> = {
-		pending: { label: 'Waiting', tone: 'warn' },
-		approved: { label: 'Live', tone: 'good' },
-		rejected: { label: 'Sent back', tone: 'bad' }
+	type JobRow = {
+		id: string;
+		owner: JobOwner;
+		slug: string;
+		role: string;
+		company: string;
+		location: string;
+		type: string;
+		work_mode: string;
+		sector: string;
+		pay: string;
+		closes_on: string | null;
+		max_applicants: number;
+		posted: string;
+		description: string;
+		status: JobStatus;
+		removed_reason: string | null;
 	};
 
-	async function removeJob(id: string, role: string) {
+	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
+	const jobs = $derived(data.jobs as JobRow[]);
+	const counts = $derived(data.counts as Record<string, { total: number; bytes: number }>);
+
+	function fmtSize(bytes: number) {
+		if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+		return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+	}
+
+	let tab = $state<JobOwner>('tic');
+	const shown = $derived(jobs.filter((j) => j.owner === tab));
+	// What this tab's resumes cost in storage, all roles together.
+	const tabBytes = $derived(shown.reduce((sum, j) => sum + (counts[j.id]?.bytes ?? 0), 0));
+	const ticCount = $derived(jobs.filter((j) => j.owner === 'tic').length);
+	const incubateeCount = $derived(jobs.filter((j) => j.owner === 'incubatee').length);
+
+	function standing(job: JobRow): { label: string; tone: string } {
+		if (job.status === 'removed') return { label: 'Removed', tone: 'bad' };
+		if (job.status === 'closed') return { label: 'Closed', tone: 'neutral' };
+		if (isExpired(job.closes_on)) return { label: 'Past closing date', tone: 'warn' };
+		return { label: 'Live', tone: 'good' };
+	}
+
+	let openId = $state('');
+	let reasons = $state<Record<string, string>>({});
+	let busy = $state('');
+
+	async function call(method: string, query: string, body?: object) {
+		const res = await fetch(`/api/tic-admin/jobs${query}`, {
+			method,
+			headers: body ? { 'content-type': 'application/json' } : undefined,
+			body: body ? JSON.stringify(body) : undefined
+		});
+		const out = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+		if (!res.ok || !out.ok) {
+			showToast(out.error ?? 'That did not go through.', 'err');
+			return false;
+		}
+		return true;
+	}
+
+	async function run(id: string, work: () => Promise<boolean>, done: string) {
+		if (busy) return;
+		busy = id;
+		try {
+			if (!(await work())) return;
+			showToast(done, 'ok');
+			await invalidateAll();
+		} finally {
+			busy = '';
+		}
+	}
+
+	function setOpen(job: JobRow, open: boolean) {
+		run(
+			job.id,
+			() => call('PATCH', '', { id: job.id, action: open ? 'reopen' : 'close' }),
+			open ? 'Role reopened.' : 'Role closed.'
+		);
+	}
+
+	async function deleteJob(job: JobRow) {
 		const ok = await askConfirm({
-			title: `Remove "${role}"?`,
-			body: 'The posting disappears from Opportunities immediately.',
-			confirmLabel: 'Take down',
+			title: `Delete "${job.role}"?`,
+			body: 'The role is deleted for good. Responses already received stay in Job responses.',
+			confirmLabel: 'Delete role',
 			tone: 'danger'
 		});
 		if (!ok) return;
-		await adminDeleteJob(id);
-		await invalidateAll();
+		run(job.id, () => call('DELETE', `?id=${job.id}`), 'Role deleted.');
 	}
 
-	function companyStatus(companyId: string): CompanyAccount['status'] | null {
-		if (!companyId) return null;
-		return companies.find((c) => c.id === companyId)?.status ?? null;
+	async function removeJob(job: JobRow) {
+		const reason = reasons[job.id]?.trim();
+		if (!reason) {
+			showToast('Write a reason first — the startup reads it.', 'err');
+			return;
+		}
+		const ok = await askConfirm({
+			title: `Remove "${job.role}"?`,
+			body: `It comes off the board, and ${job.company} is emailed the reason.`,
+			confirmLabel: 'Remove role',
+			tone: 'danger'
+		});
+		if (!ok) return;
+		run(
+			job.id,
+			() => call('PATCH', '', { id: job.id, action: 'remove', reason }),
+			'Role removed. The startup was emailed.'
+		);
 	}
 
 	async function handleLogout() {
@@ -102,118 +144,216 @@
 
 	// A page at a time; back to the first page whenever the view changes.
 	const pager = new Pager(
-		() => filtered,
-		() => [filter]
+		() => shown,
+		() => [tab]
 	);
 </script>
 
 <svelte:head>
-	<title>TIC Admin · Posted jobs</title>
+	<title>TIC Admin · Job postings</title>
 </svelte:head>
 
 <AdminShell
 	brand="TIC Team Admin"
 	navItems={TIC_ADMIN_NAV}
 	assistantHref="/tic-admin/ai"
-	title="Posted jobs"
+	title="Job postings"
 	eyebrow="Opportunities"
 	user={adminName}
 	onLogout={handleLogout}
 >
-	{#if waiting > 0}
-		<p class="waiting">
-			{waiting}
-			{waiting === 1 ? 'posting is' : 'postings are'} waiting for a decision. They are not on the public
-			board until one is made — <a href={resolve('/tic-admin/approvals')}>open Approvals</a>.
-		</p>
-	{/if}
+	{#snippet actions()}
+		<a class="btn-primary" href={resolve('/tic-admin/jobs/[id]', { id: 'new' })}>Post a job</a>
+	{/snippet}
 
 	<div class="tabs">
-		<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
-			All <span class="tab__count">{counts.all}</span>
+		<button class="tab" class:tab--active={tab === 'tic'} onclick={() => (tab = 'tic')}>
+			TIC <span class="tab__count">{ticCount}</span>
 		</button>
-		<button class="tab" class:tab--active={filter === 'user'} onclick={() => (filter = 'user')}>
-			Company-posted <span class="tab__count">{counts.user}</span>
-		</button>
-		<button class="tab" class:tab--active={filter === 'seed'} onclick={() => (filter = 'seed')}>
-			Seed <span class="tab__count">{counts.seed}</span>
+		<button class="tab" class:tab--active={tab === 'incubatee'} onclick={() => (tab = 'incubatee')}>
+			Incubatees <span class="tab__count">{incubateeCount}</span>
 		</button>
 	</div>
 
 	<p class="note">
-		Company-posted roles can be removed here, or by the company from its own dashboard. Seed roles
-		are content: edit them under Content → <a
-			href={resolve('/tic-admin/content/[...key]', { key: 'pages.ticJobs' })}>TIC jobs</a
-		>
-		and
-		<a href={resolve('/tic-admin/content/[...key]', { key: 'pages.startupJobs' })}>Startup jobs</a>,
-		where they can also be added and taken down.
+		{#if tab === 'tic'}
+			The centre's own roles, on the TIC jobs board. A role is live once posted; responses land in
+			<a href={resolve('/tic-admin/job-applications')}>Job responses</a>.
+		{:else}
+			Roles startups posted themselves. Their applicants are theirs — you see how many applied, not
+			who. Remove a role only with a reason; the startup reads it in their console and by email.
+		{/if}
+		Resumes here use <strong>{fmtSize(tabBytes)}</strong> of storage; each role takes at most 200 PDFs
+		of 2 MB, and they are deleted 90 days after the role ends.
 	</p>
 
 	<div class="panel">
-		{#if filtered.length === 0}
-			<p class="empty">No jobs in this view.</p>
+		{#if shown.length === 0}
+			<p class="empty">
+				{tab === 'tic'
+					? 'No TIC roles yet. Post the first one.'
+					: 'No startup has posted a role yet.'}
+			</p>
 		{:else}
 			<div class="table-wrap">
 				<table class="table">
 					<thead>
 						<tr>
 							<th>Role</th>
-							<th>Company</th>
+							{#if tab === 'incubatee'}<th>Startup</th>{/if}
 							<th>Type</th>
+							<th>Status</th>
+							<th>{tab === 'tic' ? 'Responses' : 'Applied'}</th>
 							<th>Posted</th>
-							<th>Source</th>
-							<th>Approval</th>
-							<th></th>
+							<th class="actions-col"></th>
 						</tr>
 					</thead>
 					<tbody>
 						{#each pager.rows as job (job.id)}
+							{@const st = standing(job)}
+							{@const count = counts[job.id] ?? { total: 0, bytes: 0 }}
 							<tr>
 								<td>
 									<p class="cell__name">{job.role}</p>
-									<p class="cell__sub">{job.location} · {job.sector}</p>
+									<p class="cell__sub">{job.location}{job.sector ? ` · ${job.sector}` : ''}</p>
+								</td>
+								{#if tab === 'incubatee'}
+									<td><p class="cell__name">{job.company}</p></td>
+								{/if}
+								<td>
+									<p class="cell__sub cell__sub--ink">{job.type}</p>
+									<p class="cell__sub">{job.work_mode}</p>
 								</td>
 								<td>
-									<p class="cell__name">{job.company}</p>
-									{#if job.source === 'user'}
-										{@const status = companyStatus(job.companyId)}
-										{#if status}
-											<span class="badge badge--{status}">{status}</span>
-										{/if}
+									<span class="badge badge--{st.tone}">{st.label}</span>
+									{#if job.closes_on && job.status === 'open'}
+										<p class="cell__sub">Closes {fmtDate(job.closes_on)}</p>
 									{/if}
 								</td>
-								<td><p class="cell__sub">{job.type}</p></td>
-								<td><p class="cell__sub">{fmtDate(job.posted)}</p></td>
 								<td>
-									<span class="src src--{job.source}">{job.source}</span>
-								</td>
-								<td>
-									<span class="approval approval--{APPROVAL[job.approval].tone}">
-										{APPROVAL[job.approval].label}
-									</span>
-								</td>
-								<td class="actions-col">
-									<div class="actions">
+									{#if tab === 'tic'}
 										<a
 											class="link"
-											href="/opportunities/{job.slug}"
-											target="_blank"
-											rel="noopener noreferrer">View →</a
+											href="{resolve('/tic-admin/job-applications')}?role={encodeURIComponent(
+												job.slug
+											)}"
 										>
-										{#if job.source === 'user'}
-											<button class="btn btn--danger" onclick={() => removeJob(job.id, job.role)}>
-												Remove
+											{count.total}
+										</a>
+										<span class="cell__sub"> / {job.max_applicants}</span>
+									{:else}
+										<p class="cell__name">
+											{count.total}<span class="cell__sub"> / {job.max_applicants}</span>
+										</p>
+									{/if}
+									{#if count.bytes > 0}<p class="cell__sub">{fmtSize(count.bytes)}</p>{/if}
+								</td>
+								<td><p class="cell__sub">{fmtDate(job.posted)}</p></td>
+								<td class="actions-col">
+									<div class="actions">
+										{#if st.label === 'Live'}
+											<a
+												class="link"
+												href={resolve('/opportunities/[id]', { id: job.slug })}
+												target="_blank"
+												rel="noopener noreferrer">View</a
+											>
+										{/if}
+										{#if tab === 'tic'}
+											<a class="link" href={resolve('/tic-admin/jobs/[id]', { id: job.id })}>Edit</a
+											>
+											<button
+												class="link"
+												disabled={busy === job.id}
+												onclick={() => setOpen(job, job.status === 'closed')}
+											>
+												{job.status === 'closed' ? 'Reopen' : 'Close'}
+											</button>
+											<button
+												class="link link--danger"
+												disabled={busy === job.id}
+												onclick={() => deleteJob(job)}
+											>
+												Delete
+											</button>
+										{:else}
+											<button
+												class="link"
+												aria-expanded={openId === job.id}
+												onclick={() => (openId = openId === job.id ? '' : job.id)}
+											>
+												{openId === job.id ? 'Hide' : 'Details'}
 											</button>
 										{/if}
 									</div>
 								</td>
 							</tr>
+
+							{#if tab === 'incubatee' && openId === job.id}
+								<tr class="detail-row">
+									<td colspan="7">
+										<div class="detail">
+											<dl>
+												<div>
+													<dt>Location</dt>
+													<dd>{job.location}</dd>
+												</div>
+												<div>
+													<dt>Work mode</dt>
+													<dd>{job.work_mode}</dd>
+												</div>
+												{#if job.pay}
+													<div>
+														<dt>Pay</dt>
+														<dd>{job.pay}</dd>
+													</div>
+												{/if}
+												{#if job.closes_on}
+													<div>
+														<dt>Closing date</dt>
+														<dd>{fmtDate(job.closes_on)}</dd>
+													</div>
+												{/if}
+												{#if job.sector}
+													<div>
+														<dt>Sector</dt>
+														<dd>{job.sector}</dd>
+													</div>
+												{/if}
+											</dl>
+											<p class="description">{job.description}</p>
+
+											{#if job.status === 'removed'}
+												<p class="removed">
+													Removed: {job.removed_reason || 'no reason recorded.'}
+												</p>
+											{:else}
+												<div class="remove">
+													<input
+														type="text"
+														placeholder="Reason for removing — the startup reads this"
+														value={reasons[job.id] ?? ''}
+														oninput={(e) =>
+															(reasons = { ...reasons, [job.id]: e.currentTarget.value })}
+													/>
+													<button
+														class="btn btn--danger"
+														disabled={busy === job.id}
+														onclick={() => removeJob(job)}
+													>
+														Remove role
+													</button>
+												</div>
+											{/if}
+										</div>
+									</td>
+								</tr>
+							{/if}
 						{/each}
 					</tbody>
 				</table>
 			</div>
-			<Pagination {pager} noun="jobs" />
+			<Pagination {pager} noun="roles" />
 		{/if}
 	</div>
 </AdminShell>
@@ -222,23 +362,77 @@
 	@use '$styles/variables' as *;
 	@use '$styles/admin' as *;
 
-	.waiting {
-		margin: 0 0 14px;
-		padding: 12px 16px;
+	.btn-primary {
+		@include admin-btn-primary;
+		text-decoration: none;
+		display: inline-flex;
+	}
+
+	.tabs {
+		@include admin-tabs;
+		margin-bottom: 14px;
+	}
+
+	.tab {
+		@include admin-tab;
+	}
+
+	.tab__count {
+		@include admin-tab-count;
+	}
+
+	.note {
+		margin: 0 0 16px;
+		max-width: 76ch;
 		font-size: 13px;
 		line-height: 1.6;
 		color: $admin-ink-2;
-		background: admin-tone-bg('warn');
-		border-radius: $admin-radius-md;
 
 		a {
-			color: $admin-ink;
+			color: $admin-accent;
 			font-weight: $font-weight-semibold;
-			@include admin-focus-ring;
+			text-decoration: none;
 		}
 	}
 
-	.approval {
+	.panel {
+		@include admin-panel;
+		overflow: hidden;
+	}
+
+	.empty {
+		@include admin-empty;
+	}
+
+	.table-wrap {
+		overflow-x: auto;
+	}
+
+	.table {
+		@include admin-table(760px);
+	}
+
+	thead th {
+		@include admin-thead;
+	}
+
+	tbody td {
+		@include admin-td;
+	}
+
+	.cell__name {
+		@include admin-cell-name;
+	}
+
+	.cell__sub {
+		@include admin-cell-sub;
+
+		&--ink {
+			color: $admin-ink;
+		}
+	}
+
+	.badge {
 		@include admin-badge;
 
 		&--good {
@@ -250,189 +444,10 @@
 		&--bad {
 			@include admin-badge-tone('bad');
 		}
-	}
-
-	.tabs {
-		display: flex;
-		gap: 4px;
-		margin-bottom: 14px;
-		flex-wrap: wrap;
-	}
-
-	.tab {
-		display: inline-flex;
-		align-items: center;
-		gap: 8px;
-		padding: 8px 14px;
-		font: inherit;
-		font-family: $font-family-base;
-		font-size: 13px;
-		font-weight: $font-weight-medium;
-		color: #555;
-		background: #fff;
-		border: 1px solid $admin-line-soft;
-		border-radius: 999px;
-		cursor: pointer;
-		&--active {
-			color: #fff;
-			background: #111;
-			border-color: #111;
+		&--neutral {
+			background: $admin-sunken;
+			color: $admin-ink-2;
 		}
-	}
-
-	.tab__count {
-		font-size: 11px;
-		opacity: 0.7;
-	}
-
-	.note {
-		margin: 0 0 16px;
-		font-size: 12px;
-		color: $admin-ink-2;
-		padding: 10px 12px;
-		background: #fff;
-		border: 1px solid $admin-line-soft;
-		border-left: 3px solid #2050d4;
-		border-radius: $admin-radius-sm;
-	}
-
-	.panel {
-		background: #fff;
-		border: 1px solid $admin-line-soft;
-		border-radius: $admin-radius-lg;
-		box-shadow: $admin-shadow-card;
-		overflow: hidden;
-	}
-
-	.empty {
-		margin: 0;
-		padding: 40px 18px;
-		text-align: center;
-		font-size: 13px;
-		color: $admin-ink-3;
-	}
-
-	.table-wrap {
-		overflow-x: auto;
-	}
-
-	.table {
-		width: 100%;
-		border-collapse: collapse;
-		font-family: $font-family-base;
-		font-size: 13px;
-		min-width: 720px;
-	}
-
-	thead th {
-		text-align: left;
-		padding: 10px 14px;
-		font-size: 11px;
-		font-weight: $font-weight-semibold;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: $admin-ink-2;
-		background: $admin-sunken;
-		border-bottom: 1px solid $admin-line-soft;
-	}
-
-	tbody td {
-		padding: 12px 14px;
-		border-bottom: 1px solid $admin-line-soft;
-		vertical-align: top;
-	}
-
-	tbody tr:last-child td {
-		border-bottom: 0;
-	}
-
-	.cell__name {
-		margin: 0;
-		font-size: 13px;
-		font-weight: $font-weight-semibold;
-		color: #111;
-	}
-
-	.cell__sub {
-		margin: 2px 0 0;
-		font-size: 12px;
-		color: $admin-ink-3;
-	}
-
-	.badge {
-		display: inline-block;
-		margin-top: 4px;
-		padding: 2px 8px;
-		font-size: 10px;
-		font-weight: $font-weight-semibold;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-		border-radius: 999px;
-
-		&--pending {
-			background: #fff4d4;
-			color: #6a4f00;
-		}
-
-		&--verified {
-			background: #d6f5e1;
-			color: #0e6b2c;
-		}
-
-		&--rejected {
-			background: #fde0e0;
-			color: #9a1515;
-		}
-	}
-
-	.src {
-		display: inline-block;
-		padding: 2px 8px;
-		font-size: 11px;
-		font-weight: $font-weight-semibold;
-		text-transform: uppercase;
-		letter-spacing: 0.04em;
-		border-radius: 999px;
-
-		&--user {
-			background: #e0e9ff;
-			color: #1d3da3;
-		}
-
-		&--seed {
-			background: #f0f0f0;
-			color: #555;
-		}
-	}
-
-	.actions {
-		display: inline-flex;
-		align-items: center;
-		gap: 10px;
-		justify-content: flex-end;
-	}
-
-	.btn {
-		padding: 6px 12px;
-		font: inherit;
-		font-family: $font-family-base;
-		font-size: 12px;
-		font-weight: $font-weight-semibold;
-		color: #111;
-		background: #fff;
-		border: 1px solid $admin-line;
-		border-radius: $admin-radius-sm;
-		cursor: pointer;
-		&--danger {
-			color: #a01515;
-			border-color: #f5c2c2;
-		}
-	}
-
-	.note a {
-		color: inherit;
-		text-decoration: underline;
-		text-underline-offset: 2px;
 	}
 
 	.actions-col {
@@ -440,10 +455,95 @@
 		white-space: nowrap;
 	}
 
+	.actions {
+		display: inline-flex;
+		gap: 12px;
+		align-items: center;
+	}
+
 	.link {
+		background: transparent;
+		border: 0;
+		padding: 0;
+		font: inherit;
+		font-family: $font-family-base;
 		font-size: 12px;
 		font-weight: $font-weight-semibold;
-		color: #2050d4;
+		color: $admin-accent;
 		text-decoration: none;
+		cursor: pointer;
+		@include admin-focus-ring($admin-accent);
+
+		&--danger {
+			color: admin-tone-fg('bad');
+		}
+
+		&:disabled {
+			cursor: default;
+			opacity: 0.5;
+		}
+	}
+
+	.detail-row td {
+		background: $admin-sunken;
+	}
+
+	.detail {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		padding: 4px 0 8px;
+		white-space: normal;
+	}
+
+	dl {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+		gap: 12px;
+		margin: 0;
+
+		dt {
+			@include admin-field-label;
+		}
+
+		dd {
+			margin: 2px 0 0;
+			font-size: 13px;
+			color: $admin-ink;
+		}
+	}
+
+	.description {
+		margin: 0;
+		max-width: 80ch;
+		font-size: 13px;
+		line-height: 1.6;
+		color: $admin-ink-2;
+		white-space: pre-wrap;
+	}
+
+	.removed {
+		margin: 0;
+		font-size: 13px;
+		color: admin-tone-fg('bad');
+	}
+
+	.remove {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+
+		input {
+			@include admin-input;
+			flex: 1 1 260px;
+		}
+	}
+
+	.btn {
+		@include admin-btn-base;
+
+		&--danger {
+			color: admin-tone-fg('bad');
+		}
 	}
 </style>

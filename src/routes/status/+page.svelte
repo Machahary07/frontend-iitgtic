@@ -6,10 +6,6 @@
 	// What still stands between the build and launch. Remove a row when it ships.
 	const left: Left[] = [
 		{
-			title: 'Job posting',
-			note: 'Founders posting roles for their startups, and TIC posting its own jobs, end to end.'
-		},
-		{
 			title: 'Backend on a VPS',
 			note: 'Move the server off Vercel onto our own VPS.'
 		},
@@ -24,20 +20,51 @@
 	];
 
 	const shipped: Area[] = [
-		{ title: 'Public website', note: 'Every page live, editable from the console, with SEO on each route.' },
-		{ title: 'Founder console', note: 'Startups, eight-step application, team, applicants, settings, account.' },
-		{ title: 'TIC admin console', note: 'Approvals, companies, users, content, storage, activity, settings.' },
-		{ title: 'Application review', note: 'Six-stage chain, 0–100 scores, Meet screening calls, CEO view.' },
+		{
+			title: 'Public website',
+			note: 'Every page live, editable from the console, with SEO on each route.'
+		},
+		{
+			title: 'Founder console',
+			note: 'Startups, eight-step application, team, applicants, settings, account.'
+		},
+		{
+			title: 'TIC admin console',
+			note: 'Approvals, companies, users, content, storage, activity, settings.'
+		},
+		{
+			title: 'Job board',
+			note: 'TIC and startups post roles live; one apply form; removal with reason.'
+		},
+		{
+			title: 'Application review',
+			note: 'Six-stage chain, 0–100 scores, Meet screening calls, CEO view.'
+		},
 		{ title: 'Email', note: 'Branded templates, block editor, delivery log, bounce handling.' },
-		{ title: 'Admin assistant', note: 'Reads the console, drafts edits and sends, behind approval.' },
-		{ title: 'Security', note: 'RLS everywhere, rate limits, Turnstile, signed sessions, audit trail.' },
+		{
+			title: 'Admin assistant',
+			note: 'Reads the console, drafts edits and sends, behind approval.'
+		},
+		{
+			title: 'Security',
+			note: 'RLS everywhere, rate limits, Turnstile, signed sessions, audit trail.'
+		},
 		{ title: 'Backups', note: 'Tables and every storage file, with a restore dry-run.' }
 	];
 
 	// Newest first. Add new releases at the top.
 	const releases: Release[] = [
+		{
+			date: '9 Oct',
+			version: 'v36',
+			note: 'Job board: live posting, TIC / Incubatees tabs, new apply page'
+		},
 		{ date: '8 Oct', version: 'v34', note: 'Score gate on every hand-off, role-based overview' },
-		{ date: '8 Oct', version: 'v33', note: 'Coordinator evaluation, applicant invite, staff settings' },
+		{
+			date: '8 Oct',
+			version: 'v33',
+			note: 'Coordinator evaluation, applicant invite, staff settings'
+		},
 		{ date: '8 Oct', version: 'v32', note: '0–100 step scores, scores in decision emails' },
 		{ date: '8 Oct', version: 'v31', note: 'Type-to-confirm account delete, test suite' },
 		{ date: '8 Oct', version: 'v30', note: 'Founder settings, account-deleted emails' },

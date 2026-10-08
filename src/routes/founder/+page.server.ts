@@ -1,4 +1,5 @@
 import { founderDb } from '$lib/server/founderGuard';
+import { isExpired } from '$lib/utils/jobPostings';
 import type { PageServerLoad } from './$types';
 
 // The overview counts what is waiting on whom: what TIC still has to look at,
@@ -10,7 +11,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 	const { founder, company, activeCompanyId } = await parent();
 
 	const empty = {
-		jobs: { approved: 0, pending: 0, rejected: 0 },
+		jobs: { live: 0, closed: 0, removed: 0 },
 		applicants: { total: 0, fresh: 0 },
 		team: { approved: 0, pending: 0 },
 		application: null as null | {
@@ -28,7 +29,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 	const companyId = activeCompanyId;
 
 	const [jobs, applicants, team, application, profileChange] = await Promise.all([
-		db.from('jobs').select('id, status').eq('company_id', companyId),
+		db.from('jobs').select('id, status, closes_on').eq('company_id', companyId),
 		db.from('job_applications').select('id, status').eq('company_id', companyId),
 		db.from('profiles').select('id, member_status').eq('company_id', companyId),
 		// The application belongs to the startup, not to the person — a founder
@@ -47,15 +48,17 @@ export const load: PageServerLoad = async ({ parent }) => {
 			.eq('status', 'pending')
 	]);
 
-	const jobRows = (jobs.data ?? []) as { status: string }[];
+	const jobRows = (jobs.data ?? []) as { status: string; closes_on: string | null }[];
+	const live = (j: { status: string; closes_on: string | null }) =>
+		j.status === 'open' && !isExpired(j.closes_on);
 	const applicantRows = (applicants.data ?? []) as { status: string }[];
 	const teamRows = (team.data ?? []) as { member_status: string }[];
 
 	return {
 		jobs: {
-			approved: jobRows.filter((j) => j.status === 'approved').length,
-			pending: jobRows.filter((j) => j.status === 'pending').length,
-			rejected: jobRows.filter((j) => j.status === 'rejected').length
+			live: jobRows.filter(live).length,
+			closed: jobRows.filter((j) => j.status !== 'removed' && !live(j)).length,
+			removed: jobRows.filter((j) => j.status === 'removed').length
 		},
 		applicants: {
 			total: applicantRows.length,

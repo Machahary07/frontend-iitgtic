@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
-import { sendTemplateEmail } from '$lib/server/email';
-import { getSiteContent } from '$lib/server/siteContent';
+import { adminAlertRecipient, sendTemplateEmail } from '$lib/server/email';
+import { applicationCount, getOpenJob } from '$lib/server/jobs';
 import { verifyTurnstile } from '$lib/server/turnstile';
 import { LIMITS, retryMinutes, withinLimit } from '$lib/server/rateLimit';
 import {
@@ -16,63 +16,11 @@ import type { RequestHandler } from './$types';
 
 // Public submit route for /opportunities/[id]. Nothing here trusts the browser:
 // the Turnstile token is checked against Cloudflare again, the role is looked up
-// server-side (so an application cannot be filed against a slug that is not on
-// the board), and every field is re-validated before the row is written.
+// server-side (so an application cannot be filed against a role that is closed,
+// removed or past its closing date), and every field is re-validated before the
+// row is written.
 
 const BUCKET = 'job-applications';
-
-type ResolvedJob = {
-	jobId: string | null;
-	companyId: string | null;
-	slug: string;
-	role: string;
-	company: string;
-	source: 'seed' | 'user';
-};
-
-async function resolveJob(slug: string): Promise<ResolvedJob | null> {
-	// Content-authored posts win on slug, matching getJob() on the public side.
-	// That is both boards: the centre's own roles and the seed startup roles.
-	const content = await getSiteContent();
-	const seed = [...content.pages.ticJobs.posts, ...content.pages.startupJobs.posts].find(
-		(p) => p.slug === slug
-	);
-	if (seed) {
-		return {
-			jobId: null,
-			companyId: null,
-			slug: seed.slug,
-			role: seed.role,
-			company: seed.company,
-			source: 'seed'
-		};
-	}
-
-	const { data: job } = await supabaseAdmin
-		.from('jobs')
-		.select('id, company_id, slug, role, company')
-		.eq('slug', slug)
-		.maybeSingle();
-	if (!job) return null;
-
-	// Only roles the public can actually see accept applications — an unverified
-	// or rejected company's posting is hidden by RLS, so it must not be a target.
-	const { data: company } = await supabaseAdmin
-		.from('companies')
-		.select('status')
-		.eq('id', job.company_id)
-		.maybeSingle();
-	if (company?.status !== 'verified') return null;
-
-	return {
-		jobId: job.id as string,
-		companyId: job.company_id as string,
-		slug: job.slug as string,
-		role: job.role as string,
-		company: job.company as string,
-		source: 'user'
-	};
-}
 
 function text(form: FormData, key: string): string {
 	const value = form.get(key);
@@ -96,8 +44,11 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
 		error(400, 'Verification failed. Please complete the check and try again.');
 	}
 
-	const job = await resolveJob(text(form, 'jobSlug'));
+	const job = await getOpenJob(text(form, 'jobSlug'));
 	if (!job) error(404, 'This role is no longer accepting applications.');
+	if ((await applicationCount(job.id)) >= job.maxApplicants) {
+		error(404, 'This role is no longer accepting applications.');
+	}
 
 	const fullName = text(form, 'fullName');
 	const email = text(form, 'email');
@@ -117,13 +68,19 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
 		error(400, 'A portfolio link must start with http:// or https://.');
 	}
 	if (!consent) error(400, 'Consent is required to share your application.');
+	if (job.workMode === 'On-site' && text(form, 'onsiteOk') !== 'true') {
+		error(400, 'This role is on-site.');
+	}
 
 	const resume = form.get('resume');
 	if (!(resume instanceof File) || resume.size === 0) error(400, 'Attach your resume.');
-	if (resume.size > RESUME_MAX_BYTES) error(400, 'Your resume must be 5 MB or smaller.');
+	if (resume.size > RESUME_MAX_BYTES) error(400, 'Your resume must be 2 MB or smaller.');
 
 	const extension = resumeExtension(resume.name);
-	if (!extension) error(400, 'Your resume must be a PDF or Word document.');
+	if (!extension) error(400, 'Your resume must be a PDF.');
+	// The name says PDF; the first bytes have to agree.
+	const head = new Uint8Array(await resume.slice(0, 5).arrayBuffer());
+	if (String.fromCharCode(...head) !== '%PDF-') error(400, 'That file is not a valid PDF.');
 
 	const safeName = resume.name.replace(/[^A-Za-z0-9._-]+/g, '-');
 	const path = `${job.slug}/${Date.now()}-${safeName}`;
@@ -134,12 +91,12 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
 	if (uploadError) error(500, 'Could not upload your resume. Please try again.');
 
 	const { error: dbError } = await supabaseAdmin.from('job_applications').insert({
-		job_id: job.jobId,
+		job_id: job.id,
 		company_id: job.companyId,
 		job_slug: job.slug,
 		job_role: job.role,
 		job_company: job.company,
-		job_source: job.source,
+		job_source: job.owner === 'tic' ? 'tic' : 'user',
 		full_name: fullName,
 		email,
 		phone: text(form, 'phone'),
@@ -163,6 +120,15 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
 		error(500, 'Could not save your application. Please try again.');
 	}
 
+	// A full role closes itself, so nobody else uploads into it.
+	if ((await applicationCount(job.id)) >= job.maxApplicants) {
+		await supabaseAdmin
+			.from('jobs')
+			.update({ status: 'closed', closed_at: new Date().toISOString() })
+			.eq('id', job.id)
+			.eq('status', 'open');
+	}
+
 	// The receipt is the only acknowledgement an applicant gets — they have no
 	// account to check a status in. Awaited rather than left to run after the
 	// response: on a serverless host the function can be frozen the moment the
@@ -181,8 +147,8 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
 		context: { table: 'job_applications', jobSlug: job.slug }
 	});
 
-	// A role a startup posted itself: tell the startup someone applied. Seed
-	// roles have no company behind them in the database.
+	// Whoever posted the role hears about it: the startup's contact for a
+	// startup's role, the operating inbox for one of TIC's own.
 	if (job.companyId) {
 		const { data: company } = await supabaseAdmin
 			.from('companies')
@@ -205,6 +171,13 @@ export const POST: RequestHandler = async ({ request, url, getClientAddress }) =
 				context: { table: 'job_applications', jobSlug: job.slug }
 			});
 		}
+	} else {
+		await sendTemplateEmail({
+			templateKey: 'new-tic-role-applicant',
+			to: adminAlertRecipient(),
+			variables: { role: job.role, applicantName: fullName, applicantEmail: email, applicantRole },
+			context: { table: 'job_applications', jobSlug: job.slug }
+		});
 	}
 
 	return json({ ok: true }, { status: 201 });

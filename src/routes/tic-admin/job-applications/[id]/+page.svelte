@@ -1,15 +1,10 @@
 <script lang="ts">
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import {
-		adminDeleteJobApplication,
-		adminSetJobApplicationStatus,
-		type JobApplicationDetail,
-		type JobApplicationStatus
-	} from '$lib/utils/ticAdmin';
+	import { adminDeleteJobApplication, type JobApplicationDetail } from '$lib/utils/ticAdmin';
 	import type { PageData } from './$types';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 	import { showToast } from '$lib/utils/toast.svelte';
@@ -19,32 +14,6 @@
 	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
 	const applicant = $derived(data.application as unknown as JobApplicationDetail);
 	const resumeUrl = $derived(data.resumeUrl);
-
-	// The stored note is the source of truth until the reviewer starts typing.
-	let noteDraft = $state<string | null>(null);
-	const reviewNote = $derived(noteDraft ?? applicant.review_note ?? '');
-
-	let saving = $state(false);
-
-	const STATUS_LABELS: Record<JobApplicationStatus, string> = {
-		new: 'new',
-		shortlisted: 'shortlisted',
-		forwarded: 'sent on',
-		rejected: 'declined'
-	};
-
-	async function setStatus(status: JobApplicationStatus) {
-		saving = true;
-		const ok = await adminSetJobApplicationStatus(applicant.id, status, reviewNote);
-		saving = false;
-		if (!ok) {
-			showToast('Could not save. Please try again.', 'err');
-			return;
-		}
-		noteDraft = null;
-		await invalidateAll();
-		showToast(`Marked ${STATUS_LABELS[status]}.`);
-	}
 
 	async function remove() {
 		const confirmed = await askConfirm({
@@ -129,9 +98,6 @@
 							<a class="link" href={resolve('/opportunities/[id]', { id: applicant.job_slug })}>
 								{applicant.job_slug}
 							</a>
-							<span class="tag"
-								>{applicant.job_source === 'seed' ? 'seed post' : 'company post'}</span
-							>
 						</dd>
 					</div>
 					<div class="answer">
@@ -225,40 +191,8 @@
 		<aside class="side">
 			<div class="card card--sticky">
 				<header class="card__head">
-					<h2>Review</h2>
+					<h2>Application</h2>
 				</header>
-
-				<div class="status-row">
-					<span class="badge badge--{applicant.status}">{STATUS_LABELS[applicant.status]}</span>
-					{#if applicant.reviewed_at}
-						<span class="status-row__when">Last updated {fmtDateTime(applicant.reviewed_at)}</span>
-					{/if}
-				</div>
-
-				<label class="field">
-					<span>Internal note</span>
-					<textarea
-						value={reviewNote}
-						oninput={(e) => (noteDraft = (e.currentTarget as HTMLTextAreaElement).value)}
-						rows="4"
-						placeholder="Why this decision — visible to the TIC team only."
-					></textarea>
-				</label>
-
-				<div class="decision">
-					<button class="btn btn--primary" disabled={saving} onclick={() => setStatus('forwarded')}>
-						Mark sent to company
-					</button>
-					<button class="btn" disabled={saving} onclick={() => setStatus('shortlisted')}>
-						Shortlist
-					</button>
-					<button class="btn" disabled={saving} onclick={() => setStatus('new')}>
-						Back to new
-					</button>
-					<button class="btn btn--danger" disabled={saving} onclick={() => setStatus('rejected')}>
-						Decline
-					</button>
-				</div>
 
 				<dl class="meta">
 					<div>
@@ -369,15 +303,6 @@
 		text-decoration: none;
 	}
 
-	.tag {
-		margin-left: 8px;
-		font-size: 10px;
-		font-weight: $font-weight-semibold;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		color: #999;
-	}
-
 	.none {
 		margin: 0;
 		font-size: 13px;
@@ -425,85 +350,6 @@
 		color: #999;
 	}
 
-	.status-row {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
-
-	.status-row__when {
-		font-size: 11px;
-		color: #999;
-	}
-
-	.badge {
-		align-self: flex-start;
-		padding: 3px 10px;
-		font-size: 11px;
-		font-weight: $font-weight-semibold;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-		border-radius: 999px;
-
-		&--new {
-			background: #e2e8f5;
-			color: #24427e;
-		}
-
-		&--shortlisted {
-			background: #fff4d4;
-			color: #6a4f00;
-		}
-
-		&--forwarded {
-			background: #d6f5e1;
-			color: #0e6b2c;
-		}
-
-		&--rejected {
-			background: #fde0e0;
-			color: #9a1515;
-		}
-	}
-
-	.field {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-
-		> span {
-			font-size: 11px;
-			font-weight: $font-weight-semibold;
-			text-transform: uppercase;
-			letter-spacing: 0.06em;
-			color: #444;
-		}
-
-		textarea {
-			padding: 10px 12px;
-			font: inherit;
-			font-family: $font-family-base;
-			font-size: 13px;
-			color: #111;
-			background: #fff;
-			border: 1px solid $admin-line;
-			border-radius: $admin-radius-sm;
-			resize: vertical;
-
-			&:focus {
-				outline: none;
-				border-color: #111;
-				box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
-			}
-		}
-	}
-
-	.decision {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-	}
-
 	.meta {
 		display: flex;
 		flex-direction: column;
@@ -545,12 +391,6 @@
 		&:disabled {
 			opacity: 0.5;
 			cursor: not-allowed;
-		}
-
-		&--primary {
-			color: #fff;
-			background: #111;
-			border-color: #111;
 		}
 
 		&--danger {

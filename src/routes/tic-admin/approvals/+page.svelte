@@ -13,18 +13,6 @@
 
 	const adminName = $derived(data.admin?.name || data.admin?.email || 'TIC Team');
 
-	type Job = {
-		id: string;
-		company_id: string;
-		role: string;
-		company: string;
-		location: string;
-		type: string;
-		sector: string;
-		description: string;
-		apply_link: string;
-		submitted_at: string;
-	};
 	type Member = {
 		id: string;
 		company_id: string;
@@ -39,14 +27,13 @@
 		created_at: string;
 	};
 
-	const jobs = $derived(data.pendingJobs as Job[]);
 	const members = $derived(data.pendingMembers as Member[]);
 	const changes = $derived(data.pendingChanges as Change[]);
 	const companies = $derived(
 		data.companies as { id: string; company_name: string; status: string }[]
 	);
 
-	const total = $derived(jobs.length + members.length + changes.length);
+	const total = $derived(members.length + changes.length);
 
 	const LABEL: Record<string, string> = {
 		companyName: 'Company name',
@@ -60,16 +47,11 @@
 		return companies.find((c) => c.id === id)?.company_name ?? 'Unknown company';
 	}
 
-	function companyVerified(id: string) {
-		return companies.find((c) => c.id === id)?.status === 'verified';
-	}
-
-	let openId = $state('');
 	let notes = $state<Record<string, string>>({});
 	let busy = $state('');
 
 	async function decide(
-		kind: 'job' | 'member' | 'profile',
+		kind: 'member' | 'profile',
 		id: string,
 		decision: 'approve' | 'reject'
 	) {
@@ -77,7 +59,6 @@
 		// A refusal the founder cannot read is a dead end, so it has to say why.
 		if (decision === 'reject' && !notes[id]?.trim()) {
 			showToast('Write a reason first — the founder reads it in their console.', 'err');
-			openId = id;
 			return;
 		}
 		busy = id;
@@ -93,7 +74,6 @@
 			}
 			showToast(decision === 'approve' ? 'Approved.' : 'Sent back.', 'ok');
 			notes = { ...notes, [id]: '' };
-			openId = '';
 			await invalidateAll();
 		} finally {
 			busy = '';
@@ -112,12 +92,6 @@
 			year: 'numeric'
 		});
 	}
-
-	// A page at a time; back to the first page whenever the view changes.
-	const jobPager = new Pager(
-		() => jobs,
-		() => []
-	);
 
 	// A page at a time; back to the first page whenever the view changes.
 	const memberPager = new Pager(
@@ -146,76 +120,13 @@
 	onLogout={handleLogout}
 >
 	<p class="lede">
-		Nothing a founder writes reaches the public site until it is approved here. A refusal needs a
-		reason, which the founder reads in their own console.
+		New team members and company detail changes wait here for a decision. A refusal needs a reason,
+		which the founder reads in their own console. Job postings go live without approval — manage
+		them under Job postings.
 	</p>
 
 	{#if total === 0}
 		<div class="empty"><p>Nothing waiting. Everything founders have sent has been decided.</p></div>
-	{/if}
-
-	{#if jobs.length > 0}
-		<section class="group">
-			<h2 class="group__title">Job postings <span class="group__count">{jobs.length}</span></h2>
-			{#each jobPager.rows as job (job.id)}
-				<article class="item">
-					<div class="item__head">
-						<div class="item__text">
-							<p class="item__name">{job.role}</p>
-							<p class="item__sub">
-								{companyName(job.company_id)} · {job.type} · {job.location || 'no location given'} · sent
-								{when(job.submitted_at)}
-							</p>
-							{#if !companyVerified(job.company_id)}
-								<p class="item__flag">
-									This company is not verified, so approving the role will not put it on the board
-									yet.
-								</p>
-							{/if}
-						</div>
-						<button class="btn-small" onclick={() => (openId = openId === job.id ? '' : job.id)}>
-							{openId === job.id ? 'Hide' : 'Read'}
-						</button>
-					</div>
-
-					{#if openId === job.id}
-						<div class="detail">
-							<p class="detail__label">Sector</p>
-							<p class="detail__text">{job.sector || '—'}</p>
-							<p class="detail__label">Description</p>
-							<p class="detail__text">{job.description}</p>
-							<p class="detail__label">Apply link</p>
-							<p class="detail__text">{job.apply_link}</p>
-						</div>
-					{/if}
-
-					<div class="decide">
-						<input
-							type="text"
-							class="note"
-							placeholder="Reason, if sending it back"
-							value={notes[job.id] ?? ''}
-							oninput={(e) => (notes = { ...notes, [job.id]: e.currentTarget.value })}
-						/>
-						<button
-							class="btn-small btn-small--primary"
-							disabled={busy === job.id}
-							onclick={() => decide('job', job.id, 'approve')}
-						>
-							Approve
-						</button>
-						<button
-							class="btn-small btn-small--danger"
-							disabled={busy === job.id}
-							onclick={() => decide('job', job.id, 'reject')}
-						>
-							Send back
-						</button>
-					</div>
-				</article>
-			{/each}
-			<Pagination pager={jobPager} noun="postings" />
-		</section>
 	{/if}
 
 	{#if members.length > 0}
@@ -385,31 +296,6 @@
 		font-size: 12px;
 		color: admin-tone-fg('warn');
 		max-width: 62ch;
-	}
-
-	.detail {
-		margin-top: 14px;
-		padding: 14px;
-		background: $admin-sunken;
-		border-radius: $admin-radius-md;
-	}
-
-	.detail__label {
-		@include admin-field-label;
-		margin: 12px 0 4px;
-
-		&:first-child {
-			margin-top: 0;
-		}
-	}
-
-	.detail__text {
-		margin: 0;
-		font-size: 13px;
-		line-height: 1.6;
-		color: $admin-ink-2;
-		white-space: pre-wrap;
-		overflow-wrap: anywhere;
 	}
 
 	.diff {

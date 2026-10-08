@@ -5,10 +5,8 @@
 // hand each verified company its own slice, and this reads it with the ordinary
 // browser client rather than through a server route.
 //
-// Two things are deliberately not here. `review_note` and `reviewed_at` are the
-// TIC team's internal notes on a candidate and are excluded at the column-grant
-// level, so they cannot be selected even by asking. And there is no write path:
-// the company has no update grant, so a status is TIC's to set.
+// Read-only: an application is received and read, never moved through stages.
+// The company has a select grant on this table and nothing else.
 
 import { supabase } from '$lib/supabaseClient';
 
@@ -107,3 +105,4 @@ export async function resumeUrl(path: string): Promise<string | null> {
 	if (error || !data) return null;
 	return data.signedUrl;
 }
+

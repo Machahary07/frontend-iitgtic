@@ -82,10 +82,25 @@ export async function loadJobs(db: SupabaseClient) {
 	const { data } = await db
 		.from('jobs')
 		.select(
-			'id, company_id, slug, role, company, company_slug, location, type, sector, posted, description, apply_link, status, review_note, created_at, updated_at'
+			'id, owner, company_id, slug, role, company, location, type, work_mode, sector, pay, closes_on, max_applicants, posted, description, status, removed_reason, removed_at'
 		)
 		.order('posted', { ascending: false });
 	return data ?? [];
+}
+
+/** How many applied to each role, and how much storage their resumes take.
+ *  Only these totals leave this function for a startup's role — who applied
+ *  is the startup's business. */
+export async function loadApplicantCounts(db: SupabaseClient) {
+	const { data } = await db.from('job_applications').select('job_id, resume->size');
+	const counts: Record<string, { total: number; bytes: number }> = {};
+	for (const row of (data ?? []) as { job_id: string | null; size: number | null }[]) {
+		if (!row.job_id) continue;
+		const c = (counts[row.job_id] ??= { total: 0, bytes: 0 });
+		c.total += 1;
+		c.bytes += Number(row.size) || 0;
+	}
+	return counts;
 }
 
 export async function loadJobApplications(db: SupabaseClient) {
@@ -94,6 +109,8 @@ export async function loadJobApplications(db: SupabaseClient) {
 		.select(
 			'id, job_slug, job_role, job_company, job_source, company_id, full_name, email, applicant_role, status, review_note, reviewed_at, created_at'
 		)
+		// TIC's own roles only: a startup's applicants are the startup's.
+		.is('company_id', null)
 		.order('created_at', { ascending: false });
 	return data ?? [];
 }

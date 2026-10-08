@@ -40,16 +40,16 @@ export const PAGES: Record<string, PageKnowledge> = {
 		actions: ['Open an application', 'Move it between statuses']
 	},
 	'/tic-admin/jobs': {
-		title: 'Posted jobs',
+		title: 'Job postings',
 		about:
-			'Roles on the public Opportunities board — those TIC seeded and those verified startups posted.',
-		actions: ['Delete a posting']
+			'Two tabs. TIC: the centre’s own roles, which TIC posts, edits, closes and deletes, with a response count per role. Incubatees: every startup’s roles with how many applied — read-only, except removing one with a reason the founder is emailed.',
+		actions: ['Post a TIC role', 'Edit, close or delete a TIC role', 'Remove a startup role with a reason']
 	},
 	'/tic-admin/job-applications': {
-		title: 'Role applicants',
+		title: 'Job responses',
 		about:
-			'People who applied to a posted role, with their resume: new, shortlisted, sent on to the company, or declined. Not the same as incubation applications.',
-		actions: ['Shortlist, send on or decline an applicant', 'Export to CSV']
+			'People who applied to one of TIC’s own roles, with their resume. Received and read, no stages. Resumes are deleted 90 days after a role ends. Not the same as incubation applications.',
+		actions: ['Open an application', 'Download all resumes as a zip', 'Export to CSV']
 	},
 	'/tic-admin/users': {
 		title: 'Users',

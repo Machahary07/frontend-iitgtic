@@ -332,7 +332,7 @@ export async function loadOverview(admin: ConsoleSession): Promise<Overview> {
 			job_company: string;
 			created_at: string;
 		}[]
-	).filter((a) => a.status === 'new');
+	).filter((a) => Date.now() - Date.parse(a.created_at) < 7 * 86_400_000);
 
 	const actions: OverviewRow[] = [
 		...toCheck.map((a) => ({
@@ -404,7 +404,7 @@ export async function loadOverview(admin: ConsoleSession): Promise<Overview> {
 				cta: 'View all'
 			},
 			{
-				label: 'New role applicants',
+				label: 'Job responses this week',
 				value: newApplicants.length,
 				tone: 'neutral',
 				icon: 'users',
@@ -420,9 +420,9 @@ export async function loadOverview(admin: ConsoleSession): Promise<Overview> {
 				rows: actions
 			},
 			{
-				title: 'New role applicants',
-				empty: 'No one is waiting on a role application.',
-				more: { href: '/tic-admin/job-applications', label: 'All applicants →' },
+				title: 'Job responses this week',
+				empty: 'No one applied to a TIC role this week.',
+				more: { href: '/tic-admin/job-applications', label: 'All responses →' },
 				rows: newApplicants.slice(0, 5).map((a) => ({
 					id: a.id,
 					title: a.full_name,
