@@ -119,9 +119,10 @@ export function adminAlertRecipient(): string {
 	return (match ? match[1] : config.from).trim();
 }
 
-// A human-readable IST timestamp for the "signed in at" / "signed up at" lines.
-export function formatEventTime(): string {
-	return new Date().toLocaleString('en-GB', {
+// A human-readable IST timestamp for the "signed in at" / "signed up at" lines,
+// or for any other moment passed in.
+export function formatEventTime(at = new Date()): string {
+	return at.toLocaleString('en-GB', {
 		timeZone: 'Asia/Kolkata',
 		day: 'numeric',
 		month: 'short',

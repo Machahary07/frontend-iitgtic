@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { phoneInput } from '$lib/utils/phone';
+	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
 	import { untrack } from 'svelte';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
@@ -172,6 +173,7 @@
 				<span>New password</span>
 				<input type="password" bind:value={newPassword} autocomplete="new-password" required />
 			</label>
+			<PasswordStrength password={newPassword} />
 			<button type="submit" class="btn" disabled={changingPassword}>
 				{changingPassword ? 'Changing…' : 'Change password'}
 			</button>

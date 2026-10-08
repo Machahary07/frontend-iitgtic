@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { supabase } from '$lib/supabaseClient';
@@ -155,6 +156,7 @@
 						</button>
 					</div>
 				</label>
+				<PasswordStrength {password} />
 
 				<label class="field">
 					<span>Confirm new password</span>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
 	import { goto } from '$app/navigation';
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
@@ -318,6 +319,7 @@
 								</div>
 							</label>
 						</div>
+						<PasswordStrength {password} />
 
 						<div class="agree-wrap" class:has-error={errors.agreed}>
 							<div class="agree">

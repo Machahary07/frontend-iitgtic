@@ -27,6 +27,7 @@ export type ConsoleSection =
 	| 'approvals'
 	| 'companies'
 	| 'applications'
+	| 'evaluation'
 	| 'jobs'
 	| 'job-applications'
 	| 'users'
@@ -36,6 +37,7 @@ export type ConsoleSection =
 	| 'email'
 	| 'storage'
 	| 'support'
+	| 'settings'
 	| 'assistant';
 
 /** In sidebar order, with the label the Roles page prints for each. */
@@ -44,6 +46,7 @@ export const CONSOLE_SECTIONS: { key: ConsoleSection; label: string }[] = [
 	{ key: 'approvals', label: 'Approvals' },
 	{ key: 'companies', label: 'Companies' },
 	{ key: 'applications', label: 'Applications' },
+	{ key: 'evaluation', label: 'Evaluation' },
 	{ key: 'jobs', label: 'Posted jobs' },
 	{ key: 'job-applications', label: 'Role applicants' },
 	{ key: 'users', label: 'Users' },
@@ -53,6 +56,7 @@ export const CONSOLE_SECTIONS: { key: ConsoleSection; label: string }[] = [
 	{ key: 'email', label: 'Email' },
 	{ key: 'storage', label: 'Storage' },
 	{ key: 'support', label: 'Support' },
+	{ key: 'settings', label: 'Settings' },
 	{ key: 'assistant', label: 'Assistant' }
 ];
 
@@ -68,6 +72,8 @@ const PIPELINE: ConsoleSection[] = [
 	'jobs',
 	'job-applications',
 	'support',
+	// Everyone manages their own details and password.
+	'settings',
 	'assistant'
 ];
 
@@ -135,7 +141,8 @@ export const ROLE_INFO: Record<AccountRole, RoleInfo> = {
 		label: 'TIC Coordinator',
 		hint: 'Pipeline, website, email',
 		blurb: 'Coordinates programmes. Works the pipeline and keeps the website and emails current.',
-		sections: [...PIPELINE, 'content', 'email']
+		// Evaluation is where they score the screening call.
+		sections: [...PIPELINE, 'evaluation', 'content', 'email']
 	},
 	founder: {
 		label: 'Founder',

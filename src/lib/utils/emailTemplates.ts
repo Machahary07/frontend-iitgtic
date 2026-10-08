@@ -9,6 +9,7 @@
 
 import { escapeHtml, renderBlocks, type EmailBlock } from '$lib/utils/emailBlocks';
 import { SCORED_STEPS } from '$lib/utils/applicationScores';
+import { EVALUATION_CRITERIA } from '$lib/utils/evaluationCriteria';
 
 export type TemplateVariable = {
 	name: string;
@@ -268,6 +269,27 @@ function scoreCard(extra: string[] = []): EmailBlock {
 		showIf: 'scoreOverall'
 	};
 }
+
+// The screening call's average per criterion, out of 10, from the coordinators'
+// submitted marks. Left out entirely when there was no screening call.
+const SCREENING_VARIABLES: TemplateVariable[] = [
+	...EVALUATION_CRITERIA.map((c) => ({
+		name: `eval_${c.key}`,
+		description: `Screening average for ${c.name} — row dropped if empty`,
+		sample: '7.5/10'
+	})),
+	{ name: 'evalOverall', description: 'Screening average across the criteria', sample: '7.1/10' }
+];
+
+const SCREENING_CARD: EmailBlock = {
+	type: 'details',
+	title: 'Screening call',
+	items: [
+		...EVALUATION_CRITERIA.map((c) => `${c.name}: {{eval_${c.key}}}`),
+		'Overall: {{evalOverall}}'
+	],
+	showIf: 'evalOverall'
+};
 
 const SIGN_OFF: EmailBlock = {
 	type: 'signature',
@@ -560,6 +582,55 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		])
 	},
 	{
+		key: 'screening-invite',
+		name: 'Screening call invite',
+		description:
+			'Invites the applicant to the screening call with TIC coordinators: when it is and the Google Meet link.',
+		trigger: 'Admin saves or changes the meeting on /tic-admin/evaluation',
+		group: 'Incubation applications',
+		variables: [
+			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{ name: 'meetTime', description: 'When, in IST', sample: 'Mon, 12 Oct 2026, 11:00' },
+			{
+				name: 'meetUrl',
+				description: 'Google Meet link',
+				sample: 'https://meet.google.com/abc-defg-hij'
+			}
+		],
+		subject: 'Your screening call with {{siteName}}',
+		...fromBlocks([
+			{ type: 'progress', stage: '3' },
+			{ type: 'sticker', tone: 'info', text: 'Screening call' },
+			{ type: 'heading', text: 'Let’s _talk_, {{fullName}}' },
+			{
+				type: 'lede',
+				text: 'Your application for **{{startupName}}** has moved to a screening call with our coordinators. It is a conversation, not an exam — tell us about the team, the problem and where you are headed.'
+			},
+			{
+				type: 'details',
+				title: 'Your call',
+				items: ['When: {{meetTime}} IST', 'Where: Google Meet']
+			},
+			{ type: 'button', label: 'Join Google Meet', href: '{{meetUrl}}' },
+			{ type: 'subheading', text: 'Before the call' },
+			{
+				type: 'bullets',
+				items: [
+					'Join a couple of minutes early from a quiet place with a working camera and mic.',
+					'Have a short pitch ready — five minutes on the problem, product, traction and team.',
+					'Co-founders are welcome to join.'
+				]
+			},
+			{
+				type: 'note',
+				text: 'Can’t make this time? Reply to this email and we will find another.'
+			},
+			SIGN_OFF
+		])
+	},
+
+	{
 		key: 'application-accepted',
 		name: 'Application accepted',
 		description:
@@ -570,7 +641,8 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
 			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
 			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' },
-			...SCORE_VARIABLES
+			...SCORE_VARIABLES,
+			...SCREENING_VARIABLES
 		],
 		subject: 'Congratulations — {{startupName}} is in',
 		...fromBlocks([
@@ -595,6 +667,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				showIf: 'note'
 			},
 			scoreCard(),
+			SCREENING_CARD,
 			{ type: 'subheading', text: 'Your first steps' },
 			{
 				type: 'numbers',
@@ -620,7 +693,8 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 			{ name: 'note', description: 'Reviewer note — dropped if empty', sample: '' },
 			{ name: 'decidedAt', description: 'Review step it was declined at', sample: 'CEO review' },
 			{ name: 'decidedBy', description: 'Role that declined it', sample: 'TIC CEO' },
-			...SCORE_VARIABLES
+			...SCORE_VARIABLES,
+			...SCREENING_VARIABLES
 		],
 		subject: 'About your {{siteName}} application',
 		...fromBlocks([
@@ -638,6 +712,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				showIf: 'note'
 			},
 			scoreCard(['Review step: {{decidedAt}}', 'Decided by: {{decidedBy}}']),
+			SCREENING_CARD,
 			{
 				type: 'text',
 				text: 'This is not a judgement on you or the idea’s future. Many of our incubated founders applied more than once — we would genuinely like to hear from you again.'
@@ -720,6 +795,53 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 	},
 
 	// --- founder console ----------------------------------------------------
+	{
+		key: 'evaluation-meeting',
+		name: 'Screening call scheduled',
+		description:
+			'Tells each assigned coordinator when the screening call is and gives them the Google Meet link and their evaluation card.',
+		trigger: 'Admin saves or changes the meeting on /tic-admin/evaluation',
+		group: 'Internal review',
+		variables: [
+			{ name: 'recipientName', description: 'Coordinator first name', sample: 'Ananya' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{ name: 'founderName', description: 'Applicant name', sample: 'Rahul Bora' },
+			{
+				name: 'meetTime',
+				description: 'When, in IST (dropped if empty)',
+				sample: '12 Oct 2026, 11:00'
+			},
+			{
+				name: 'meetUrl',
+				description: 'Google Meet link',
+				sample: 'https://meet.google.com/abc-defg-hij'
+			},
+			{
+				name: 'evaluationUrl',
+				description: 'Their evaluation page',
+				sample: 'https://iitgtic.itsjeu.com/tic-admin/evaluation'
+			}
+		],
+		subject: 'Screening call: {{startupName}}',
+		...fromBlocks([
+			{ type: 'progress', stage: '3' },
+			{ type: 'sticker', tone: 'info', text: 'Screening call' },
+			{ type: 'heading', text: 'Hi {{recipientName}}, _you are on the panel_' },
+			{
+				type: 'lede',
+				text: 'The screening call for **{{startupName}}** is set up. Join it, then score the startup on each criterion and submit from your evaluation card.'
+			},
+			{
+				type: 'details',
+				title: 'Meeting',
+				items: ['Startup: {{startupName}}', 'Founder: {{founderName}}', 'When: {{meetTime}} IST']
+			},
+			{ type: 'button', label: 'Join Google Meet', href: '{{meetUrl}}' },
+			{ type: 'link', label: 'Open your evaluation card', href: '{{evaluationUrl}}' },
+			SIGN_OFF
+		])
+	},
+
 	{
 		key: 'role-decision',
 		name: 'Job posting approved / sent back',

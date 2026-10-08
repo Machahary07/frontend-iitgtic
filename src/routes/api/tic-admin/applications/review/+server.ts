@@ -11,7 +11,8 @@ import type { RequestHandler } from './$types';
 //
 //   forward   admin    0 → 1   passes it to the CEO (applicant hears "under review")
 //   assign    admin/CEO 1|2 → 3 coordinators, or 4 → 5 heads
-//   sign-off  assigned coordinator at 3 / head at 5; the last coordinator moves it to 4
+//   sign-off  assigned head at 5 (coordinators submit from /tic-admin/evaluation,
+//             and admin ending the screening call moves it to 4)
 //   live      admin    accepted → 6, once it shows among the incubated startups
 //
 // Accepting and rejecting stay on PATCH /api/tic-admin/applications.
@@ -146,9 +147,9 @@ export const POST: RequestHandler = async ({ cookies, request, url }) => {
 		}
 
 		case 'sign-off': {
-			if (scope !== 'coordinator' && scope !== 'head')
-				error(403, 'Only an assigned reviewer signs off.');
-			if (stage !== (scope === 'coordinator' ? 3 : 5)) error(409, 'It is not at your step.');
+			if (scope === 'coordinator') error(403, 'Coordinators submit their scores from Evaluation.');
+			if (scope !== 'head') error(403, 'Only an assigned TIC head signs off.');
+			if (stage !== 5) error(409, 'It is not at your step.');
 
 			const { data: mine, error: updateError } = await ctx.db
 				.from('application_reviewers')
@@ -160,23 +161,15 @@ export const POST: RequestHandler = async ({ cookies, request, url }) => {
 			if (updateError) error(500, updateError.message);
 			if (!mine?.length) error(403, 'You are not assigned to this application.');
 
-			// The last coordinator to sign off sends it back to the CEO. Heads
-			// stay at 5: once they are all done it is with admin for the final email.
+			// Heads stay at 5: once they are all done it is with admin for the
+			// final email.
 			const { count: pending } = await ctx.db
 				.from('application_reviewers')
 				.select('id', { count: 'exact', head: true })
 				.eq('application_id', app.id)
 				.eq('kind', scope)
 				.is('done_at', null);
-			if (pending === 0 && scope === 'coordinator') {
-				await setStage(4);
-				await notifyReviewers({
-					...handOff,
-					stage: 4,
-					roles: ['tic_ceo'],
-					ask: 'every assigned coordinator has signed off. Recheck their notes and assign the TIC heads.'
-				});
-			} else if (pending === 0) {
+			if (pending === 0) {
 				await notifyReviewers({
 					...handOff,
 					stage: 5,

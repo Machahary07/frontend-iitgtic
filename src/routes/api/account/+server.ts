@@ -4,6 +4,7 @@ import type { RequestHandler } from './$types';
 import { clearTicAdminSession } from '$lib/server/ticAdminSession';
 import { clearFounderSession } from '$lib/server/founderSession';
 import { sendTemplateEmail } from '$lib/server/email';
+import { FULL_ADMIN_ROLES, type StaffRole } from '$lib/utils/roles';
 
 // Closing your own account. Deleting the auth user is the only part that needs
 // the service role — a login that survives the account would be worse than
@@ -28,6 +29,16 @@ export const DELETE: RequestHandler = async ({ request, cookies }) => {
 		supabaseAdmin.from('profiles').select('full_name, email, role').eq('id', user.id).maybeSingle(),
 		supabaseAdmin.from('companies').select('company_name').eq('owner_id', user.id)
 	]);
+
+	// The same rule the Users page applies: the console is never left with no
+	// one who can run it.
+	if (FULL_ADMIN_ROLES.includes(profile?.role as StaffRole)) {
+		const { count } = await supabaseAdmin
+			.from('profiles')
+			.select('id', { count: 'exact', head: true })
+			.in('role', FULL_ADMIN_ROLES);
+		if ((count ?? 0) <= 1) error(400, 'This is the last admin account, so it cannot be deleted.');
+	}
 
 	const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
 	if (deleteError) error(500, deleteError.message);

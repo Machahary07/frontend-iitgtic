@@ -14,13 +14,15 @@ export type DocumentLink = { field: string; name: string; size: number; url: str
 
 export const load: PageServerLoad = async ({ parent, url }) => {
 	const { founder, activeCompanyId } = await parent();
-	if (!activeCompanyId) return { application: null, documents: [] as DocumentLink[] };
+	if (!activeCompanyId) {
+		return { application: null, documents: [] as DocumentLink[], screening: null };
+	}
 
 	const db = founderDb(founder.userId);
 	const { data } = await db
 		.from('applications')
 		.select(
-			'id, status, startup_name, created_at, reviewed_at, applicant_message, full_name, email, answers, documents'
+			'id, status, startup_name, created_at, reviewed_at, applicant_message, full_name, email, answers, documents, meet_url, meet_at, meeting_ended_at'
 		)
 		.eq('company_id', activeCompanyId)
 		.order('created_at', { ascending: false })
@@ -29,11 +31,17 @@ export const load: PageServerLoad = async ({ parent, url }) => {
 
 	const application = (data ?? null) as ApplicationDetail | null;
 
+	// The screening call they are invited to, while it is still to happen.
+	const screening =
+		data?.meet_url && !data.meeting_ended_at && data.status !== 'rejected'
+			? { meetUrl: data.meet_url as string, meetAt: (data.meet_at as string | null) ?? null }
+			: null;
+
 	// A declined startup may apply again; `?new` opens the form for that. Any
 	// other standing keeps the submitted record in view, so a second application
 	// cannot be started while the first is still with TIC.
 	if (!application || (application.status === 'rejected' && url.searchParams.has('new'))) {
-		return { application: null, documents: [] as DocumentLink[] };
+		return { application: null, documents: [] as DocumentLink[], screening: null };
 	}
 
 	// Signed here rather than in the browser: the storage policy only lets a user
@@ -49,5 +57,5 @@ export const load: PageServerLoad = async ({ parent, url }) => {
 			})
 	);
 
-	return { application, documents };
+	return { application, documents, screening };
 };

@@ -17,6 +17,7 @@
 
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
 	import Pencil from '@lucide/svelte/icons/pencil';
 	import Power from '@lucide/svelte/icons/power';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
@@ -373,6 +374,7 @@
 									{#if showPassword}<EyeOff size={15} />{:else}<Eye size={15} />{/if}
 								</button>
 							</span>
+							<PasswordStrength {password} />
 							{#if errors.password}<span class="field__error">{errors.password}</span>{/if}
 						</label>
 					{/if}

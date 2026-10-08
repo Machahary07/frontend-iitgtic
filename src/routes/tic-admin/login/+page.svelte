@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
+	import PasswordStrength from '$lib/components/PasswordStrength.svelte';
 	import { resolve } from '$app/paths';
 	import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 	import { bootstrapFirstAdmin } from '$lib/utils/ticAdminAuth';
@@ -137,6 +138,7 @@
 					<span>Choose a password</span>
 					<input type="password" bind:value={setupPw} autocomplete="new-password" required />
 				</label>
+				<PasswordStrength password={setupPw} />
 				<label class="field">
 					<span>Confirm password</span>
 					<input type="password" bind:value={setupConfirm} autocomplete="new-password" required />

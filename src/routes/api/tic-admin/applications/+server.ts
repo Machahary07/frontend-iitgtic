@@ -3,6 +3,7 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
 import { sendTemplateEmail } from '$lib/server/email';
 import { canSeeApplication, reviewScope, scoreEmailVariables } from '$lib/server/applicationReview';
+import { screeningEmailVariables } from '$lib/server/evaluation';
 import { REVIEW_STEP_NAMES } from '$lib/utils/emailBlocks';
 import { roleLabel } from '$lib/utils/roles';
 import type { RequestHandler } from './$types';
@@ -108,7 +109,12 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 		// The panel's marks go out with the decision only — never while it is
 		// still being reviewed — as per-step averages with no names attached.
 		const decided = rejecting || body.status === 'accepted';
-		const scoreVars = decided ? await scoreEmailVariables(ctx.db, body.id) : {};
+		const scoreVars = decided
+			? {
+					...(await scoreEmailVariables(ctx.db, body.id)),
+					...(await screeningEmailVariables(ctx.db, body.id))
+				}
+			: {};
 		const result = await sendTemplateEmail({
 			templateKey,
 			to: application.email as string,

@@ -10,6 +10,7 @@ import {
 	loadReviewers,
 	reviewScope
 } from '$lib/server/applicationReview';
+import { loadScreening } from '$lib/server/evaluation';
 import type { PageServerLoad } from './$types';
 
 const BUCKET = 'application-documents';
@@ -28,7 +29,7 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 
 	const { data, error: dbError } = await db
 		.from('applications')
-		.select(`${APPLICATION_COLUMNS}, answers, documents`)
+		.select(`${APPLICATION_COLUMNS}, answers, documents, meet_at, meeting_ended_at`)
 		.eq('id', params.id)
 		.maybeSingle();
 
@@ -46,15 +47,21 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 	}
 
 	const assigns = scope === 'admin' || scope === 'ceo';
-	const [reviewers, coordinators, heads, myScores, allScores, scoring] = await Promise.all([
-		loadReviewers(db, data.id),
-		assigns ? loadAssignable(db, 'coordinator') : Promise.resolve([]),
-		assigns ? loadAssignable(db, 'head') : Promise.resolve([]),
-		loadMyScores(db, data.id, admin!.userId),
-		// Everyone's marks go to admin and nobody else — not even as a total.
-		scope === 'admin' ? loadAllScores(db, data.id) : Promise.resolve(null),
-		canScore(db, admin!, data)
-	]);
+	// The coordinators' screening marks: admin always, the CEO from the recheck
+	// on (stage 4), once the call has ended. Nobody else.
+	const seesScreening = scope === 'admin' || (scope === 'ceo' && Boolean(data.meeting_ended_at));
+
+	const [reviewers, coordinators, heads, myScores, allScores, scoring, screening] =
+		await Promise.all([
+			loadReviewers(db, data.id),
+			assigns ? loadAssignable(db, 'coordinator') : Promise.resolve([]),
+			assigns ? loadAssignable(db, 'head') : Promise.resolve([]),
+			loadMyScores(db, data.id, admin!.userId),
+			// Everyone's marks go to admin and nobody else — not even as a total.
+			scope === 'admin' ? loadAllScores(db, data.id) : Promise.resolve(null),
+			canScore(db, admin!, data),
+			seesScreening ? loadScreening(db, data.id) : Promise.resolve(null)
+		]);
 
 	const documents = (data.documents ?? {}) as Record<string, DocumentEntry>;
 	const documentLinks: Record<string, { name: string; size: number; url: string | null }> = {};
@@ -74,6 +81,9 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 		me: admin!.userId,
 		reviewers,
 		assignable: { coordinators, heads },
-		scores: { mine: myScores, all: allScores, canScore: scoring }
+		scores: { mine: myScores, all: allScores, canScore: scoring },
+		screening: screening
+			? { people: screening, meetAt: data.meet_at, endedAt: data.meeting_ended_at }
+			: null
 	};
 };

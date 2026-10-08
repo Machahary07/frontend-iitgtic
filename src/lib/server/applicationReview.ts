@@ -151,9 +151,10 @@ export async function loadAssignable(db: SupabaseClient, kind: ReviewerKind) {
 
 // ---- scores ------------------------------------------------------------------
 
-/** Whether this person may mark the application right now: admin until the
- *  decision, the CEO at its own steps, and an assigned reviewer at their step
- *  until they sign off. */
+/** Whether this person may mark the application's steps right now: admin
+ *  until the decision, the CEO at its own steps, and an assigned head at step 5
+ *  until they sign off. Coordinators score the screening call instead
+ *  ($lib/server/evaluation). */
 export async function canScore(
 	db: SupabaseClient,
 	admin: Pick<ConsoleSession, 'role' | 'userId'>,
@@ -164,8 +165,7 @@ export async function canScore(
 	const stage = app.review_stage;
 	if (scope === 'admin') return true;
 	if (scope === 'ceo') return stage === 1 || stage === 2 || stage === 4;
-	if (scope !== 'coordinator' && scope !== 'head') return false;
-	if (stage !== (scope === 'coordinator' ? 3 : 5)) return false;
+	if (scope !== 'head' || stage !== 5) return false;
 
 	const { data } = await db
 		.from('application_reviewers')

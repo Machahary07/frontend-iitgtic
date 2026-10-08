@@ -5,6 +5,7 @@
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
 	import ReviewProgress, { type ReviewStage } from '$lib/components/ReviewProgress.svelte';
+	import ScreeningScores from '$lib/components/ScreeningScores.svelte';
 	import {
 		adminDeleteApplication,
 		adminReviewAction,
@@ -56,9 +57,8 @@
 	const myPending = $derived(
 		reviewers.find((r) => r.user_id === data.me && r.kind === scope && !r.done_at) ?? null
 	);
-	const mySignOffOpen = $derived(
-		myPending !== null && stage === (myPending.kind === 'coordinator' ? 3 : 5)
-	);
+	// Only heads sign off here; coordinators submit from Evaluation.
+	const mySignOffOpen = $derived(myPending?.kind === 'head' && stage === 5);
 
 	let picked = $state<string[]>([]);
 	let signOffNote = $state('');
@@ -289,6 +289,21 @@
 
 	<div class="layout">
 		<div class="main">
+			{#if data.screening?.people.length}
+				<section class="card">
+					<header class="card__head">
+						<h2><span class="card__step">Screening call</span> Coordinator evaluation</h2>
+						{#if data.screening.endedAt}
+							<span class="card__when">Ended {fmtDateTime(data.screening.endedAt)}</span>
+						{:else if data.screening.meetAt}
+							<span class="card__when">Meeting {fmtDateTime(data.screening.meetAt)}</span>
+						{/if}
+					</header>
+					<!-- The CEO reads the submitted marks only; nothing here can be changed. -->
+					<ScreeningScores people={data.screening.people} submittedOnly={!isAdmin} />
+				</section>
+			{/if}
+
 			{#each sectionsBeforeDocuments as section (section.step)}
 				<section class="card">
 					<header class="card__head">
@@ -411,7 +426,16 @@
 								<p class="step__hint">With the CEO for review.</p>
 							{/if}
 						{:else if stage === 3}
-							<p class="step__hint">Assigned coordinators are reviewing.</p>
+							<p class="step__hint">
+								{isAdmin
+									? 'Assigned coordinators are in the screening call. Set up the meeting and end it from Evaluation.'
+									: scope === 'coordinator'
+										? 'Join the screening call and submit your scores from Evaluation.'
+										: 'Assigned coordinators are in the screening call.'}
+							</p>
+							{#if isAdmin || scope === 'coordinator'}
+								<a class="btn" href={resolve('/tic-admin/evaluation')}>Open Evaluation</a>
+							{/if}
 						{:else if stage === 4}
 							{#if canAssign}
 								{@render picker('head', data.assignable.heads)}
@@ -470,7 +494,13 @@
 										<li class="reviewer">
 											<span class="reviewer__name">{r.name || r.email}</span>
 											<span class="reviewer__state" class:reviewer__state--done={r.done_at}>
-												{r.done_at ? 'Signed off' : 'Reviewing'}
+												{r.done_at
+													? r.kind === 'coordinator'
+														? 'Submitted'
+														: 'Signed off'
+													: r.kind === 'coordinator'
+														? 'Evaluating'
+														: 'Reviewing'}
 											</span>
 											{#if r.note}<p class="reviewer__note">{r.note}</p>{/if}
 										</li>
@@ -694,6 +724,12 @@
 		color: #fff;
 		background: #111;
 		border-color: #111;
+	}
+
+	.card__when {
+		flex: none;
+		font-size: 11px;
+		color: $admin-ink-3;
 	}
 
 	.card__step {
