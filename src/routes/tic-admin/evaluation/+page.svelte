@@ -57,16 +57,25 @@
 		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 	}
 
-	let meetDrafts = $state<Record<string, { url: string; at: string }>>({});
+	// Seeded up front, not while drawing the card: creating state during render
+	// is what Svelte refuses (state_unsafe_mutation).
+	const draftOf = (card: EvaluationCard) => ({
+		url: card.meetUrl ?? '',
+		at: toLocalInput(card.meetAt)
+	});
+	let meetDrafts = $state<Record<string, { url: string; at: string }>>(
+		untrack(() =>
+			Object.fromEntries((data.active as EvaluationCard[]).map((c) => [c.id, draftOf(c)]))
+		)
+	);
+	$effect.pre(() => {
+		for (const card of active) meetDrafts[card.id] ??= draftOf(card);
+	});
 	let busy = $state<string | null>(null);
 
-	function meetDraft(card: EvaluationCard) {
-		return (meetDrafts[card.id] ??= { url: card.meetUrl ?? '', at: toLocalInput(card.meetAt) });
-	}
-
 	async function saveMeeting(card: EvaluationCard) {
-		const draft = meetDraft(card);
-		if (!draft.at) {
+		const draft = meetDrafts[card.id];
+		if (!draft?.at) {
 			showToast('Choose the meeting date and time.', 'err');
 			return;
 		}
@@ -335,7 +344,7 @@
 			<!-- Meeting card -->
 			<div class="meet">
 				{#if isAdmin}
-					{@const draft = meetDraft(card)}
+					{@const draft = meetDrafts[card.id]}
 					<div class="meet__form">
 						<label class="field field--grow">
 							<span>Google Meet link</span>

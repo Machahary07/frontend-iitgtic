@@ -81,6 +81,28 @@ export async function signOut(): Promise<void> {
 	await supabase.auth.signOut();
 }
 
+/**
+ * Seats someone who already has a supabase-js session (a founder who has just
+ * signed up) in their console, through the same captcha-checked route as /login.
+ * Returns false when the server would not, and they sign in at /login instead.
+ */
+export async function startConsoleSession(captchaToken: string): Promise<boolean> {
+	const { data } = await supabase.auth.getSession();
+	const accessToken = data.session?.access_token;
+	if (!accessToken || !captchaToken) return false;
+	try {
+		const res = await fetch('/api/session-login', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ accessToken, captchaToken })
+		});
+		const body = (await res.json().catch(() => ({}))) as { ok?: boolean };
+		return res.ok && Boolean(body.ok);
+	} catch {
+		return false;
+	}
+}
+
 function friendlyAuthError(message: string): string {
 	const m = message.toLowerCase();
 	if (m.includes('invalid login credentials')) return 'Invalid email or password.';

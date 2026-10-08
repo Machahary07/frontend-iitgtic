@@ -7,6 +7,7 @@
 	import Turnstile from '$lib/components/Turnstile.svelte';
 	import { signUpFounder, sendFounderWelcome } from '$lib/utils/userSession';
 	import { verifyTurnstileToken } from '$lib/utils/turnstile';
+	import { startConsoleSession } from '$lib/utils/appAuth';
 
 	let name = $state('');
 	let email = $state('');
@@ -93,6 +94,14 @@
 		revalidate();
 	}
 
+	async function nextCaptchaToken(timeoutMs = 15000): Promise<string> {
+		const started = Date.now();
+		while (!turnstileToken && Date.now() - started < timeoutMs) {
+			await new Promise((r) => setTimeout(r, 250));
+		}
+		return turnstileToken;
+	}
+
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		if (submitting) return;
@@ -127,7 +136,13 @@
 			// carries the link that lifts the step-8 gate. Fire-and-forget so a mail
 			// hiccup never blocks the account they just created.
 			void sendFounderWelcome();
-			goto(resolve('/founder'));
+			// The console wants its own signed cookie, which /api/session-login only
+			// issues against a captcha token — and the one above is spent. The widget
+			// was reset and hands over a fresh one in a moment; use it to seat the
+			// new founder, or send them to sign in if it never comes.
+			const fresh = await nextCaptchaToken();
+			if (fresh && (await startConsoleSession(fresh))) goto(resolve('/founder'));
+			else goto(resolve('/login'));
 		} finally {
 			submitting = false;
 		}
