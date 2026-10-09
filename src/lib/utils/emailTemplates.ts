@@ -50,7 +50,7 @@ export const COMMON_VARIABLES: TemplateVariable[] = [
 	{
 		name: 'siteUrl',
 		description: 'Public site origin',
-		sample: 'https://iitgtic.itsjeu.com'
+		sample: 'https://iitgtic.com'
 	},
 	{ name: 'year', description: 'Current year', sample: String(new Date().getFullYear()) }
 ];
@@ -295,7 +295,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 			{
 				name: 'verifyUrl',
 				description: 'Signed one-off link that confirms the address',
-				sample: 'https://iitgtic.itsjeu.com/verify-email?u=…&e=…&t=…'
+				sample: 'https://iitgtic.com/verify-email?u=…&e=…&t=…'
 			}
 		],
 		subject: 'Welcome to {{siteName}} — confirm your email',
@@ -735,7 +735,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 			{
 				name: 'applicationUrl',
 				description: 'Link to the application in the console',
-				sample: 'https://iitgtic.itsjeu.com/tic-admin/applications/…'
+				sample: 'https://iitgtic.com/tic-admin/applications/…'
 			}
 		],
 		subject: 'Your review: {{startupName}}',
@@ -784,7 +784,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 			{
 				name: 'evaluationUrl',
 				description: 'Their evaluation page',
-				sample: 'https://iitgtic.itsjeu.com/tic-admin/evaluation'
+				sample: 'https://iitgtic.com/tic-admin/evaluation'
 			}
 		],
 		subject: 'Screening call: {{startupName}}',

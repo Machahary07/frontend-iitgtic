@@ -149,41 +149,174 @@ its own from this code.
 
 | Service                                    | Used for                                   | Notes                                                                                |
 | ------------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------ |
-| Node.js 20+ and **pnpm**                   | Building and running the app               | Do not use npm here                                                                  |
-| **Supabase** (hosted or self-hosted)       | Postgres, auth, file storage               | Any plan; the free plan's 1 GB of storage is enough to start                         |
-| **Resend** + a domain you control          | Every transactional email                  | Verify the domain (SPF, DKIM, DMARC) before sending to real people                   |
+| Node.js 22+ and **pnpm**                   | Building and running the app               | The live project runs Node 24. Do not use npm here                                   |
+| **Supabase** (hosted or self-hosted)       | Postgres, auth, file storage               | Any plan; the free plan's 1 GB of storage is enough to start. [Setup](#set-up-supabase) |
+| **Resend** + a domain you control          | Every transactional email                  | Or any other email provider. [Setup](#set-up-email)                                  |
 | **Cloudflare Turnstile**                   | Bot check on sign-in, sign-up and forms    | Free                                                                                 |
-| A host: **Vercel**, or a **VPS**           | Serving the app                            | See [Hosting](#hosting) below                                                        |
+| A host: **Vercel**, or a **VPS**           | Serving the app                            | [Vercel setup](#set-up-vercel) · [VPS](#hosting)                                     |
 | Sarvam AI (optional)                       | The admin assistant                        | Without a key the rest of the console works normally                                 |
 
 ### Steps
 
 1. **Install.** `pnpm install`, then `cp .env.example .env.local`.
-2. **Database.** Create a Supabase project, then apply every file in `supabase/migrations/`
-   in filename order — `supabase link --project-ref <ref>` and `supabase db push`, or paste
-   each into the SQL editor. The migrations create all 20 tables, their row-level security,
-   the triggers, and the four storage buckets.
-3. **Auth settings.** In Supabase → Authentication, set the Site URL to your domain and add
-   `https://<your-domain>/auth/callback` as a redirect URL. Leave **Confirm email off** — the
-   app sends its own confirmation and gates the final application step on it (see
-   [Roadmap](#roadmap)).
-4. **Environment.** Fill `.env.local` — every variable is described in
+2. **Supabase.** Create the project, build the schema and set up auth —
+   [Set up Supabase](#set-up-supabase).
+3. **Email.** Verify a sending domain and add the keys — [Set up email](#set-up-email).
+4. **Turnstile.** In Cloudflare → Turnstile, add a widget for your domain. Its site key is
+   `PUBLIC_TURNSTILE_SITE_KEY`, its secret key `TURNSTILE_SECRET_KEY`. For local development,
+   use Cloudflare's published test keys.
+5. **Environment.** Fill `.env.local` — every variable is described in
    [Environment](#environment). Generate `ADMIN_SESSION_SECRET` and `CRON_SECRET` with the
    command shown there. Set `ADMIN_ALERT_EMAIL` to a TIC inbox.
-5. **Check.** `pnpm doctor` confirms the keys, the connection and the buckets.
-6. **Content.** `node scripts/seed-content.js` copies the bundled page copy into the database
+6. **Check.** `pnpm doctor` confirms the keys, the connection and the buckets.
+7. **Content.** `node scripts/seed-content.js` copies the bundled page copy into the database
    so it can be edited from the console. Optional — the site falls back to the bundled copy.
-7. **First admin.** Run the app, open `/tic-admin/login`, enter `TIC_ADMIN_PASSWORD`. That
+8. **First admin.** Run the app, open `/tic-admin/login`, enter `TIC_ADMIN_PASSWORD`. That
    creates admin #1 and the password stops working. Create everyone else from **Users**.
-8. **Email.** Verify your domain in Resend, set `RESEND_FROM` to an address on it, and point a
-   Resend webhook (`email.bounced`, `email.complained`) at `https://<your-domain>/api/resend-webhook`
-   with its secret in `RESEND_WEBHOOK_SECRET`.
-9. **Deploy.** See below. Then set `PUBLIC_SITE_URL` to the live origin.
+9. **Deploy.** [Set up Vercel](#set-up-vercel), or run it on [a VPS](#hosting).
+
+### Set up Supabase
+
+1. **Create the project.** At [supabase.com](https://supabase.com) → **New project**. Pick the
+   region nearest your users (Mumbai, `ap-south-1`, for India) and keep the database password:
+   it is `IITG_SUPABASE_PASSWORD`, used only by the CLI and `pnpm backup`.
+2. **Copy the keys** into `.env.local`:
+
+   | Dashboard                   | Value                                | Variable                                                   |
+   | --------------------------- | ------------------------------------ | ---------------------------------------------------------- |
+   | Project Settings → Data API | Project URL                          | `PUBLIC_SUPABASE_URL`                                      |
+   | Project Settings → API Keys | Publishable key (`sb_publishable_…`) | `PUBLIC_SUPABASE_PUBLISHABLE_KEY`                          |
+   | Project Settings → API Keys | Secret key (`sb_secret_…`)           | `SUPABASE_SERVICE_ROLE_KEY` — server only, never `PUBLIC_` |
+
+3. **Build the schema.** Install the [Supabase CLI](https://supabase.com/docs/guides/cli), then:
+
+   ```sh
+   supabase login
+   supabase link --project-ref <project-ref>   # asks for the database password
+   supabase db push                            # applies every migration, in order
+   ```
+
+   That creates the 20 tables with row-level security on every one, the triggers and
+   functions, and the four storage buckets. Without the CLI, paste each file from
+   `supabase/migrations/` into the SQL Editor in filename order.
+
+4. **URL configuration.** Authentication → URL Configuration: set **Site URL** to
+   `https://<your-domain>`, and add `https://<your-domain>/**` and `http://localhost:5173/**`
+   under **Redirect URLs**. A link to an address missing from that list is dropped silently and
+   the Site URL used instead.
+5. **Keep "Confirm email" off.** Authentication → Sign In / Providers → Email. The app sends its
+   own welcome-and-confirm email and holds the last application step until the founder
+   confirms. With Supabase's confirmation on, sign-up returns no session and that flow stops
+   without an error.
+6. **Password-reset mail.** Supabase sends this one itself, and its built-in sender is for
+   testing — only a few messages an hour. Under Authentication → Emails → **SMTP Settings**,
+   turn on custom SMTP with your email provider. For Resend: host `smtp.resend.com`, port `465`,
+   username `resend`, password a Resend API key, sender an address on your verified domain.
+   Custom SMTP starts at 30 auth emails an hour; raise it under Authentication → Rate Limits if
+   needed. The wording is under Authentication → Emails → Templates → **Reset password**.
+7. **Check.** `pnpm doctor` connects with the keys and confirms the four buckets exist.
+
+> [!NOTE]
+> **Self-hosted Supabase** (for TIC's own server) works the same way. Use the instance's API URL,
+> its `ANON_KEY` as the publishable key and its `SERVICE_ROLE_KEY` as the secret key, apply the
+> migrations with `supabase db push --db-url <postgres connection string>`, and set the auth
+> options in the instance's `.env`: `SITE_URL`, `ADDITIONAL_REDIRECT_URLS`,
+> `ENABLE_EMAIL_AUTOCONFIRM=true` (confirmation off) and the `SMTP_*` settings.
+
+### Set up email
+
+Two things send mail, and both can use the same provider:
+
+| Mail                                                                     | Sent by                       | Set up in                                    |
+| ------------------------------------------------------------------------ | ----------------------------- | -------------------------------------------- |
+| The 23 app emails — applications, review hand-offs, job board, newsletter | The app, through Resend's API | The `RESEND_*` variables, below              |
+| Password reset                                                           | Supabase Auth                 | Supabase SMTP settings — [step 6](#set-up-supabase) above |
+
+**With Resend**
+
+1. **Account.** Sign up at [resend.com](https://resend.com).
+2. **Domain.** Domains → **Add domain**: the domain you will send from, for example
+   `iitgtic.com`. Resend lists a few DNS records — an MX and an SPF (TXT) record on a `send`
+   subdomain, and a DKIM (TXT) record at `resend._domainkey`. Add them exactly as shown at the
+   domain's DNS host, then press **Verify**. They sit on their own names, so the domain's
+   existing mailboxes (Google Workspace, for `iitgtic.com`) are not affected. If the domain has
+   no DMARC record, add one: `_dmarc` TXT `v=DMARC1; p=none;`.
+3. **API key.** API Keys → **Create API key** → `RESEND_API_KEY`. _Sending access_ is enough to
+   send; _Full access_ also lets the console show whether the domain is verified.
+4. **Variables.**
+
+   | Variable            | Set it to                                                                                           |
+   | ------------------- | --------------------------------------------------------------------------------------------------- |
+   | `RESEND_FROM`       | An address on the verified domain, e.g. `IIT Guwahati TIC <hello@iitgtic.com>` — no quotes in a dashboard |
+   | `RESEND_REPLY_TO`   | An inbox someone reads                                                                              |
+   | `ADMIN_ALERT_EMAIL` | The TIC team inbox, for sign-in and new-applicant alerts                                            |
+   | `EMAIL_SITE_NAME`   | `IIT Guwahati TIC`                                                                                  |
+   | `PUBLIC_SITE_URL`   | The live origin, e.g. `https://iitgtic.com` — every link inside an email uses it                    |
+   | `RESEND_PLAN`       | `free`, `pro`, `scale` or `enterprise` — what the usage meter counts against                        |
+
+5. **Bounce feedback.** Webhooks → **Add endpoint**: `https://<your-domain>/api/resend-webhook`,
+   events `email.bounced` and `email.complained`. Its signing secret (`whsec_…`) goes in
+   `RESEND_WEBHOOK_SECRET`. Without it the endpoint refuses every request and bounced addresses
+   are not suppressed; sending still works.
+6. **Test.** In the console, Email → Templates → any template → **Send a test**. Every attempt,
+   delivered or not, is in the Email log with the reason.
+
+**With another provider**
+
+The app talks to Resend in one function: `postToResend()` in `src/lib/server/email.ts`. It posts
+`from`, `to`, `subject`, `html`, `text`, `reply_to` and `attachments` to
+`https://api.resend.com/emails` and returns `{ id, error }`. To use SendGrid, Postmark, Amazon
+SES, Brevo or a plain SMTP server, replace that function's body with the provider's send call
+and keep the return shape — templates, the log, the usage meter and suppressions carry on
+working. Then:
+
+- Put the provider's key in `RESEND_API_KEY` (the name is only a label), or rename it in
+  `email.ts`.
+- Set `RESEND_MONTHLY_LIMIT` and `RESEND_DAILY_LIMIT` to the provider's allowance.
+- `/api/resend-webhook` checks Resend's signature, so point the provider's bounce webhook at a
+  route of your own, or go without automatic suppression.
+- The domain banner on the Email page (`src/lib/server/resendDomains.ts`) asks Resend; remove it
+  or point it at the provider.
+
+Supabase's SMTP settings take any provider's SMTP host and credentials.
+
+### Set up Vercel
+
+1. **Import.** Put the repository in TIC's GitHub account (fork it, or push a clone). In Vercel →
+   **Add New → Project**, import it.
+2. **Build settings.** Vercel recognises SvelteKit; keep its defaults:
+
+   | Setting          | Value                                         |
+   | ---------------- | --------------------------------------------- |
+   | Framework Preset | SvelteKit                                     |
+   | Root Directory   | `.`                                           |
+   | Build Command    | default (`vite build`)                        |
+   | Install Command  | default — pnpm, picked from `pnpm-lock.yaml`  |
+   | Node.js Version  | 24.x, under Settings → General                |
+
+3. **Environment variables.** Settings → Environment Variables: add every variable from
+   [Environment](#environment) for **Production**, values without quotes.
+   `IITG_SUPABASE_PASSWORD` is not needed there. Variables are read when the app is built, so
+   **redeploy after changing one**.
+4. **Deploy.** The first deploy runs on import. After that every push to `main` goes live;
+   other branches do not deploy (`git.deploymentEnabled` in `vercel.json`).
+5. **Domain.** Settings → Domains: add `iitgtic.com` and `www.iitgtic.com`, then add the A and
+   CNAME records Vercel shows at the DNS host. Set `PUBLIC_SITE_URL` to `https://iitgtic.com`
+   and redeploy, and use the same address in Supabase's URL configuration, the Resend webhook
+   and the Turnstile widget's hostnames.
+6. **Cron.** `vercel.json` runs `/api/cron/resume-retention` daily at 21:30 UTC (03:00 IST).
+   With `CRON_SECRET` set, Vercel sends it as the bearer token the route checks. The job is
+   listed under Settings → Cron Jobs.
+7. **Region.** Settings → Functions: put the functions near the database — Mumbai (`bom1`) for
+   a Supabase project in `ap-south-1`.
+
+Vercel Analytics is already in the code; turn on **Web Analytics** in the project's Analytics
+tab to collect it. Vercel's free Hobby plan is for personal, non-commercial use, so an
+organisation's site normally belongs on a Pro team.
 
 ### Hosting
 
-- **Vercel.** Import the repository, add the environment variables, deploy. `vercel.json`
-  already schedules the daily resume clean-up.
+- **Vercel.** See [Set up Vercel](#set-up-vercel) above.
 - **VPS.** Swap `@sveltejs/adapter-auto` for `@sveltejs/adapter-node` in
   `svelte.config.js`, `pnpm build`, run `node build` under a process manager behind a
   reverse proxy with TLS, and add a daily cron:
@@ -240,6 +373,7 @@ and must never reach the browser.
 | `EMAIL_SITE_NAME`                            | **server only** | Name used in the email copy and the From display name                                                                                                                                                            |
 | `CRON_SECRET`                                | **server only** | Bearer token Vercel Cron sends to `/api/cron/*`. The daily resume clean-up refuses to run without it                                                                                                              |
 | `SARVAM_API_KEY`                             | **server only** | Optional shared key for the admin assistant; without it each admin pastes their own                                                                                                                              |
+| `SARVAM_MODEL_ID`, `SARVAM_SYSTEM_MESSAGE`, `SARVAM_TEMPERATURE`, `SARVAM_TOP_P`, `SARVAM_MAX_TOKENS`, `SARVAM_REASONING_EFFORT` | **server only** | Optional assistant tuning: the default model, extra system instructions, temperature (default 0.2), top-p (1), token budget (4096) and reasoning effort (`low` / `medium` / `high`)                       |
 | `SUPABASE_STORAGE_QUOTA_BYTES`               | **server only** | Optional; what the storage meter draws against (default 1 GB, the free plan)                                                                                                                                     |
 
 Everything under `RESEND_*` is optional. Without `RESEND_API_KEY` the app still renders
@@ -856,8 +990,9 @@ Point Resend at `https://<site>/api/resend-webhook`, subscribe it to `email.boun
 
 ### Auth email and the callback
 
-Supabase Auth sends the confirmation and password-reset mail itself — it never goes through
-the Resend layer above. Every `signUp` passes an **`emailRedirectTo`** pointing at
+Supabase Auth sends the password-reset mail itself — it never goes through the Resend layer
+above; its sender is the SMTP set in [Set up Supabase](#set-up-supabase), step 6. Every
+`signUp` passes an **`emailRedirectTo`** pointing at
 `/auth/callback`; without one Supabase falls back to the project's **Site URL**, which is
 how a confirmation link ends up on `http://localhost:3000`.
 
@@ -872,10 +1007,9 @@ link forwards to `/auth/reset-password`.
 > `emailRedirectTo` that is not allow-listed is dropped silently and the Site URL used
 > instead.
 
-The project currently has **email confirmation enabled**, so `signUp` returns no session
-and the sign-up screens tell the user to check their inbox. To let people in immediately
-instead, turn off _Confirm email_ under **Authentication → Sign In / Providers → Email**
-in the Supabase dashboard — the code already handles both cases.
+Supabase's own _Confirm email_ is **off**, so `signUp` returns a session at once. The app
+sends its own welcome-and-confirm email and holds the final application step until the
+founder confirms. Keep it off — see [Roadmap](#roadmap).
 
 ## Admin assistant
 
