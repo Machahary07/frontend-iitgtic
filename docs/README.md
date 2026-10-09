@@ -19,7 +19,7 @@ Prepared by **Jeu Machahary** and **Veeshal D Bodosa** · October 2026 · build 
 | File                                                   | What it is                                                                                                                                                                                                                                                  |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [IITG-TIC-Admin-Manual.pdf](IITG-TIC-Admin-Manual.pdf) | The operations manual, 30 pages. Signing in and the staff roles, every console screen, the six-step review chain, screening calls, the job board, every automatic email, the security model, the feature ledger, troubleshooting and the caretaker's notes. |
-| [IITG-TIC-Handover.docx](IITG-TIC-Handover.docx)       | A one-page handover letter from the developers: what the source-code zip contains, what is not included (hosting, domains, accounts, keys, data), how to get it running, the state of the code, and contacts. Setup detail is in the root README.    |
+| [IITG-TIC-Handover.docx](IITG-TIC-Handover.docx)       | A one-page handover letter from the developers: what the repository contains, what is not included (hosting, domains, accounts, keys, data), how to get it running, the state of the code, and contacts. Setup detail is in the root README.    |
 
 ## Videos
 
