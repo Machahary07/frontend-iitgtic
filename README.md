@@ -37,8 +37,9 @@ The public website, the company job portal, the incubation application, and the 
 </div>
 
 > [!NOTE]
-> **Using or taking over the system?** Start in [`docs/`](docs/README.md): the operations
-> manual (PDF), the handover document (Word) and two walkthrough videos.
+> **Taking over the code?** Read [Handover: setting up from this repository](#handover-setting-up-from-this-repository)
+> below. For how the console is used, see [`docs/`](docs/README.md): the operations manual
+> (PDF), the handover note (Word) and two walkthrough videos.
 
 ---
 
@@ -47,6 +48,7 @@ The public website, the company job portal, the incubation application, and the 
 | Section                                                                                                                                                                           | What you will find                           |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | [Overview](#overview) · [Stack](#stack) · [Architecture](#architecture)                                                                                                           | What the app is and how it fits together     |
+| [Handover](#handover-setting-up-from-this-repository)                                                                                                                             | Standing up your own copy from this repo     |
 | [Getting started](#getting-started) · [Environment](#environment) · [Scripts](#scripts)                                                                                           | Running it locally                           |
 | [Project structure](#project-structure) · [Routes](#routes) · [API surface](#api-surface)                                                                                         | Finding your way around the code             |
 | [Data model](#data-model) · [Permissions](#permissions-at-a-glance) · [Role applications](#role-applications)                                                                     | Postgres, RLS and the flows that write to it |
@@ -134,6 +136,66 @@ Three things follow from that shape:
   guarded by the admin session cookie or by Turnstile.
 - **Nothing in the admin console waits on a client-side fetch.** Every section is loaded by
   `+page.server.ts`, so navigation never flashes an empty screen.
+
+## Handover: setting up from this repository
+
+This repository is the whole hand-over: the source of the website, the founder console, the
+TIC admin console and their APIs, the database schema, the manual and the videos. **No hosting,
+database, email account, domain or key comes with it.** The developers' running copy
+(`iitgtic.itsjeu.com`, its Supabase project and its Resend account) stays theirs; TIC stands up
+its own from this code.
+
+### What you need
+
+| Service                                    | Used for                                   | Notes                                                                                |
+| ------------------------------------------ | ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| Node.js 20+ and **pnpm**                   | Building and running the app               | Do not use npm here                                                                  |
+| **Supabase** (hosted or self-hosted)       | Postgres, auth, file storage               | Any plan; the free plan's 1 GB of storage is enough to start                         |
+| **Resend** + a domain you control          | Every transactional email                  | Verify the domain (SPF, DKIM, DMARC) before sending to real people                   |
+| **Cloudflare Turnstile**                   | Bot check on sign-in, sign-up and forms    | Free                                                                                 |
+| A host: **Vercel**, or a **VPS**           | Serving the app                            | See [Hosting](#hosting) below                                                        |
+| Sarvam AI (optional)                       | The admin assistant                        | Without a key the rest of the console works normally                                 |
+
+### Steps
+
+1. **Install.** `pnpm install`, then `cp .env.example .env.local`.
+2. **Database.** Create a Supabase project, then apply every file in `supabase/migrations/`
+   in filename order — `supabase link --project-ref <ref>` and `supabase db push`, or paste
+   each into the SQL editor. The migrations create all 20 tables, their row-level security,
+   the triggers, and the four storage buckets.
+3. **Auth settings.** In Supabase → Authentication, set the Site URL to your domain and add
+   `https://<your-domain>/auth/callback` as a redirect URL. Leave **Confirm email off** — the
+   app sends its own confirmation and gates the final application step on it (see
+   [Roadmap](#roadmap)).
+4. **Environment.** Fill `.env.local` — every variable is described in
+   [Environment](#environment). Generate `ADMIN_SESSION_SECRET` and `CRON_SECRET` with the
+   command shown there. Set `ADMIN_ALERT_EMAIL` to a TIC inbox.
+5. **Check.** `pnpm doctor` confirms the keys, the connection and the buckets.
+6. **Content.** `node scripts/seed-content.js` copies the bundled page copy into the database
+   so it can be edited from the console. Optional — the site falls back to the bundled copy.
+7. **First admin.** Run the app, open `/tic-admin/login`, enter `TIC_ADMIN_PASSWORD`. That
+   creates admin #1 and the password stops working. Create everyone else from **Users**.
+8. **Email.** Verify your domain in Resend, set `RESEND_FROM` to an address on it, and point a
+   Resend webhook (`email.bounced`, `email.complained`) at `https://<your-domain>/api/resend-webhook`
+   with its secret in `RESEND_WEBHOOK_SECRET`.
+9. **Deploy.** See below. Then set `PUBLIC_SITE_URL` to the live origin.
+
+### Hosting
+
+- **Vercel.** Import the repository, add the environment variables, deploy. `vercel.json`
+  already schedules the daily resume clean-up.
+- **VPS.** Swap `@sveltejs/adapter-auto` for `@sveltejs/adapter-node` in
+  `svelte.config.js`, `pnpm build`, run `node build` under a process manager behind a
+  reverse proxy with TLS, and add a daily cron:
+  `curl -H "Authorization: Bearer $CRON_SECRET" https://<your-domain>/api/cron/resume-retention`.
+  `vercel.json` is then unused.
+
+### Moving data from an existing instance
+
+Only needed if TIC is given a copy of the developers' data. `pnpm backup` takes the schema,
+every table and every stored file; `pnpm restore <dir>` puts them into a new project (try it
+with `--dry-run` first). Accounts restore only through the SQL dump, so users keep their
+passwords.
 
 ## Getting started
 

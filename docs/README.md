@@ -6,20 +6,20 @@ Prepared by **Jeu Machahary** and **Veeshal D Bodosa** · October 2026 · build 
 
 ## Start here
 
-| If you are…                           | Read or watch                                                                           |
-| ------------------------------------- | --------------------------------------------------------------------------------------- |
-| TIC staff using the console           | [IITG-TIC-Admin-Manual.pdf](IITG-TIC-Admin-Manual.pdf), chapters 1–3, then your screens |
-| New to how an application is reviewed | [video/TIC-IITG-end-to-end.mp4](video/TIC-IITG-end-to-end.mp4)                          |
-| Posting roles or handling applicants  | [video/TIC-IITG-job-board.mp4](video/TIC-IITG-job-board.mp4), manual chapters 8–9       |
-| Taking ownership of the system        | [IITG-TIC-Handover.docx](IITG-TIC-Handover.docx)                                        |
-| A developer                           | The repository [README](../README.md), then manual chapter 22                           |
+| If you are…                           | Read or watch                                                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| TIC staff using the console           | [IITG-TIC-Admin-Manual.pdf](IITG-TIC-Admin-Manual.pdf), chapters 1–3, then your screens                                         |
+| New to how an application is reviewed | [video/TIC-IITG-end-to-end.mp4](video/TIC-IITG-end-to-end.mp4)                                                                  |
+| Posting roles or handling applicants  | [video/TIC-IITG-job-board.mp4](video/TIC-IITG-job-board.mp4), manual chapters 8–9                                               |
+| Taking over the code                  | [IITG-TIC-Handover.docx](IITG-TIC-Handover.docx), then the root [README](../README.md#handover-setting-up-from-this-repository) |
+| A developer                           | The repository [README](../README.md), then manual chapter 22                                                                   |
 
 ## Documents
 
 | File                                                   | What it is                                                                                                                                                                                                                                                  |
 | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [IITG-TIC-Admin-Manual.pdf](IITG-TIC-Admin-Manual.pdf) | The operations manual, 30 pages. Signing in and the staff roles, every console screen, the six-step review chain, screening calls, the job board, every automatic email, the security model, the feature ledger, troubleshooting and the caretaker's notes. |
-| [IITG-TIC-Handover.docx](IITG-TIC-Handover.docx)       | The handover from the developers to IIT Guwahati TIC: what is handed over, architecture, accounts and services to transfer, configuration, how to run and deploy it, status, remaining work, the handover checklist and sign-off.                           |
+| [IITG-TIC-Handover.docx](IITG-TIC-Handover.docx)       | A two-page handover note from the developers: what the source-code zip contains, what is not included (hosting, domains, accounts, keys, data), how to get it running, the state of the code, contacts and sign-off. Setup detail is in the root README.    |
 
 ## Videos
 
