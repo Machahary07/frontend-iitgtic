@@ -1,12 +1,12 @@
 import { ensureProfile } from '$lib/server/startupProfiles';
-import { groupsFor } from '$lib/utils/startupProfile';
+import { groupsFor, sectorList } from '$lib/utils/startupProfile';
 import type { PageServerLoad } from './$types';
 
 // The founder's public profile. Created from their application the first time
 // they open this once TIC has accepted it.
 export const load: PageServerLoad = async ({ parent }) => {
 	const { activeCompanyId, content } = await parent();
-	const sectors = content.pages.incubatedStartups.sectors as string[];
+	const sectors = sectorList(content.pages.incubatedStartups);
 	if (!activeCompanyId) return { profile: null, sectors };
 	const profile = await ensureProfile(activeCompanyId);
 	return {

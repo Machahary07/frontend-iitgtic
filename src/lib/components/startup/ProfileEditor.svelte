@@ -128,11 +128,11 @@
 			<label class="field"><span class="field__label">Tagline *</span><input bind:value={value.tagline} placeholder="Soil health, read in minutes." /></label>
 			<label class="field field--wide"><span class="field__label">One-liner *</span><input bind:value={value.oneLiner} placeholder="What you do, for whom, in one sentence." /></label>
 			<label class="field">
-				<span class="field__label">Sector *</span>
-				<select bind:value={value.sector}>
-					<option value="">Choose…</option>
-					{#each sectors as s (s)}<option value={s}>{s}</option>{/each}
-				</select>
+				<span class="field__label">Sector * <small>Pick one or type your own</small></span>
+				<input list="sector-options" bind:value={value.sector} placeholder="e.g. Agriculture & Food" />
+				<datalist id="sector-options">
+					{#each sectors as s (s)}<option value={s}></option>{/each}
+				</datalist>
 			</label>
 			<label class="field"><span class="field__label">Industry</span><input bind:value={value.industry} /></label>
 			<label class="field">

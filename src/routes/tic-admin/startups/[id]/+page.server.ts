@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { profileById } from '$lib/server/startupProfiles';
 import { canOpen } from '$lib/utils/roles';
+import { sectorList } from '$lib/utils/startupProfile';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, parent }) => {
@@ -15,6 +16,6 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 			status: profile.draft_status,
 			hasPublished: Boolean(profile.published)
 		},
-		sectors: content.pages.incubatedStartups.sectors as string[]
+		sectors: sectorList(content.pages.incubatedStartups)
 	};
 };

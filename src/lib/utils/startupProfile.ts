@@ -3,6 +3,14 @@
 // passes through. Shared by the founder editor, the console and the public pages.
 
 import { STARTUP_STAGES } from '$lib/content';
+import bundled from '$lib/data/content.json';
+
+/** The sector suggestions: the edited list in site content, or the bundled one
+ *  when that section was saved without it. */
+export function sectorList(section: { sectors?: unknown } | undefined): string[] {
+	const live = Array.isArray(section?.sectors) ? (section.sectors as unknown[]).filter((s) => typeof s === 'string') : [];
+	return (live.length ? live : bundled.pages.incubatedStartups.sectors) as string[];
+}
 
 export type ProfileLayout = 'classic' | 'story' | 'one-pager' | 'showcase' | 'lab';
 
