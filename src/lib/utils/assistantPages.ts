@@ -27,12 +27,6 @@ export const PAGES: Record<string, PageKnowledge> = {
 			'The queue that holds the public site up: new startups waiting to be verified, job postings waiting to go live, team members founders have added, and profile changes founders asked for.',
 		actions: ['Approve or reject each item']
 	},
-	'/tic-admin/companies': {
-		title: 'Companies',
-		about:
-			'Every startup registered on the site, filtered by pending, verified or rejected. Only verified companies can post roles.',
-		actions: ['Verify or reject a company', 'Delete a company']
-	},
 	'/tic-admin/applications': {
 		title: 'Applications',
 		about:
@@ -42,8 +36,9 @@ export const PAGES: Record<string, PageKnowledge> = {
 	'/tic-admin/startups': {
 		title: 'Incubatees',
 		about:
-			'Every incubated startup’s public page, in tabs Current, Virtual (a subset of Current), Graduated and Not listed. Founders write their own profile and send it through Approvals.',
+			'Every startup TIC has accepted: its company record (contact, status) and its public page, in tabs Current, Virtual (a subset of Current), Graduated, Not on the site, Rejected and All. Founders write their own profile and send it through Approvals.',
 		actions: [
+			'Approve, reject, revert or delete a startup',
 			'Make a startup virtual or not',
 			'Graduate a startup with an outcome',
 			'Take a startup off the site',

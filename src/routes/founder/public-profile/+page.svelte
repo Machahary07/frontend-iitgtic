@@ -122,10 +122,14 @@
 				</p>
 			</div>
 			<div class="status__acts">
-				<!-- A preview route outside the console, opened in a new tab. -->
+				<!-- Public-site pages, opened in a new tab. -->
+				{#if profile.liveHref}
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a class="btn" href={profile.liveHref} target="_blank" rel="noopener">View live page</a>
+				{/if}
 				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 				<a class="btn" href={`/incubated-startups/preview/${profile.id}`} target="_blank" rel="noopener"
-					>Preview</a
+					>Preview {profile.liveHref ? 'changes' : ''}</a
 				>
 				{#if isOwner}
 					{#if inReview}

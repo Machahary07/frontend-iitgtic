@@ -1,4 +1,5 @@
 import { ensureProfile } from '$lib/server/startupProfiles';
+import { groupsFor } from '$lib/utils/startupProfile';
 import type { PageServerLoad } from './$types';
 
 // The founder's public profile. Created from their application the first time
@@ -20,7 +21,12 @@ export const load: PageServerLoad = async ({ parent }) => {
 			hasPublished: Boolean(profile.published),
 			status: profile.draft_status,
 			note: profile.review_note,
-			submittedAt: profile.submitted_at
+			submittedAt: profile.submitted_at,
+			// The page visitors see, once it is on the site.
+			liveHref:
+				profile.listed && profile.published && profile.stage !== 'exited'
+					? `/incubated-startups/${groupsFor(profile.stage, false)[0]}/${profile.slug}`
+					: null
 		}
 	};
 };

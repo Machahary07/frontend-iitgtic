@@ -400,7 +400,7 @@ export async function loadOverview(admin: ConsoleSession): Promise<Overview> {
 				value: companies.length,
 				tone: 'good',
 				icon: 'badge',
-				href: '/tic-admin/companies',
+				href: '/tic-admin/startups',
 				cta: 'View all'
 			},
 			{

@@ -5,7 +5,6 @@
 // rounded tinted tile so sections are findable by shape as well as by label.
 
 import Home from '@lucide/svelte/icons/house';
-import Building2 from '@lucide/svelte/icons/building-2';
 import FileText from '@lucide/svelte/icons/file-text';
 import Briefcase from '@lucide/svelte/icons/briefcase';
 import UserSearch from '@lucide/svelte/icons/user-search';
@@ -28,7 +27,6 @@ export const TIC_ADMIN_NAV: NavItem[] = [
 	// Sits second because it is the queue that holds the public site up: a founder
 	// cannot publish anything until someone works through it.
 	{ label: 'Approvals', href: '/tic-admin/approvals', icon: ShieldCheck, tone: 'bad' },
-	{ label: 'Companies', href: '/tic-admin/companies', icon: Building2, tone: 'info' },
 	{ label: 'Applications', href: '/tic-admin/applications', icon: FileText, tone: 'good' },
 	{ label: 'Evaluation', href: '/tic-admin/evaluation', icon: ClipboardCheck, tone: 'info' },
 	{ label: 'Incubatees', href: '/tic-admin/startups', icon: Rocket, tone: 'good' },

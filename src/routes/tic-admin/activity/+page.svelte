@@ -122,6 +122,7 @@
 		'/tic-admin/users': 'Admin · Users',
 		'/tic-admin/activity': 'Admin · Activity',
 		'/tic-admin/companies': 'Admin · Companies',
+		'/tic-admin/startups': 'Admin · Incubatees',
 		'/tic-admin/applications': 'Admin · Applications',
 		'/tic-admin/jobs': 'Admin · Posted Jobs',
 		'/tic-admin/home-page': 'Admin · Home Page',

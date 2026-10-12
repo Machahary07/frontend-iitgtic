@@ -25,7 +25,6 @@ export const ACCOUNT_ROLES: AccountRole[] = [...STAFF_ROLES, 'founder'];
 export type ConsoleSection =
 	| 'overview'
 	| 'approvals'
-	| 'companies'
 	| 'applications'
 	| 'startups'
 	| 'evaluation'
@@ -45,7 +44,6 @@ export type ConsoleSection =
 export const CONSOLE_SECTIONS: { key: ConsoleSection; label: string }[] = [
 	{ key: 'overview', label: 'Overview' },
 	{ key: 'approvals', label: 'Approvals' },
-	{ key: 'companies', label: 'Companies' },
 	{ key: 'applications', label: 'Applications' },
 	{ key: 'startups', label: 'Incubatees' },
 	{ key: 'evaluation', label: 'Evaluation' },
@@ -69,7 +67,6 @@ const ALL = CONSOLE_SECTIONS.map((section) => section.key);
 const PIPELINE: ConsoleSection[] = [
 	'overview',
 	'approvals',
-	'companies',
 	'applications',
 	'startups',
 	'jobs',
@@ -213,11 +210,15 @@ export function canSetPassword(
 // the screen that calls it.
 const PAGE_SEGMENT: Record<string, ConsoleSection> = {
 	'': 'overview',
+	// Merged into Incubatees; the old address redirects there.
+	companies: 'startups',
 	'home-page': 'overview',
 	ai: 'assistant'
 };
 
 const API_SEGMENT: Record<string, ConsoleSection> = {
+	// The company record actions (verify, reject, delete) live on Incubatees.
+	companies: 'startups',
 	ai: 'assistant',
 	newsletter: 'email'
 };

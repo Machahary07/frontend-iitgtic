@@ -1330,7 +1330,7 @@ export function findTool(name: string): ToolDef | undefined {
 // the CEO can.
 const TOOL_SECTION: Record<string, ConsoleSection> = {
 	console_overview: 'overview',
-	list_companies: 'companies',
+	list_companies: 'startups',
 	list_incubatees: 'startups',
 	get_incubatee_profile: 'startups',
 	list_incubation_applications: 'applications',
