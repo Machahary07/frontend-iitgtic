@@ -3,7 +3,7 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logAdminAction, requireAdmin, type AdminContext } from '$lib/server/adminGuard';
 import { reviewScope } from '$lib/server/applicationReview';
 import { sendTemplateEmail } from '$lib/server/email';
-import { goLive, profileById } from '$lib/server/startupProfiles';
+import { ensureProfile, goLive, profileById } from '$lib/server/startupProfiles';
 import { uploadProfileImage } from '$lib/server/profileImages';
 import { sanitizeProfile } from '$lib/utils/startupProfile';
 import { canOpen } from '$lib/utils/roles';
@@ -18,6 +18,8 @@ import type { RequestHandler } from './$types';
 //   'exit'                    take it off the site, keeping the record
 // PUT   { id, draft, publish }  edit the profile — staff who edit site content
 // POST  multipart { id, file }  an image for it → { url }
+// POST  { companyId }             start the profile of an accepted startup, from
+//                                 its application, before the founder has → { id }
 
 const realRole = (ctx: AdminContext) => ctx.admin.actor?.role ?? ctx.admin.role;
 
@@ -133,6 +135,17 @@ export const PUT: RequestHandler = async ({ cookies, request }) => {
 export const POST: RequestHandler = async ({ cookies, request }) => {
 	const ctx = await requireAdmin(cookies);
 	if (!canOpen(realRole(ctx), 'content')) error(403, 'Editing a profile is for staff who edit the site.');
+	if (request.headers.get('content-type')?.includes('application/json')) {
+		const body = (await request.json().catch(() => ({}))) as { companyId?: string };
+		if (!body.companyId) error(400, 'Missing company id.');
+		const profile = await ensureProfile(body.companyId);
+		if (!profile) error(409, 'Only an accepted startup has a public profile.');
+		await logAdminAction(ctx, `started the public profile of ${profile.draft.name || profile.slug}`, {
+			table: 'startup_profiles',
+			recordId: profile.id
+		});
+		return json({ id: profile.id });
+	}
 	const form = await request.formData().catch(() => null);
 	const profile = await load(form?.get('id'));
 	return json({ url: await uploadProfileImage(profile.id, form?.get('file')) });

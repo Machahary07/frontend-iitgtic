@@ -121,6 +121,22 @@
 		await invalidateAll();
 	}
 
+	async function startProfile(companyId: string) {
+		busy = companyId;
+		const res = await fetch('/api/tic-admin/startups', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ companyId })
+		});
+		busy = '';
+		const b = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
+		if (!res.ok || !b.id) {
+			showToast(b.message ?? 'Could not start the profile.', 'err');
+			return;
+		}
+		goto(resolve('/tic-admin/startups/[id]', { id: b.id }));
+	}
+
 	async function handleLogout() {
 		await logoutTicAdmin();
 		goto(resolve('/login'));
@@ -229,6 +245,9 @@
 											{#if data.canEdit}
 												<a class="btn" href={resolve('/tic-admin/startups/[id]', { id: p.id })}>Edit</a>
 											{/if}
+										{/if}
+										{#if !p && c && c.status === 'verified' && data.canEdit}
+											<button class="btn" disabled={busy === c.id} onclick={() => startProfile(c.id)}>Start profile</button>
 										{/if}
 										{#if data.canMove && p}
 											{#if p.onSite && p.stage === 'current'}
