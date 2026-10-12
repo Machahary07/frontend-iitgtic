@@ -18,7 +18,8 @@
 		submitted: 'Submitted — waiting for review',
 		'under-review': 'Under review by TIC',
 		accepted: 'Accepted',
-		rejected: 'Not accepted'
+		rejected: 'Not accepted',
+		returned: 'Returned — submit it again'
 	};
 
 	const tiles = $derived([

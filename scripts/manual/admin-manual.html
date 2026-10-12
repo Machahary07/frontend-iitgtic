@@ -185,7 +185,7 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
     <div class="cover__meta">
       <p><b>Audience</b> TIC staff — admins, CEO, coordinators, heads</p>
       <p><b>Console</b> iitgtic.itsjeu.com/tic-admin</p>
-      <p><b>Edition</b> October 2026 · build v36</p>
+      <p><b>Edition</b> October 2026 · build v37</p>
       <p><b>Status</b> Console complete · hosting and domain cutover pending</p>
       <p><b>Prepared by</b> Jeu Machahary · Veeshal D Bodosa</p>
     </div>
@@ -431,7 +431,7 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
     <b>Message to applicant</b><span>Goes into the email the founder receives. Write it as if they will read only this sentence.</span>
     <b>Internal note</b><span>Stays in the console, for the team.</span>
     <b>Reject</b><span>Admin or the CEO can reject at any step; the decline email carries your message.</span>
-    <b>Reopen</b><span>Admin only: brings a rejected application back under review.</span>
+    <b>Reopen · Send back</b><span>Admin only. Reopen brings a rejected application back under review; Send back returns an unreviewed one to the founder, who resubmits it once their email is confirmed.</span>
     <b>Delete application</b><span>Removes the record and its documents. Asks first. Irreversible — reject rather than delete unless it is a duplicate or a test.</span>
   </div>
   <div class="warn">
@@ -540,7 +540,7 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
   <h2><span class="num">10.1</span>Users</h2>
   <p>Tabs: All · TIC staff · Founders · Never signed in · Deactivated · Deleted. “Never signed in” usually means a typo in an email address.</p>
   <div class="kv">
-    <b>New account</b><span>Name, email, role and a starting password, with a strength meter. Hand the password over by a channel the person already controls.</span>
+    <b>New account</b><span>Name, email, role and a starting password, with a strength meter. The person is emailed their role, their sign-in details and a confirm-your-email link, and asked to set their own password once in. The password is masked in the email log.</span>
     <b>Edit account</b><span>Change details or role, or set a new password — within your rank.</span>
     <b>Deactivate</b><span>Blocks sign-in without deleting anything. Reversible. The right first move for a compromised account.</span>
     <b>Delete</b><span>Type to confirm. The account owner is emailed; the deletion is kept in the Deleted tab.</span>
@@ -699,12 +699,14 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
       <tr><td class="k">Screening call invite · scheduled</td><td>Admin saves or changes the meeting — to the founder and coordinators</td></tr>
       <tr><td class="k">Application accepted</td><td>Admin accepts after every head signs off, with average scores</td></tr>
       <tr><td class="k">Application declined</td><td>Admin or the CEO rejects it</td></tr>
+      <tr><td class="k">Application sent back</td><td>Admin sends it back to the founder</td></tr>
       <tr><td class="k">Startup is live</td><td>Admin marks it live</td></tr>
       <tr><td class="k">Role application received</td><td>A candidate applies to any role</td></tr>
       <tr><td class="k">New applicant for your role</td><td>To the startup, when someone applies to its role</td></tr>
       <tr><td class="k">New applicant for a TIC role</td><td>To the operating inbox, when someone applies to a TIC role</td></tr>
       <tr><td class="k">Job posting removed by TIC</td><td>Admin removes a startup’s role, with the reason</td></tr>
       <tr><td class="k">Resumes are about to be cleared</td><td>83 days after a role ends — to whoever posted it</td></tr>
+      <tr><td class="k">New account (staff · team member)</td><td>Sign-in details: admin adds staff, or a founder a team member</td></tr>
       <tr><td class="k">Account deleted (by TIC · by owner)</td><td>An account is deleted</td></tr>
       <tr><td class="k">Newsletter · subscription confirmed</td><td>A newsletter is sent; someone subscribes</td></tr>
       <tr><td class="k">Direct message</td><td>Sent by the assistant to a chosen recipient, after approval</td></tr>

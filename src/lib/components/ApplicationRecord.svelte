@@ -21,7 +21,8 @@
 		submitted: { label: 'Submitted', tone: 'neutral' },
 		'under-review': { label: 'Under review', tone: 'warn' },
 		accepted: { label: 'Accepted', tone: 'good' },
-		rejected: { label: 'Not accepted', tone: 'bad' }
+		rejected: { label: 'Not accepted', tone: 'bad' },
+		returned: { label: 'Returned to you', tone: 'warn' }
 	};
 
 	const status = $derived(STATUS[application.status] ?? STATUS.submitted);

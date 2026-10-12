@@ -1,7 +1,8 @@
 import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
-import { sendTemplateEmail } from '$lib/server/email';
+import { emailConfig, sendTemplateEmail } from '$lib/server/email';
+import { verifyEmailUrl } from '$lib/server/emailVerify';
 import {
 	canSeeApplication,
 	requireAllScored,
@@ -16,7 +17,7 @@ import type { RequestHandler } from './$types';
 // Application review. Applicants can read only their own rows and cannot touch
 // `status`, so the TIC team reads and moves them through review from here.
 
-const STATUSES = ['submitted', 'under-review', 'accepted', 'rejected'] as const;
+const STATUSES = ['submitted', 'under-review', 'accepted', 'rejected', 'returned'] as const;
 type Status = (typeof STATUSES)[number];
 
 const BUCKET = 'application-documents';
@@ -26,7 +27,8 @@ const BUCKET = 'application-documents';
 const TEMPLATE_FOR: Partial<Record<Status, string>> = {
 	'under-review': 'application-under-review',
 	accepted: 'application-accepted',
-	rejected: 'application-rejected'
+	rejected: 'application-rejected',
+	returned: 'application-returned'
 };
 
 type DocumentEntry = { path: string; name: string; size: number };
@@ -52,11 +54,17 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 
 	const { data: current } = await ctx.db
 		.from('applications')
-		.select('review_stage')
+		.select('review_stage, status')
 		.eq('id', body.id)
 		.maybeSingle();
 	if (!current) error(404, 'Application not found.');
 	const stage = current.review_stage as number;
+
+	// Sent back before anyone has started on it, so no review is left half-done
+	// while the founder has it.
+	if (body.status === 'returned' && (current.status !== 'submitted' || stage !== 0)) {
+		error(409, 'Only a submitted application that has not gone into review can be sent back.');
+	}
 
 	// The final email goes out only once every assigned head has signed off.
 	if (body.status === 'accepted') {
@@ -88,7 +96,7 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 			...(body.status === 'under-review' && stage === 0 ? { review_stage: 1 } : {})
 		})
 		.eq('id', body.id)
-		.select('email, full_name, startup_name, applicant_message, company_id')
+		.select('email, full_name, startup_name, applicant_message, company_id, user_id')
 		.maybeSingle();
 	if (dbError) error(500, dbError.message);
 
@@ -115,6 +123,19 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 		// The panel's marks go out with the decision only — never while it is
 		// still being reviewed — as per-step averages with no names attached.
 		const decided = rejecting || body.status === 'accepted';
+		// A founder who has not confirmed their email gets the link with it, since
+		// that is what stands between them and submitting again.
+		let verifyUrl = '';
+		if (body.status === 'returned') {
+			const { data: owner } = await supabaseAdmin
+				.from('profiles')
+				.select('email_verified')
+				.eq('id', application.user_id)
+				.maybeSingle();
+			if (!owner?.email_verified) {
+				verifyUrl = verifyEmailUrl(emailConfig().siteUrl, application.user_id as string);
+			}
+		}
 		const scoreVars = decided
 			? {
 					...(await scoreEmailVariables(ctx.db, body.id)),
@@ -129,6 +150,7 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 				fullName: (application.full_name as string) ?? '',
 				startupName: (application.startup_name as string) ?? '',
 				note: (application.applicant_message as string) ?? '',
+				verifyUrl,
 				...scoreVars,
 				...(rejecting
 					? {

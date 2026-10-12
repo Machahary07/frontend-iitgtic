@@ -323,13 +323,13 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 	{
 		name: 'list_incubation_applications',
 		description:
-			'Applications from founders asking to be incubated — the "Applications" section of the console. Status is submitted, under-review, accepted or rejected. Use this for questions about who applied to the incubator and which ones are still waiting on a decision.',
+			'Applications from founders asking to be incubated — the "Applications" section of the console. Status is submitted, under-review, accepted, rejected or returned (sent back to the founder to resubmit). Use this for questions about who applied to the incubator and which ones are still waiting on a decision.',
 		parameters: {
 			type: 'object',
 			properties: {
 				status: {
 					type: 'string',
-					enum: ['submitted', 'under-review', 'accepted', 'rejected']
+					enum: ['submitted', 'under-review', 'accepted', 'rejected', 'returned']
 				},
 				search: { type: 'string', description: 'Matches applicant name, email or startup name.' },
 				limit: { type: 'integer', description: 'Default 25, maximum 200.' }

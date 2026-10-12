@@ -27,7 +27,7 @@ export async function adminDeleteCompany(id: string): Promise<boolean> {
 
 // --- applications ----------------------------------------------------------
 
-export type ApplicationStatus = 'submitted' | 'under-review' | 'accepted' | 'rejected';
+export type ApplicationStatus = 'submitted' | 'under-review' | 'accepted' | 'rejected' | 'returned';
 
 export type ApplicationSummary = {
 	id: string;

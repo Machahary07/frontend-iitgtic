@@ -3,20 +3,26 @@
 // storage bucket, one folder per user, and the row records their paths.
 
 import { supabase } from '$lib/supabaseClient';
-import { missingRequiredAnswers } from '$lib/utils/applicationSchema';
+import {
+	DOCUMENT_FIELDS,
+	missingRequiredAnswers,
+	type DocumentField
+} from '$lib/utils/applicationSchema';
 
 export type ApplicationDocuments = Record<string, { path: string; name: string; size: number }>;
 
+/** An application TIC sent back, reopened in the form with everything kept. */
+export type ReturnedApplication = {
+	id: string;
+	answers: Record<string, unknown>;
+	documents: ApplicationDocuments;
+	note: string | null;
+	returnedAt: string | null;
+};
+
 export type SubmitResult = { ok: true; id: string } | { ok: false; error: string };
 
-const DOCUMENT_FIELDS = [
-	'pitchDeck',
-	'founderCv',
-	'financialProjections',
-	'incorporationCert'
-] as const;
-
-export type DocumentField = (typeof DOCUMENT_FIELDS)[number];
+export { DOCUMENT_FIELDS, type DocumentField };
 
 export async function submitApplication(
 	answers: Record<string, unknown>,
@@ -48,24 +54,9 @@ export async function submitApplication(
 		return { ok: false, error: 'A pitch deck PDF is required before submitting.' };
 	}
 
-	const documents: ApplicationDocuments = {};
-	const stamp = Date.now();
-
-	for (const field of DOCUMENT_FIELDS) {
-		const file = files[field];
-		if (!file) continue;
-
-		const safeName = file.name.replace(/[^A-Za-z0-9._-]+/g, '-');
-		const path = `${userId}/${stamp}-${field}-${safeName}`;
-		const { error } = await supabase.storage
-			.from('application-documents')
-			.upload(path, file, { upsert: true, contentType: file.type || undefined });
-
-		if (error) {
-			return { ok: false, error: `Could not upload ${file.name}: ${error.message}` };
-		}
-		documents[field] = { path, name: file.name, size: file.size };
-	}
+	const uploaded = await uploadDocuments(userId, files);
+	if (!uploaded.ok) return uploaded;
+	const documents = uploaded.documents;
 
 	// The File objects themselves are not serialisable — only their paths are stored.
 	const payload = { ...answers };
@@ -89,7 +80,76 @@ export async function submitApplication(
 	return { ok: true, id: data.id as string };
 }
 
-export type ApplicationStatus = 'submitted' | 'under-review' | 'accepted' | 'rejected';
+async function uploadDocuments(
+	userId: string,
+	files: Partial<Record<DocumentField, File | null>>
+): Promise<{ ok: true; documents: ApplicationDocuments } | { ok: false; error: string }> {
+	const documents: ApplicationDocuments = {};
+	const stamp = Date.now();
+
+	for (const field of DOCUMENT_FIELDS) {
+		const file = files[field];
+		if (!file) continue;
+
+		const safeName = file.name.replace(/[^A-Za-z0-9._-]+/g, '-');
+		const path = `${userId}/${stamp}-${field}-${safeName}`;
+		const { error } = await supabase.storage
+			.from('application-documents')
+			.upload(path, file, { upsert: true, contentType: file.type || undefined });
+
+		if (error) {
+			return { ok: false, error: `Could not upload ${file.name}: ${error.message}` };
+		}
+		documents[field] = { path, name: file.name, size: file.size };
+	}
+	return { ok: true, documents };
+}
+
+// Submits an application TIC sent back. Only newly chosen files are uploaded;
+// the rest keep the uploads already on the row. The status change happens on
+// the server, which a founder cannot write directly.
+export async function resubmitApplication(
+	id: string,
+	answers: Record<string, unknown>,
+	files: Partial<Record<DocumentField, File | null>>,
+	kept: ApplicationDocuments
+): Promise<SubmitResult> {
+	const { data: sessionData } = await supabase.auth.getSession();
+	const userId = sessionData.session?.user.id;
+	if (!userId) {
+		return { ok: false, error: 'Please sign in before submitting your application.' };
+	}
+
+	const missing = missingRequiredAnswers(answers);
+	if (missing.length > 0) {
+		return {
+			ok: false,
+			error: `Please complete every required field before submitting: ${missing.join(', ')}.`
+		};
+	}
+	if (!files.pitchDeck && !kept.pitchDeck) {
+		return { ok: false, error: 'A pitch deck PDF is required before submitting.' };
+	}
+
+	const uploaded = await uploadDocuments(userId, files);
+	if (!uploaded.ok) return uploaded;
+
+	const payload = { ...answers };
+	for (const field of DOCUMENT_FIELDS) delete payload[field];
+
+	const res = await fetch('/api/founder/application/resubmit', {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify({ id, answers: payload, documents: { ...kept, ...uploaded.documents } })
+	}).catch(() => null);
+	if (!res) return { ok: false, error: 'Could not reach the server. Please try again.' };
+
+	const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+	if (!res.ok) return { ok: false, error: body.message ?? body.error ?? 'Could not submit.' };
+	return { ok: true, id };
+}
+
+export type ApplicationStatus = 'submitted' | 'under-review' | 'accepted' | 'rejected' | 'returned';
 
 export type MyApplication = {
 	id: string;

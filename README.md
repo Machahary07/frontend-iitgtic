@@ -581,12 +581,14 @@ admin's id.
 | `/api/company-account`              | `POST` `DELETE`               | Signup receipt for a just-created account; a company closing its own account                                                                              |
 | `/api/tic-admin-login`              | `GET` `POST` `DELETE`         | Session state, sign-in, first-admin bootstrap, sign-out                                                                                                   |
 | `/api/tic-admin/companies`          | `PATCH` `DELETE`              | Verify / reject / delete an account                                                                                                                       |
-| `/api/tic-admin/applications`       | `PATCH` `DELETE`              | Move an incubation application through review                                                                                                             |
+| `/api/tic-admin/applications`       | `PATCH` `DELETE`              | Move an incubation application through review, or send a just-submitted one back to the founder (`status: returned`)                                    |
+| `/api/founder/application/resubmit` | `POST`                        | The founder who submitted a returned application sends it again — checks a confirmed email, every required answer and a pitch deck, then moves it back to `submitted` |
+| `/api/founder/users`                | `POST` `DELETE`               | A founder adds a team member (pending TIC approval, emailed their sign-in details) or removes one                                                         |
 | `/api/tic-admin/job-applications`   | `GET` `POST` `DELETE`         | TIC roles only: full records for the CSV, `?resumes=1` signed links for the zip, `POST ?jobSlug=` clears a role, `DELETE` one applicant — resumes first |
 | `/api/tic-admin/jobs`               | `POST` `PATCH` `DELETE`       | Post, edit, close, reopen or delete a TIC role; `PATCH action: remove` takes a startup role down with a reason and emails the founder                 |
 | `/api/founder/jobs`                 | `POST` `PATCH` `DELETE`       | A founder’s own roles: post (live at once), edit, close, reopen, delete                                                                                   |
 | `/api/cron/resume-retention`        | `GET`                         | Daily, from Vercel Cron with `CRON_SECRET`: warns posters a week ahead, clears resumes 90 days after a role ends                                         |
-| `/api/tic-admin/users`              | `PATCH` `PUT` `POST` `DELETE` | Roles, suspend, reset mail, delete, create admin                                                                                                          |
+| `/api/tic-admin/users`              | `PATCH` `PUT` `POST` `DELETE` | Roles, suspend, reset mail, delete, create a staff account (emailed their role and sign-in details)                                                      |
 | `/api/tic-admin/activity`           | `GET`                         | Paged audit entries and impressions over 7d / 30d / all                                                                                                   |
 | `/api/tic-admin/content`            | `PUT` `DELETE`                | Save a section, or reset it to the bundled default                                                                                                        |
 | `/api/tic-admin/content/assets`     | `POST`                        | Upload an image for a media field into the public `site-assets` bucket; returns the public URL saved into the section                                     |
@@ -658,7 +660,7 @@ erDiagram
     applications {
         uuid id PK
         uuid user_id FK
-        text status "submitted / under-review / accepted / rejected"
+        text status "submitted / under-review / accepted / rejected / returned"
         jsonb answers "the 38 questions"
         jsonb documents "paths into the private bucket"
     }
@@ -886,19 +888,33 @@ Mail goes out through [Resend](https://resend.com), and everything about it is v
 
 **What gets sent, and when**
 
-Twenty-three messages, each editable in the console. The full list with triggers is in the
+Twenty-six messages, each editable in the console. The full list with triggers is in the
 operations manual, chapter 18. In short:
 
 | Group                 | Messages                                                                                                     |
 | --------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Founders              | Welcome & confirm, sign-in notice, startup registered, account deleted                                       |
-| Incubation            | Application received, under review, screening call invite, accepted (with scores), declined, startup live    |
-| Staff                 | An application needs your review, screening call scheduled, admin sign-in alert, new founder signed up       |
+| Founders              | Welcome & confirm, sign-in notice, startup registered, account deleted, team member added (sign-in details and confirm link) |
+| Incubation            | Application received, under review, screening call invite, accepted (with scores), declined, sent back to the founder (with the confirm link if unconfirmed), startup live |
+| Staff                 | Staff account created (role, sign-in details and confirm link), an application needs your review, screening call scheduled, admin sign-in alert, new founder signed up |
 | Job board             | Application received, new applicant (to the startup or the TIC inbox), role removed by TIC, resumes clearing soon |
 | Newsletter and direct | Newsletter, subscription confirmed, direct message from the assistant                                        |
 
 Moving a record _back_ to its opening state (`pending`, `submitted`) sends nothing —
 that is an internal correction, not news for the recipient.
+
+**New accounts.** When an admin adds someone in **Users**, or a founder adds a team member,
+the new person is emailed the password that was set for them, with a confirm-your-email
+button. `sendTemplateEmail()` takes a `secrets` list for this: those values are replaced
+with `••••••••` in the body stored in `email_log`, so the console never shows a password.
+The message itself, and the copy Resend keeps, still carry it — which is why the email asks
+them to set their own password after signing in.
+
+**Confirm your email.** Every confirm button points at a signed `/verify-email` link
+(`src/lib/server/emailVerify.ts`, valid 7 days) that sets `profiles.email_verified`. The page
+it lands on sends a founder back to their application, staff to the console and a team member
+to the founder console. Only a founder's application depends on the flag: step 8 will not
+submit without it, and neither will the database (see the email-confirmation row under
+[Roadmap](#roadmap)).
 
 **Templates.** The copy bundled in `src/lib/utils/emailTemplates.ts` is what runs until a
 template is edited in the console, exactly as `content.json` backs `site_content`. Editing
@@ -1204,6 +1220,10 @@ Deployed to Vercel via `@sveltejs/adapter-auto`. Pushes to `main` deploy automat
 
 - **Migrations first.** Apply a new file in `supabase/migrations` to the database before
   pushing code that depends on it, or the live site breaks until it is applied.
+- **The live project's migration history is out of step with the files.** Several migrations
+  were applied by hand under other version numbers, so `supabase db push` there would try to
+  re-run old ones. Until the history is repaired (`supabase migration repair`), apply a new
+  file by pasting it into the SQL Editor.
 - **Cron.** `vercel.json` schedules `/api/cron/resume-retention` daily at 03:00 IST; set
   `CRON_SECRET` in the project's environment. On a VPS, call the same URL from the server's
   cron with that secret as a bearer token.
@@ -1219,7 +1239,7 @@ component and backend piece, with a frontend and a backend rail. The open items 
 | Self-hosted Supabase     | Database, auth and storage are on Supabase's hosted **free plan (1 GB storage)**. To move to self-hosted Supabase on the VPS, data and files migrated with `pnpm backup` / `pnpm restore`                                                                                                                                                                                              |
 | Sending domain (cutover) | Development mail sends from `hello@itsjeu.com` on the **verified** `itsjeu.com` domain, so real recipients get it. The planned production identity is **`iitgtic.com`** with an official address — it resolves and its MX is Google Workspace, but its DNS is not ours to publish Resend's records to yet. Cutover is a domain verify + a `RESEND_FROM` change when that access lands |
 | Auth URL configuration   | Email confirmation is currently **off**, so new signups need no confirmation link. The linked project's Site URL should still be set to `https://iitgtic.itsjeu.com` (recorded in `supabase/config.toml`) so password-reset links resolve; applying it needs the dashboard or a `supabase config push`                                                                                |
-| Email-confirmation gate (dependency) | The founder welcome/confirm email, the `/verify-email` link, the step-8 "confirm your email to submit" gate, and the new-applicant admin alert are all built on Supabase native confirmation staying **off** — the browser needs a session at signup to fire them. **Do not turn Supabase "Confirm email" on** without reworking this flow, or those emails and the gate go silent with no error. The gate itself is enforced by `profiles.email_verified` + the `applications` insert RLS policy in `20260910000000_founder_email_verified.sql`; until that migration is applied the gate is dormant (fail-open) by design |
+| Email-confirmation gate (dependency) | The founder welcome/confirm email, the `/verify-email` link, the step-8 "confirm your email to submit" gate, and the new-applicant admin alert are all built on Supabase native confirmation staying **off** — the browser needs a session at signup to fire them. **Do not turn Supabase "Confirm email" on** without reworking this flow, or those emails and the gate go silent with no error. The gate is enforced twice: step 8 refuses to submit while `profiles.email_verified` is false, or cannot be read, and the `applications` insert RLS policy refuses the row. That policy was added in `20260910000000_founder_email_verified.sql`, dropped by mistake when `20260912000000_founder_console.sql` recreated it, and restored in `20261012000000_restore_email_verified_gate.sql`. An application that got through in the meantime can be sent back from its page in the console. The founder reopens it at step 8 with every answer and upload kept, and cannot resubmit until they confirm |
 | Backups                  | `pnpm backup` is complete — a real `pg_dump` of schema and data including `auth.users`, plus NDJSON and storage — and `pnpm restore --dry-run` passes. One thing left: rehearse the real restore once into a scratch project, which needs a project to throw away first                                                                                                               |
 | Real content             | The upload path is done — image fields take a real file from the console into `site-assets`, and the Partners logos already use it. What remains is content, not plumbing: the other `{ alt }`-only placeholders (events, incubation, startups, people photos) still need pictures, and video would want its own bucket and player                                                    |
 

@@ -687,6 +687,54 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		])
 	},
 	{
+		key: 'application-returned',
+		name: 'Application sent back',
+		description:
+			'Tells the applicant TIC has sent their application back to them to submit again, with every answer and upload kept. Carries the confirm-your-email link when they have not confirmed yet.',
+		trigger: 'Admin sends a submitted application back to the founder',
+		group: 'Incubation applications',
+		variables: [
+			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{
+				name: 'note',
+				description: 'Why it was sent back — dropped if empty',
+				sample: 'Please confirm your email address, then submit again.'
+			},
+			{
+				name: 'verifyUrl',
+				description: 'Confirm-your-email link — dropped once they have confirmed',
+				sample: 'https://iitgtic.com/verify-email?u=…&e=…&t=…'
+			}
+		],
+		subject: 'Your {{siteName}} application needs one more step',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'info', text: 'Action needed' },
+			{ type: 'heading', text: 'One more _step_' },
+			{
+				type: 'lede',
+				text: 'Hi {{fullName}}, we have sent the **{{startupName}}** application back to you. Every answer and document you sent is kept — you only need to submit it again.'
+			},
+			{ type: 'callout', tone: 'info', label: 'From the TIC team', text: '{{note}}', showIf: 'note' },
+			{
+				type: 'callout',
+				tone: 'info',
+				label: 'Confirm your email first',
+				text: 'Your email address is not confirmed yet, and the application cannot be submitted until it is.',
+				showIf: 'verifyUrl'
+			},
+			{ type: 'button', label: 'Confirm your email', href: '{{verifyUrl}}', showIf: 'verifyUrl' },
+			{ type: 'button', label: 'Open your application', href: '{{siteUrl}}/founder/application', hideIf: 'verifyUrl' },
+			{
+				type: 'link',
+				label: 'Then open your application',
+				href: '{{siteUrl}}/founder/application',
+				showIf: 'verifyUrl'
+			},
+			SIGN_OFF
+		])
+	},
+	{
 		key: 'startup-live',
 		name: 'Startup is live',
 		description:

@@ -103,6 +103,16 @@ export const APPLICATION_SECTIONS: ApplicationSection[] = [
 	}
 ];
 
+// The four uploads, in form order. Stored as paths on the row, not as answers.
+export const DOCUMENT_FIELDS = [
+	'pitchDeck',
+	'founderCv',
+	'financialProjections',
+	'incorporationCert'
+] as const;
+
+export type DocumentField = (typeof DOCUMENT_FIELDS)[number];
+
 // Every answer key the form marks with a `*`, in form order.
 export const REQUIRED_ANSWER_KEYS: string[] = APPLICATION_SECTIONS.flatMap((section) =>
 	section.fields.filter((f) => f.required).map((f) => f.key)

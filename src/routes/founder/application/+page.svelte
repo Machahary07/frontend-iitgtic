@@ -90,6 +90,7 @@
 			companies={data.companies}
 			companyId={data.activeCompanyId}
 			onCompanyChange={switchCompany}
+			returned={data.returned}
 		/>
 	{/if}
 </FounderShell>

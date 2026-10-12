@@ -1,5 +1,5 @@
 import { founderDb } from '$lib/server/founderGuard';
-import type { ApplicationDetail } from '$lib/utils/applications';
+import type { ApplicationDetail, ReturnedApplication } from '$lib/utils/applications';
 import type { PageServerLoad } from './$types';
 
 // Once a startup has applied, this page is the record of what it sent, not a
@@ -15,14 +15,14 @@ export type DocumentLink = { field: string; name: string; size: number; url: str
 export const load: PageServerLoad = async ({ parent, url }) => {
 	const { founder, activeCompanyId } = await parent();
 	if (!activeCompanyId) {
-		return { application: null, documents: [] as DocumentLink[], screening: null };
+		return { application: null, documents: [] as DocumentLink[], screening: null, returned: null };
 	}
 
 	const db = founderDb(founder.userId);
 	const { data } = await db
 		.from('applications')
 		.select(
-			'id, status, startup_name, created_at, reviewed_at, applicant_message, full_name, email, answers, documents, meet_url, meet_at, meeting_ended_at'
+			'id, user_id, status, startup_name, created_at, reviewed_at, applicant_message, full_name, email, answers, documents, meet_url, meet_at, meeting_ended_at'
 		)
 		.eq('company_id', activeCompanyId)
 		.order('created_at', { ascending: false })
@@ -41,7 +41,20 @@ export const load: PageServerLoad = async ({ parent, url }) => {
 	// other standing keeps the submitted record in view, so a second application
 	// cannot be started while the first is still with TIC.
 	if (!application || (application.status === 'rejected' && url.searchParams.has('new'))) {
-		return { application: null, documents: [] as DocumentLink[], screening: null };
+		return { application: null, documents: [] as DocumentLink[], screening: null, returned: null };
+	}
+
+	// Sent back by TIC: the founder who submitted it gets the form again, filled
+	// in. Anyone else on the team sees the record, which says it was returned.
+	if (application.status === 'returned' && data?.user_id === founder.userId) {
+		const returned: ReturnedApplication = {
+			id: application.id,
+			answers: application.answers ?? {},
+			documents: application.documents ?? {},
+			note: application.applicant_message,
+			returnedAt: application.reviewed_at
+		};
+		return { application: null, documents: [] as DocumentLink[], screening: null, returned };
 	}
 
 	// Signed here rather than in the browser: the storage policy only lets a user
@@ -57,5 +70,5 @@ export const load: PageServerLoad = async ({ parent, url }) => {
 			})
 	);
 
-	return { application, documents, screening };
+	return { application, documents, screening, returned: null };
 };

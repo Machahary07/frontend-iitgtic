@@ -2,7 +2,7 @@
 
 Manuals, the handover document and walkthrough videos for the IITG-TIC platform: the public website, the founder console, the incubation review chain, the job board and the TIC admin console.
 
-Prepared by **Jeu Machahary** and **Veeshal D Bodosa** · October 2026 · build v36
+Prepared by **Jeu Machahary** and **Veeshal D Bodosa** · October 2026 · build v37
 
 ## Start here
 

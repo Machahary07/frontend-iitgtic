@@ -30,6 +30,6 @@ export const load: PageServerLoad = async ({ parent }) => {
 };
 
 type ApplicationStanding = {
-	status: 'submitted' | 'under-review' | 'accepted' | 'rejected';
+	status: 'submitted' | 'under-review' | 'accepted' | 'rejected' | 'returned';
 	live: boolean;
 };

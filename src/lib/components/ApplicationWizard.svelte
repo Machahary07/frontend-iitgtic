@@ -4,7 +4,14 @@
 	import { goto } from '$app/navigation';
 	import ButtonReveal from '$lib/components/ButtonReveal.svelte';
 	import { loadUserSession, sendFounderWelcome } from '$lib/utils/userSession';
-	import { submitApplication, notifyApplicationSubmitted } from '$lib/utils/applications';
+	import {
+		notifyApplicationSubmitted,
+		resubmitApplication,
+		submitApplication,
+		type ApplicationDocuments,
+		type DocumentField,
+		type ReturnedApplication
+	} from '$lib/utils/applications';
 	import { clearDraft, loadDraft, saveDraft, savedAgo } from '$lib/utils/applicationDraft';
 	import { askConfirm } from '$lib/utils/dialog.svelte';
 
@@ -24,9 +31,17 @@
 		companyId?: string | null;
 		/** Asks the console to switch startup, so the whole page follows. */
 		onCompanyChange?: (id: string) => void;
+		/** An application TIC sent back: the form opens on it, filled in, at step 8. */
+		returned?: ReturnedApplication | null;
 	}
 
-	let { embedded = false, companies = [], companyId = null, onCompanyChange }: Props = $props();
+	let {
+		embedded = false,
+		companies = [],
+		companyId = null,
+		onCompanyChange,
+		returned = null
+	}: Props = $props();
 
 	const activeCompany = $derived(companies.find((c) => c.id === companyId) ?? null);
 
@@ -136,6 +151,21 @@
 	let userId = $state('');
 	let draftReady = $state(false);
 	let restoredFrom = $state('');
+	// Uploads already on a returned application. A field keeps its file unless a
+	// new one is chosen.
+	let kept = $state<ApplicationDocuments>({});
+
+	// A restored draft holds `{}` where a File was, so only a real File counts.
+	function chosenFile(field: DocumentField): File | null {
+		const value = data[field] as unknown;
+		return value instanceof File ? value : null;
+	}
+
+	function fileName(field: DocumentField): string {
+		const file = chosenFile(field);
+		if (file) return file.name;
+		return kept[field] ? `${kept[field].name} (already uploaded)` : 'No file selected';
+	}
 
 	const data = $state<FormData>({
 		fullName: '',
@@ -246,8 +276,9 @@
 			e.biggestChallenge = requireText(data.biggestChallenge, 'Biggest current challenge');
 			if (data.supportNeeded.length === 0) e.supportNeeded = 'Select at least one option.';
 		} else if (s === 7) {
-			if (!data.pitchDeck) e.pitchDeck = 'Pitch deck is required.';
-			else if (data.pitchDeck.type !== 'application/pdf') e.pitchDeck = 'Upload a PDF file.';
+			const deck = chosenFile('pitchDeck');
+			if (!deck && !kept.pitchDeck) e.pitchDeck = 'Pitch deck is required.';
+			else if (deck && deck.type !== 'application/pdf') e.pitchDeck = 'Upload a PDF file.';
 		} else if (s === 8) {
 			if (!data.infoAccurate) e.infoAccurate = 'Please confirm the information is accurate.';
 			if (!data.agreeTerms) e.agreeTerms = 'You must agree to the terms.';
@@ -378,16 +409,15 @@
 
 		submitting = true;
 		submitError = '';
-		const result = await submitApplication(
-			{ ...data },
-			{
-				pitchDeck: data.pitchDeck,
-				founderCv: data.founderCv,
-				financialProjections: data.financialProjections,
-				incorporationCert: data.incorporationCert
-			},
-			companyId
-		);
+		const files = {
+			pitchDeck: chosenFile('pitchDeck'),
+			founderCv: chosenFile('founderCv'),
+			financialProjections: chosenFile('financialProjections'),
+			incorporationCert: chosenFile('incorporationCert')
+		};
+		const result = returned
+			? await resubmitApplication(returned.id, { ...data }, files, kept)
+			: await submitApplication({ ...data }, files, companyId);
 		submitting = false;
 
 		if (!result.ok) {
@@ -400,8 +430,9 @@
 		// The row in public.applications is the record now, so the draft is done.
 		if (companyId) clearDraft(userId, companyId);
 		restoredFrom = '';
-		// Fire-and-forget: the receipt email must not hold up or fail the submit.
-		void notifyApplicationSubmitted(result.id);
+		// Fire-and-forget: the receipt email must not hold up or fail the submit. A
+		// resubmit sends its own from the server.
+		if (!returned) void notifyApplicationSubmitted(result.id);
 		window.scrollTo({ top: 0, behavior: 'smooth' });
 	}
 
@@ -461,14 +492,30 @@
 		// The draft wins over the profile prefill: what someone typed is more
 		// current than what their account happens to hold.
 		userId = session.id;
+		if (returned) kept = { ...returned.documents };
 		const draft = companyId ? loadDraft(userId, companyId) : null;
-		if (draft) {
+		// A draft started before the application came back is older than what TIC
+		// holds, so the returned answers win over it.
+		const draftIsCurrent =
+			draft &&
+			(!returned || new Date(draft.savedAt) > new Date(returned.returnedAt ?? 0));
+		if (draft && draftIsCurrent) {
 			for (const [key, value] of Object.entries(draft.values)) {
 				if (key in data) (data as Record<string, unknown>)[key] = value;
 			}
 			step = Math.min(Math.max(draft.step, 1), STEPS.length);
 			completedSteps = new Set(draft.completedSteps ?? []);
 			restoredFrom = draft.savedAt;
+		} else if (returned) {
+			for (const [key, value] of Object.entries(returned.answers)) {
+				if (key in data) (data as Record<string, unknown>)[key] = value;
+			}
+			// The consents are given afresh, by the person submitting it now.
+			data.infoAccurate = false;
+			data.agreeTerms = false;
+			data.allowReview = false;
+			step = STEPS.length;
+			completedSteps = new Set(STEPS.slice(0, -1).map((s) => s.n));
 		}
 
 		draftReady = true;
@@ -545,7 +592,19 @@
 				</div>
 			{/if}
 
-			{#if companies.length > 0 && restoredFrom}
+			{#if returned}
+				<div class="draft" role="status">
+					<p class="draft__text">
+						<strong>TIC sent this application back to you.</strong>
+						{#if returned.note}{returned.note}{/if}
+						Every answer and upload you sent is kept.
+						{#if !emailVerified}Confirm your email first, then tick{:else}Tick{/if} the consent boxes
+						on step 8 and submit it again.
+					</p>
+				</div>
+			{/if}
+
+			{#if companies.length > 0 && restoredFrom && !returned}
 				<div class="draft" role="status">
 					<p class="draft__text">
 						Picked up where you left off — saved {savedAgo(restoredFrom)}. Your uploads and the
@@ -1077,7 +1136,7 @@
 									/>
 									<span class="file__btn">Choose file</span>
 									<span class="file__name"
-										>{data.pitchDeck ? data.pitchDeck.name : 'No file selected'}</span
+										>{fileName('pitchDeck')}</span
 									>
 								</label>
 							</div>
@@ -1094,7 +1153,7 @@
 									/>
 									<span class="file__btn">Choose file</span>
 									<span class="file__name"
-										>{data.founderCv ? data.founderCv.name : 'No file selected'}</span
+										>{fileName('founderCv')}</span
 									>
 								</label>
 							</div>
@@ -1113,9 +1172,7 @@
 									/>
 									<span class="file__btn">Choose file</span>
 									<span class="file__name"
-										>{data.financialProjections
-											? data.financialProjections.name
-											: 'No file selected'}</span
+										>{fileName('financialProjections')}</span
 									>
 								</label>
 							</div>
@@ -1134,9 +1191,7 @@
 									/>
 									<span class="file__btn">Choose file</span>
 									<span class="file__name"
-										>{data.incorporationCert
-											? data.incorporationCert.name
-											: 'No file selected'}</span
+										>{fileName('incorporationCert')}</span
 									>
 								</label>
 							</div>

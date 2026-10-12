@@ -55,6 +55,11 @@
 	// Newest first. Add new releases at the top.
 	const releases: Release[] = [
 		{
+			date: '12 Oct',
+			version: 'v37',
+			note: 'New-account emails, confirm-email gate restored, send application back'
+		},
+		{
 			date: '9 Oct',
 			version: 'v36',
 			note: 'Job board: live posting, TIC / Incubatees tabs, new apply page'

@@ -598,6 +598,19 @@
 									)}>Accept and send final email</button
 							>
 						{/if}
+						{#if isAdmin && application.status === 'submitted' && stage === 0}
+							<button
+								class="btn"
+								disabled={saving}
+								onclick={() =>
+									passOn(
+										`Send ${application.startup_name || 'this application'} back to the founder?`,
+										'They reopen it with every answer and upload kept, and submit it again. If their email is not confirmed yet, the email they get carries the confirm link, and they cannot resubmit until they use it.',
+										'Yes, send it back',
+										() => setStatus('returned')
+									)}>Send back to founder</button
+							>
+						{/if}
 						{#if rejected}
 							{#if isAdmin}
 								<button class="btn" disabled={saving} onclick={() => setStatus('under-review')}

@@ -39,6 +39,8 @@
 						];
 			case 'rejected':
 				return [{ label: 'Not accepted', tone: 'bad' }];
+			case 'returned':
+				return [{ label: 'Returned — submit again', tone: 'warn' }];
 		}
 	}
 
