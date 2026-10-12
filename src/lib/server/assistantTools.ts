@@ -321,6 +321,86 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 	},
 
 	{
+		name: 'list_incubatees',
+		description:
+			'Incubated startups and their public profile pages — the "Incubatees" section. Stage is current, graduated or exited (taken off the site). Virtual incubatees are current ones with isVirtual true. profileStatus says where the founder’s latest edits are: draft (editing), in_review (waiting in Approvals), sent_back or approved.',
+		parameters: {
+			type: 'object',
+			properties: {
+				stage: { type: 'string', enum: ['current', 'graduated', 'exited'] },
+				virtual: { type: 'boolean', description: 'Only virtual incubatees.' },
+				search: { type: 'string', description: 'Matches the startup name or slug.' },
+				limit: { type: 'integer', description: 'Default 25, maximum 200.' }
+			}
+		},
+		label: () => 'Reading incubatees',
+		run: async (db, args) => {
+			const { data, error } = await db
+				.from('startup_profiles')
+				.select('slug, stage, is_virtual, listed, draft_status, published, draft, live_at, graduated_at')
+				.order('updated_at', { ascending: false })
+				.limit(MAX_ROWS);
+			if (error) return { error: error.message };
+			const search = textOf(args, 'search').toLowerCase();
+			const stage = textOf(args, 'stage');
+			const rows = (data ?? [])
+				.map((r) => {
+					const p = (r.published ?? r.draft ?? {}) as Record<string, unknown>;
+					return {
+						name: String(p.name ?? r.slug),
+						slug: r.slug,
+						stage: r.stage,
+						isVirtual: r.is_virtual,
+						onWebsite: r.listed && r.stage !== 'exited' && Boolean(r.published),
+						profileStatus: r.draft_status,
+						layout: p.layout,
+						sector: p.sector,
+						tagline: p.tagline,
+						liveAt: r.live_at,
+						graduatedAt: r.graduated_at
+					};
+				})
+				.filter((r) => !stage || r.stage === stage)
+				.filter((r) => args.virtual !== true || (r.isVirtual && r.stage === 'current'))
+				.filter((r) => !search || r.name.toLowerCase().includes(search) || r.slug.includes(search))
+				.slice(0, limitOf(args));
+			return { incubatees: rows };
+		}
+	},
+
+	{
+		name: 'get_incubatee_profile',
+		description:
+			'One incubated startup’s public profile in full: the version on the website and, if different, the founder’s draft. Look the slug up with list_incubatees first.',
+		parameters: {
+			type: 'object',
+			properties: { slug: { type: 'string' } },
+			required: ['slug']
+		},
+		label: (args) => `Reading the profile of ${String(args.slug ?? 'a startup')}`,
+		run: async (db, args) => {
+			const { data, error } = await db
+				.from('startup_profiles')
+				.select('slug, stage, is_virtual, listed, draft_status, review_note, published, draft')
+				.eq('slug', textOf(args, 'slug'))
+				.maybeSingle();
+			if (error) return { error: error.message };
+			if (!data) return { error: 'No startup with that slug.' };
+			const same = JSON.stringify(data.published) === JSON.stringify(data.draft);
+			return {
+				slug: data.slug,
+				stage: data.stage,
+				isVirtual: data.is_virtual,
+				onWebsite: data.listed && data.stage !== 'exited' && Boolean(data.published),
+				profileStatus: data.draft_status,
+				reviewNote: data.review_note,
+				live: clip(data.published, 6000),
+				draft: same ? 'same as live' : clip(data.draft, 6000)
+			};
+		}
+	},
+
+	{
 		name: 'list_incubation_applications',
 		description:
 			'Applications from founders asking to be incubated — the "Applications" section of the console. Status is submitted, under-review, accepted, rejected or returned (sent back to the founder to resubmit). Use this for questions about who applied to the incubator and which ones are still waiting on a decision.',
@@ -1251,6 +1331,8 @@ export function findTool(name: string): ToolDef | undefined {
 const TOOL_SECTION: Record<string, ConsoleSection> = {
 	console_overview: 'overview',
 	list_companies: 'companies',
+	list_incubatees: 'startups',
+	get_incubatee_profile: 'startups',
 	list_incubation_applications: 'applications',
 	get_incubation_application: 'applications',
 	list_jobs: 'jobs',

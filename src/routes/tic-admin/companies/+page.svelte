@@ -196,6 +196,13 @@
 								</td>
 								<td class="actions-col">
 									<div class="actions">
+										{#if data.profileLinks[company.id]}
+											<!-- A public-site page, opened in a new tab. -->
+											<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+											<a class="btn" href={data.profileLinks[company.id]} target="_blank" rel="noopener"
+												>View profile</a
+											>
+										{/if}
 										{#if company.status === 'pending'}
 											<button class="btn btn--primary" onclick={() => approve(company.id)}
 												>Approve</button
@@ -402,6 +409,8 @@
 	}
 
 	.btn {
+		display: inline-block;
+		text-decoration: none;
 		padding: 6px 12px;
 		font: inherit;
 		font-family: $font-family-base;

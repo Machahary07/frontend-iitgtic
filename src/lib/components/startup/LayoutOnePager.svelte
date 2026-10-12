@@ -1,5 +1,6 @@
 <script lang="ts">
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
+	import Prose from './Prose.svelte';
 	import { SOCIAL_KEYS, type StartupProfileData } from '$lib/utils/startupProfile';
 
 	// Layout 3 of the public profile: an investor brief. A sticky fact card beside
@@ -82,6 +83,13 @@
 				</section>
 			{/if}
 
+			{#if startup.description}
+				<section class="panel">
+					<p class="eyebrow">About {startup.name}</p>
+					<Prose class="long" text={startup.description} />
+				</section>
+			{/if}
+
 			{#if startup.traction.length}
 				<section class="kpis">
 					{#each startup.traction as m (m.label)}
@@ -99,7 +107,7 @@
 					{#each boxes as [k, v] (k)}
 						<div>
 							<h3>{k}</h3>
-							<p>{v}</p>
+							<Prose text={v} />
 						</div>
 					{/each}
 				</section>
@@ -353,6 +361,15 @@
 		line-height: 1.65;
 	}
 
+	.panel :global(.long) {
+		margin: 14px 0 0;
+		max-width: 76ch;
+		font-family: $font-family-serif;
+		font-size: 1.12rem;
+		line-height: 1.85;
+		color: rgba($color-black, 0.78);
+	}
+
 	.lead {
 		margin: 0 0 12px;
 		font-family: $font-family-serif;
@@ -411,7 +428,7 @@
 			color: rgba($color-black, 0.6);
 		}
 
-		p {
+		:global(p) {
 			margin: 0;
 			color: rgba($color-black, 0.7);
 			line-height: 1.6;

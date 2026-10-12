@@ -4,7 +4,7 @@
 
 import { STARTUP_STAGES } from '$lib/content';
 
-export type ProfileLayout = 'classic' | 'story' | 'one-pager';
+export type ProfileLayout = 'classic' | 'story' | 'one-pager' | 'showcase' | 'lab';
 
 export const PROFILE_LAYOUTS: { value: ProfileLayout; label: string; hint: string }[] = [
 	{
@@ -21,6 +21,16 @@ export const PROFILE_LAYOUTS: { value: ProfileLayout; label: string; hint: strin
 		value: 'one-pager',
 		label: 'One-pager',
 		hint: 'A fact card, your numbers up front, funding and team on one page. Suits startups with traction.'
+	},
+	{
+		value: 'showcase',
+		label: 'Showcase',
+		hint: 'A full-width cover photo, your features with pictures, a photo gallery. Suits products with good photos.'
+	},
+	{
+		value: 'lab',
+		label: 'Lab',
+		hint: 'Technology first: readiness level, specifications, patents, research partners. Suits deep-tech and research spin-outs.'
 	}
 ];
 
@@ -44,6 +54,7 @@ export type StartupProfileData = {
 	name: string;
 	tagline: string;
 	oneLiner: string;
+	/** "About the startup": the long write-up every layout gives room to. */
 	description: string;
 	sector: string;
 	industry: string;
@@ -54,6 +65,12 @@ export type StartupProfileData = {
 	contactEmail: string;
 	logo: Image;
 	cover: Image;
+	/** Showcase: photos of the product and the team at work. */
+	gallery: string[];
+	/** Lab: technology readiness level, 1–9, or '' when not given. */
+	trl: string;
+	/** Lab: the key technical figures, as label / value rows. */
+	specs: { label: string; value: string }[];
 	/** Story roadmap: the sentence over the hero. */
 	headline: string;
 	/** One-pager: the paragraph that opens it. */
@@ -107,6 +124,9 @@ export function emptyProfile(): StartupProfileData {
 		contactEmail: '',
 		logo: { src: '', alt: '' },
 		cover: { src: '', alt: '' },
+		gallery: [],
+		trl: '',
+		specs: [],
 		headline: '',
 		summary: '',
 		businessModel: '',
@@ -150,7 +170,8 @@ type Raw = Record<string, unknown>;
 const obj = (v: unknown): Raw => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Raw) : {});
 const str = (v: unknown, max = 400) =>
 	(typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '').trim().slice(0, max);
-const text = (v: unknown) => str(v, 4000);
+// Long-form fields are given plenty of room: founders write in full paragraphs.
+const text = (v: unknown) => str(v, 8000);
 const list = <T>(v: unknown, max: number, item: (x: unknown) => T, keep: (x: T) => boolean): T[] =>
 	(Array.isArray(v) ? v : []).slice(0, max).map(item).filter(keep);
 const strings = (v: unknown, max = 30) => list(v, max, (x) => str(x), Boolean);
@@ -191,7 +212,7 @@ export function sanitizeProfile(input: unknown): StartupProfileData {
 		name: str(r.name, 120),
 		tagline: str(r.tagline, 160),
 		oneLiner: str(r.oneLiner, 300),
-		description: text(r.description),
+		description: str(r.description, 16000),
 		sector: str(r.sector, 80),
 		industry: str(r.industry, 120),
 		stage: STARTUP_STAGES.includes(str(r.stage)) ? str(r.stage) : '',
@@ -201,6 +222,14 @@ export function sanitizeProfile(input: unknown): StartupProfileData {
 		contactEmail: safeEmail(r.contactEmail),
 		logo: image(r.logo),
 		cover: image(r.cover),
+		gallery: list(r.gallery, 12, safeUrl, Boolean),
+		trl: /^[1-9]$/.test(str(r.trl)) ? str(r.trl) : '',
+		specs: list(
+			r.specs,
+			16,
+			(x) => ({ label: str(obj(x).label, 80), value: str(obj(x).value, 200) }),
+			(s) => Boolean(s.label && s.value)
+		),
 		headline: str(r.headline, 200),
 		summary: text(r.summary),
 		businessModel: text(r.businessModel),
@@ -300,6 +329,8 @@ export function missingForReview(p: StartupProfileData): string[] {
 	if (!p.logo.src) missing.push('Logo');
 	if (p.layout === 'story' && p.milestones.length < 2) missing.push('At least two milestones');
 	if (p.layout === 'one-pager' && p.traction.length === 0) missing.push('At least one traction figure');
+	if (p.layout === 'showcase' && !p.cover.src) missing.push('A cover photo');
+	if (p.layout === 'lab' && p.specs.length < 2) missing.push('At least two specification rows');
 	return missing;
 }
 
@@ -330,6 +361,10 @@ export function profileFromApplication(
 		...emptyProfile(),
 		name: company.name || a.startupName,
 		oneLiner: str(a.productDescription, 300),
+		description: [a.productDescription, a.differentiation, a.whyNow, a.longTermVision]
+			.map((x) => str(x, 4000))
+			.filter(Boolean)
+			.join('\n\n'),
 		summary: a.productDescription,
 		industry: a.industry,
 		stage: APPLICATION_STAGE[str(a.stage)] ?? '',

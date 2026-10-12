@@ -39,6 +39,17 @@ export const PAGES: Record<string, PageKnowledge> = {
 			'Founders applying to be incubated, by status: submitted, under review, accepted, rejected. Each opens to the full application and its documents.',
 		actions: ['Open an application', 'Move it between statuses']
 	},
+	'/tic-admin/startups': {
+		title: 'Incubatees',
+		about:
+			'Every incubated startup’s public page, in tabs Current, Virtual (a subset of Current), Graduated and Not listed. Founders write their own profile and send it through Approvals.',
+		actions: [
+			'Make a startup virtual or not',
+			'Graduate a startup with an outcome',
+			'Take a startup off the site',
+			'Edit and publish a profile'
+		]
+	},
 	'/tic-admin/jobs': {
 		title: 'Job postings',
 		about:

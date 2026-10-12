@@ -464,7 +464,7 @@ Links marked 🔒 need a session; opening one signed-out redirects to the matchi
 | Programs                | [`/programs`](https://iitgtic.itsjeu.com/programs)                                                       | Programme overview                                           |
 | Schemes                 | [`/schemes`](https://iitgtic.itsjeu.com/schemes)                                                         | Funding and support schemes                                  |
 | Incubation pillars      | [`/incubation`](https://iitgtic.itsjeu.com/incubation) · `/incubation/[slug]`                            | Five support pillars, each with a scrollspy detail page      |
-| Incubated startups      | [`/incubated-startups`](https://iitgtic.itsjeu.com/incubated-startups) · `/[slug]/[startupSlug]`         | Current, virtual and graduated cohorts, down to one startup — each page in the layout its founder chose (Classic, Story roadmap or One-pager). `/preview/[id]` shows a draft to its founders and TIC staff only |
+| Incubated startups      | [`/incubated-startups`](https://iitgtic.itsjeu.com/incubated-startups) · `/[slug]/[startupSlug]`         | Current, virtual and graduated cohorts, down to one startup — each page in the layout its founder chose (Classic, Story roadmap, One-pager, Showcase or Lab), every one with a long "About" read. `/preview/[id]` shows a draft to its founders and TIC staff only |
 | Events                  | [`/events`](https://iitgtic.itsjeu.com/events) · `/events/[slug]`                                        | Upcoming and past events                                     |
 | Partners                | [`/partners`](https://iitgtic.itsjeu.com/partners)                                                       | Partner grid                                                 |
 | Contact                 | [`/contact`](https://iitgtic.itsjeu.com/contact)                                                         | Enquiry form and a click-to-load map                         |
@@ -1188,7 +1188,8 @@ Historically most pages rendered straight from `src/lib/data/content.json`. Dyna
 1. **Accepted.** The acceptance email points the founder to **Public profile** in their console.
    The first visit creates the profile from their application answers.
 2. **Founder edits and submits.** They pick a layout (`src/lib/components/startup/`: Classic,
-   Story roadmap, One-pager), add a logo, photos and milestones, preview it at
+   Story roadmap, One-pager, Showcase, Lab), write the long "About" (up to 16,000 characters,
+   paragraphs kept), add a logo, photos and milestones, preview it at
    `/incubated-startups/preview/[id]`, and send it for review. Everything they type passes
    through `sanitizeProfile()` in `src/lib/utils/startupProfile.ts`; images go to
    `site-assets/startups/<id>/`, raster formats only.

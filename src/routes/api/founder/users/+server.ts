@@ -34,13 +34,15 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 		return json({ ok: false, error: 'Set a password of at least 8 characters.' }, { status: 400 });
 	}
 
-	// company_id in the metadata is what the signup trigger reads to attach the
-	// new profile to this company as a pending member.
+	// company_id in the app metadata is what the signup trigger reads to attach the
+	// new profile to this company as a pending member. It must not go in
+	// user_metadata: a public signUp can set that.
 	const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
 		email,
 		password,
 		email_confirm: true,
-		user_metadata: { full_name: fullName, company_id: ctx.companyId }
+		user_metadata: { full_name: fullName },
+		app_metadata: { company_id: ctx.companyId }
 	});
 
 	if (createError || !created.user) {

@@ -112,22 +112,34 @@
 		</label>
 		<label class="field">
 			<span class="field__label">Summary <small>One-pager — the paragraph it opens with</small></span>
-			<textarea rows="3" bind:value={value.summary}></textarea>
+			<textarea rows="5" bind:value={value.summary}></textarea>
+		</label>
+	</section>
+
+	<section class="group">
+		<h3>About your startup</h3>
+		<p class="group__sub">
+			The main write-up on your page, shown large in every layout. Write as much as you like — leave a
+			blank line between paragraphs.
+		</p>
+		<label class="field">
+			<span class="field__label">About {value.name || 'your startup'} <small>{value.description.length.toLocaleString('en-IN')} / 16,000 characters</small></span>
+			<textarea class="long" rows="14" maxlength="16000" bind:value={value.description}></textarea>
 		</label>
 	</section>
 
 	<section class="group">
 		<h3>The story</h3>
-		<div class="grid">
-			<label class="field"><span class="field__label">Problem</span><textarea rows="4" bind:value={value.problem}></textarea></label>
-			<label class="field"><span class="field__label">Solution</span><textarea rows="4" bind:value={value.solution}></textarea></label>
-			<label class="field"><span class="field__label">Target market</span><textarea rows="3" bind:value={value.targetMarket}></textarea></label>
-			<label class="field"><span class="field__label">Market size</span><textarea rows="3" bind:value={value.marketSize}></textarea></label>
-			<label class="field"><span class="field__label">Business model</span><textarea rows="3" bind:value={value.businessModel}></textarea></label>
+		<div class="grid grid--wide">
+			<label class="field"><span class="field__label">Problem</span><textarea rows="7" bind:value={value.problem}></textarea></label>
+			<label class="field"><span class="field__label">Solution</span><textarea rows="7" bind:value={value.solution}></textarea></label>
+			<label class="field"><span class="field__label">Target market</span><textarea rows="6" bind:value={value.targetMarket}></textarea></label>
+			<label class="field"><span class="field__label">Market size</span><textarea rows="6" bind:value={value.marketSize}></textarea></label>
+			<label class="field"><span class="field__label">Business model</span><textarea rows="6" bind:value={value.businessModel}></textarea></label>
 			<label class="field"><span class="field__label">Raising now</span><input bind:value={value.raising} placeholder="Pre-Series A · ₹5 Cr" /></label>
-			<label class="field"><span class="field__label">What you built</span><textarea rows="3" bind:value={value.founderStory.whatTheyBuilt}></textarea></label>
-			<label class="field"><span class="field__label">What TIC contributed</span><textarea rows="3" bind:value={value.founderStory.whatTicContributed}></textarea></label>
-			<label class="field"><span class="field__label">Where you are now</span><textarea rows="3" bind:value={value.founderStory.whereTheyAreNow}></textarea></label>
+			<label class="field"><span class="field__label">What you built</span><textarea rows="6" bind:value={value.founderStory.whatTheyBuilt}></textarea></label>
+			<label class="field"><span class="field__label">What TIC contributed</span><textarea rows="6" bind:value={value.founderStory.whatTicContributed}></textarea></label>
+			<label class="field"><span class="field__label">Where you are now</span><textarea rows="6" bind:value={value.founderStory.whereTheyAreNow}></textarea></label>
 		</div>
 		{@render textList('Key features', value.features, (v) => (value.features = v))}
 	</section>
@@ -140,7 +152,7 @@
 				<div class="grid">
 					<label class="field"><span class="field__label">Year</span><input bind:value={m.year} /></label>
 					<label class="field"><span class="field__label">Title</span><input bind:value={m.event} /></label>
-					<label class="field field--wide"><span class="field__label">What happened</span><textarea rows="2" bind:value={m.text}></textarea></label>
+					<label class="field field--wide"><span class="field__label">What happened</span><textarea rows="4" bind:value={m.text}></textarea></label>
 					{@render image('Photo', `m${i}`, m.photo, (u) => (m.photo = u))}
 					<label class="check"><input type="checkbox" bind:checked={m.upcoming} /> Still ahead</label>
 				</div>
@@ -178,7 +190,7 @@
 				<div class="grid">
 					<label class="field"><span class="field__label">Name</span><input bind:value={f.name} /></label>
 					<label class="field"><span class="field__label">Role</span><input bind:value={f.role} /></label>
-					<label class="field field--wide"><span class="field__label">Short bio</span><textarea rows="2" bind:value={f.bio}></textarea></label>
+					<label class="field field--wide"><span class="field__label">Short bio</span><textarea rows="4" bind:value={f.bio}></textarea></label>
 					{@render image('Photo', `f${i}`, f.photo, (u) => (f.photo = u))}
 				</div>
 				{#if !readonly}<button type="button" class="link link--danger" onclick={() => value.founders.splice(i, 1)}>Remove</button>{/if}
@@ -222,11 +234,50 @@
 	</section>
 
 	<section class="group">
+		<h3>Photos</h3>
+		<p class="group__sub">Up to 12. Showcase pairs the first ones with your key features and shows the rest as a gallery.</p>
+		<div class="gallery">
+			{#each value.gallery as src, i (i)}
+				<div class="gallery__item">
+					<img {src} alt="" />
+					{#if !readonly}<button type="button" class="link link--danger" onclick={() => value.gallery.splice(i, 1)}>Remove</button>{/if}
+				</div>
+			{/each}
+		</div>
+		{#if !readonly && value.gallery.length < 12}
+			<label class="btn">
+				{uploading === 'gallery' ? 'Uploading…' : 'Add a photo'}
+				<input type="file" accept="image/png,image/jpeg,image/webp" hidden onchange={(e) => pick(e, 'gallery', (u) => value.gallery.push(u))} />
+			</label>
+		{/if}
+	</section>
+
+	<section class="group">
 		<h3>Technology and impact</h3>
+		<div class="grid">
+			<label class="field">
+				<span class="field__label">Technology readiness level <small>Lab layout</small></span>
+				<select bind:value={value.trl}>
+					<option value="">Not given</option>
+					{#each ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as n (n)}<option value={n}>TRL {n}</option>{/each}
+				</select>
+			</label>
+		</div>
+		<p class="field__label">Specifications <small>Lab layout — key technical figures</small></p>
+		{#each value.specs as s, i (i)}
+			<div class="row row--inline row--two">
+				<input bind:value={s.label} placeholder="Accuracy" aria-label="What it measures" />
+				<input bind:value={s.value} placeholder="±8% against lab tests" aria-label="Value" />
+				{#if !readonly}<button type="button" class="link link--danger" onclick={() => value.specs.splice(i, 1)}>Remove</button>{/if}
+			</div>
+		{/each}
+		{#if !readonly}
+			<button type="button" class="btn" onclick={() => value.specs.push({ label: '', value: '' })}>Add a specification</button>
+		{/if}
 		{@render textList('Tech stack', value.techStack, (v) => (value.techStack = v))}
 		{@render textList('Patents and IP', value.ipPatents, (v) => (value.ipPatents = v))}
 		{@render textList('SDGs', value.sdgAlignment, (v) => (value.sdgAlignment = v), 'One per line, e.g. SDG 2 · Zero hunger')}
-		<label class="field"><span class="field__label">Impact so far</span><textarea rows="3" bind:value={value.impactCreated}></textarea></label>
+		<label class="field"><span class="field__label">Impact so far</span><textarea rows="6" bind:value={value.impactCreated}></textarea></label>
 	</section>
 
 	<section class="group">
@@ -307,6 +358,41 @@
 
 	.field--wide {
 		grid-column: 1 / -1;
+	}
+
+	// Long-form answers get the full width and room to write.
+	.grid--wide {
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+	}
+
+	.long {
+		min-height: 320px;
+		font-size: 15px;
+		line-height: 1.7;
+	}
+
+	.gallery {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+		gap: 10px;
+	}
+
+	.gallery__item {
+		display: grid;
+		gap: 4px;
+		justify-items: start;
+
+		img {
+			width: 100%;
+			aspect-ratio: 4 / 3;
+			object-fit: cover;
+			border-radius: 8px;
+			border: 1px solid $admin-line;
+		}
+	}
+
+	.row--two {
+		grid-template-columns: 1fr 2fr auto;
 	}
 
 	.field__label {

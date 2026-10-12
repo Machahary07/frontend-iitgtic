@@ -100,7 +100,13 @@
 					onfocusin={() => animate(i, -50)}
 					onfocusout={() => animate(i, 0)}
 				>
-					<div class="card__logo" aria-label={startup.logo.alt}></div>
+					<div class="card__logo">
+						{#if startup.logo.src}
+							<img src={startup.logo.src} alt={startup.logo.alt || `${startup.name} logo`} />
+						{:else}
+							<span aria-hidden="true">{startup.name.charAt(0)}</span>
+						{/if}
+					</div>
 					<div class="card__body">
 						<p class="card__sector">{startup.sector}</p>
 						<h2 class="card__name">
@@ -274,7 +280,21 @@
 		width: 100px;
 		height: 100px;
 		border-radius: 50%;
+		overflow: hidden;
+		display: grid;
+		place-items: center;
 		background: $color-black;
+		color: $color-white;
+		font-family: $font-family-serif;
+		font-style: italic;
+		font-size: 2.2rem;
+
+		img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			background: $color-white;
+		}
 
 		@include breakpoint-down($bp-sm) {
 			width: 84px;

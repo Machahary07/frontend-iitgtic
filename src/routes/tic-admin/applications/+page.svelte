@@ -42,7 +42,8 @@
 		submitted: applications.filter((a) => a.status === 'submitted').length,
 		'under-review': applications.filter((a) => a.status === 'under-review').length,
 		accepted: applications.filter((a) => a.status === 'accepted').length,
-		rejected: applications.filter((a) => a.status === 'rejected').length
+		rejected: applications.filter((a) => a.status === 'rejected').length,
+		returned: applications.filter((a) => a.status === 'returned').length
 	});
 
 	async function setStatus(id: string, status: ApplicationStatus) {
@@ -174,6 +175,13 @@
 			onclick={() => (filter = 'rejected')}
 		>
 			Rejected <span class="tab__count">{counts.rejected}</span>
+		</button>
+		<button
+			class="tab"
+			class:tab--active={filter === 'returned'}
+			onclick={() => (filter = 'returned')}
+		>
+			Returned <span class="tab__count">{counts.returned}</span>
 		</button>
 		<button class="tab" class:tab--active={filter === 'all'} onclick={() => (filter = 'all')}>
 			All <span class="tab__count">{counts.all}</span>
@@ -612,6 +620,11 @@
 		&--rejected {
 			background: #fde0e0;
 			color: #9a1515;
+		}
+
+		&--returned {
+			background: #efe6fb;
+			color: #5b2a9a;
 		}
 	}
 

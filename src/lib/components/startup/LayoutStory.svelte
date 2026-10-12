@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import LinkReveal from '$lib/components/LinkReveal.svelte';
 	import { prefersReducedMotion } from '$lib/utils/animation';
+	import Prose from './Prose.svelte';
 	import type { StartupProfileData } from '$lib/utils/startupProfile';
 
 	// Layout 2 of the public profile: the startup's milestones as stops on a road
@@ -215,6 +216,13 @@
 		<p class="hero__cue">Scroll the road<i></i></p>
 	</header>
 
+	{#if startup.description}
+		<section class="about reveal">
+			<p class="eyebrow">About {startup.name}</p>
+			<Prose class="about__p" text={startup.description} />
+		</section>
+	{/if}
+
 	{#if stops.length}
 		<section class="road-sec">
 			<div class="year-wrap" aria-hidden="true">
@@ -272,7 +280,7 @@
 			{#each story as [title, body] (title)}
 				<div class="chapter reveal">
 					<p class="eyebrow">{title}</p>
-					<p class="chapter__body">{body}</p>
+					<Prose class="chapter__body" text={body} />
 				</div>
 			{/each}
 		</section>
@@ -501,6 +509,31 @@
 		100% {
 			transform: scaleY(1);
 			opacity: 0;
+		}
+	}
+
+	// ---- the long read ----
+	.about {
+		width: min(760px, 100% - 32px);
+		margin: 0 auto;
+		padding: 110px 0 0;
+		opacity: 0;
+		transform: translateY(30px);
+		transition:
+			opacity 0.8s,
+			transform 0.8s;
+
+		&:global(.is-in) {
+			opacity: 1;
+			transform: none;
+		}
+
+		:global(.about__p) {
+			margin: 18px 0 0;
+			font-family: $font-family-serif;
+			font-size: 1.2rem;
+			line-height: 1.9;
+			color: rgba($color-black, 0.8);
 		}
 	}
 
@@ -796,7 +829,7 @@
 		}
 	}
 
-	.chapter__body {
+	.chapter :global(.chapter__body) {
 		margin: 14px 0 0;
 		font-family: $font-family-serif;
 		font-size: 1.05rem;
@@ -972,6 +1005,7 @@
 	@media (prefers-reduced-motion: reduce) {
 		.stop__text,
 		.stop__media,
+		.about,
 		.numbers,
 		.chapter,
 		.person {

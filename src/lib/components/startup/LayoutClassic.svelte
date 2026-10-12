@@ -30,6 +30,7 @@
 	import ArrowUpRight from '@lucide/svelte/icons/arrow-up-right';
 	import User from '@lucide/svelte/icons/user';
 	import type { StartupProfileData } from '$lib/utils/startupProfile';
+	import Prose from './Prose.svelte';
 
 	// Layout 1 of the public profile: every section in a fixed order, with an
 	// index alongside. Empty sections drop out.
@@ -108,6 +109,7 @@
 		(
 			[
 				['overview', 'Overview', true],
+				['about', 'About', Boolean(startup.description)],
 				['problem-solution', 'Problem & Solution', hasProblemSolution],
 				['features', 'Key features', hasFeatures],
 				['market', 'Target market', hasMarket],
@@ -269,6 +271,16 @@
 				</div>
 			</section>
 
+			{#if startup.description}
+				<section id="about" class="block">
+					<div class="block__head">
+						<p class="block__eyebrow"><Sparkles size={14} strokeWidth={1.75} />About</p>
+						<h2>About {startup.name}.</h2>
+					</div>
+					<div class="about"><Prose class="prose prose--long" text={startup.description} /></div>
+				</section>
+			{/if}
+
 			{#if hasProblemSolution}
 				<section id="problem-solution" class="block">
 					<div class="block__head">
@@ -279,13 +291,13 @@
 						{#if startup.problem}
 							<div>
 								<p class="block__eyebrow block__eyebrow--minor">Problem</p>
-								<p class="prose">{startup.problem}</p>
+								<Prose class="prose" text={startup.problem} />
 							</div>
 						{/if}
 						{#if startup.solution}
 							<div>
 								<p class="block__eyebrow block__eyebrow--minor">Solution</p>
-								<p class="prose">{startup.solution}</p>
+								<Prose class="prose" text={startup.solution} />
 							</div>
 						{/if}
 					</div>
@@ -312,7 +324,7 @@
 						<p class="block__eyebrow"><Target size={14} strokeWidth={1.75} />Target market</p>
 						<h2>Who we serve.</h2>
 					</div>
-					<p class="prose">{startup.targetMarket}</p>
+					<Prose class="prose" text={startup.targetMarket} />
 				</section>
 			{/if}
 
@@ -805,13 +817,22 @@
 		gap: $space-2;
 	}
 
-	.prose {
-		margin: 0;
+	// Prose renders the paragraphs, so the class reaches into it.
+	.content :global(.prose) {
+		margin: 0 0 1em;
 		font-family: $font-family-serif;
 		font-size: $font-size-md;
 		line-height: $line-height-relaxed;
 		color: $color-black;
 		max-width: 62ch;
+	}
+
+	// The long read gets the most room and the largest text on the page.
+	.content :global(.prose--long) {
+		max-width: 76ch;
+		font-size: 1.15rem;
+		line-height: 1.85;
+		color: rgba($color-black, 0.8);
 	}
 
 	.overview-grid {
