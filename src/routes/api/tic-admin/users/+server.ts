@@ -332,5 +332,21 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 		table: 'profiles',
 		recordId: data.user.id
 	});
+
+	// Never fails the create, which has already happened.
+	await sendTemplateEmail({
+		templateKey: 'staff-account-created',
+		to: email,
+		toName: details.fullName,
+		variables: {
+			fullName: details.fullName.split(' ')[0] ?? '',
+			roleLabel: roleLabel(role),
+			email,
+			password: body.password
+		},
+		secrets: [body.password],
+		context: { table: 'profiles', recordId: data.user.id },
+		sentBy: ctx.admin.userId
+	});
 	return json({ ok: true, id: data.user.id });
 };

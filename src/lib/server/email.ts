@@ -10,7 +10,7 @@ import {
 	templateDef,
 	type EmailTemplateDef
 } from '$lib/utils/emailTemplates';
-import { attachmentsFor, parseBlocks, renderBlocks, type EmailBlock } from '$lib/utils/emailBlocks';
+import { attachmentsFor, escapeHtml, parseBlocks, renderBlocks, type EmailBlock } from '$lib/utils/emailBlocks';
 import { unsubscribeUrl } from '$lib/server/newsletter';
 import {
 	allowance,
@@ -393,6 +393,9 @@ export type SendOptions = {
 	// Test sends deliberately ignore the template's enabled switch — the point of
 	// a test is to see a template that is not live yet.
 	ignoreEnabled?: boolean;
+	// Values the recipient needs but the console's email log must not keep, such
+	// as a password. Masked in the logged body; the message itself is unchanged.
+	secrets?: string[];
 };
 
 async function logEmail(fields: {
@@ -462,6 +465,10 @@ export async function sendTemplateEmail(options: SendOptions): Promise<SendResul
 	const context = options.context ?? {};
 	const toName = options.toName ?? '';
 	const isTest = options.isTest ?? false;
+	const redact = (body: string) =>
+		(options.secrets ?? [])
+			.filter(Boolean)
+			.reduce((out, secret) => out.split(escapeHtml(secret)).join('••••••••'), body);
 
 	const blocked = async (reason: string, subject = '', body = ''): Promise<SendResult> => {
 		await logEmail({
@@ -469,7 +476,7 @@ export async function sendTemplateEmail(options: SendOptions): Promise<SendResul
 			to: options.to,
 			toName,
 			subject,
-			body,
+			body: redact(body),
 			status: 'blocked',
 			providerId: null,
 			error: reason,
@@ -570,7 +577,7 @@ export async function sendTemplateEmail(options: SendOptions): Promise<SendResul
 		to: options.to,
 		toName,
 		subject,
-		body: html,
+		body: redact(html),
 		status: error ? 'failed' : 'sent',
 		providerId: id,
 		error,

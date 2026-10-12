@@ -898,6 +898,43 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		])
 	},
 	{
+		key: 'staff-account-created',
+		name: 'Staff account created',
+		description:
+			'Gives a new member of TIC staff their role and sign-in details. The password is masked in the email log.',
+		trigger: 'An admin creates a staff account in /tic-admin/users',
+		group: 'Admin',
+		variables: [
+			{ name: 'fullName', description: 'Account holder name', sample: 'Ananya Sharma' },
+			{ name: 'roleLabel', description: 'The role they were given', sample: 'TIC Coordinator' },
+			{ name: 'email', description: 'Their sign-in email', sample: 'ananya@iitg.ac.in' },
+			{ name: 'password', description: 'The password the admin set', sample: 'Welcome@2026' }
+		],
+		subject: 'Your {{siteName}} {{roleLabel}} account is ready',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'good', text: 'Account created' },
+			{ type: 'heading', text: 'Welcome, _{{fullName}}_', showIf: 'fullName' },
+			{ type: 'heading', text: 'Welcome to _TIC IITG_', hideIf: 'fullName' },
+			{
+				type: 'lede',
+				text: 'Your {{roleLabel}} account on the TIC console has been made. Here are your sign-in details.'
+			},
+			{
+				type: 'details',
+				title: 'Sign-in details',
+				items: ['Role: {{roleLabel}}', 'Email: {{email}}', 'Password: {{password}}']
+			},
+			{ type: 'button', label: 'Sign in', href: '{{siteUrl}}/login' },
+			{
+				type: 'callout',
+				tone: 'info',
+				label: 'Change your password',
+				text: 'After you sign in, set a password of your own from Settings in the console.'
+			},
+			SIGN_OFF
+		])
+	},
+	{
 		key: 'new-applicant-alert',
 		name: 'New founder signed up',
 		description:
