@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { STARTUP_STAGES } from '$lib/content';
+	import { layoutPrompt } from '$lib/utils/layoutPrompts';
+	import { showToast } from '$lib/utils/toast.svelte';
 	import {
 		PROFILE_LAYOUTS,
 		SOCIAL_KEYS,
@@ -28,6 +30,16 @@
 		const url = await upload(file);
 		uploading = '';
 		if (url) set(url);
+	}
+
+	// A ChatGPT prompt for one layout, carrying everything filled in so far.
+	async function copyPrompt(layout: StartupProfileData['layout']) {
+		try {
+			await navigator.clipboard.writeText(layoutPrompt(value, layout));
+			showToast('Prompt copied — paste it into ChatGPT.');
+		} catch {
+			showToast('Could not copy. Your browser blocked the clipboard.', 'err');
+		}
 	}
 
 	const lines = (list: string[]) => list.join('\n');
@@ -101,7 +113,11 @@
 <fieldset class="editor" disabled={readonly}>
 	<section class="group">
 		<h3>Layout</h3>
-		<p class="group__sub">How your page is laid out. Everything you fill in below is kept whichever you pick.</p>
+		<p class="group__sub">
+			How your page is laid out. Everything you fill in below is kept whichever you pick. Stuck for
+			words? <em>Copy ChatGPT prompt</em> gives ChatGPT what you have so far and asks it to write that
+			layout's fields, and the photos you'll need.
+		</p>
 		<div class="layouts">
 			{#each PROFILE_LAYOUTS as l (l.value)}
 				<div class="layout" class:layout--on={value.layout === l.value}>
@@ -116,6 +132,7 @@
 					<a class="link" href={`/incubated-startups/preview/layout/${l.value}`} target="_blank" rel="noopener"
 						>See an example</a
 					>
+					<button type="button" class="link" onclick={() => copyPrompt(l.value)}>Copy ChatGPT prompt</button>
 				</div>
 			{/each}
 		</div>
