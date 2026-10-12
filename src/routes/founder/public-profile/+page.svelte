@@ -184,7 +184,8 @@
 	}
 
 	.status {
-		display: flex;
+		// The card mixin stacks its children; this one is text beside actions.
+		flex-direction: row;
 		flex-wrap: wrap;
 		gap: 12px 24px;
 		align-items: center;

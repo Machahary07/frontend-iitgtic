@@ -53,6 +53,44 @@
 	</div>
 {/snippet}
 
+<!-- A small drawing of each layout, so the cards can be told apart at a glance. -->
+{#snippet thumb(layout: string)}
+	<svg class="thumb" viewBox="0 0 120 72" aria-hidden="true">
+		<rect width="120" height="72" rx="6" fill="#f4f4f1" />
+		{#if layout === 'classic'}
+			<rect x="38" y="6" width="44" height="12" rx="2" fill="#cfcfca" />
+			<rect x="8" y="24" width="22" height="42" rx="2" fill="#e2e2dd" />
+			<rect x="36" y="24" width="76" height="12" rx="2" fill="#d9d9d4" />
+			<rect x="36" y="40" width="76" height="12" rx="2" fill="#d9d9d4" />
+			<rect x="36" y="56" width="76" height="10" rx="2" fill="#d9d9d4" />
+		{:else if layout === 'story'}
+			<rect width="120" height="22" rx="6" fill="#12261a" />
+			<path d="M60 22 C 72 32, 72 38, 60 46 S 48 58, 60 66 L 60 72" fill="none" stroke="#00b451" stroke-width="2" />
+			<circle cx="60" cy="46" r="2.5" fill="#00b451" />
+			<rect x="12" y="34" width="34" height="14" rx="2" fill="#d9d9d4" />
+			<rect x="74" y="52" width="34" height="14" rx="2" fill="#d9d9d4" />
+		{:else if layout === 'one-pager'}
+			<rect x="6" y="6" width="34" height="60" rx="4" fill="#fff" />
+			<rect x="46" y="6" width="68" height="14" rx="3" fill="#fff" />
+			<rect x="46" y="24" width="68" height="12" rx="3" fill="#fff" />
+			<rect x="46" y="40" width="32" height="26" rx="3" fill="#fff" />
+			<rect x="82" y="40" width="32" height="26" rx="3" fill="#fff" />
+		{:else if layout === 'showcase'}
+			<rect width="120" height="34" rx="6" fill="#c9c9c3" />
+			<rect x="10" y="26" width="100" height="14" rx="3" fill="#fff" />
+			<rect x="10" y="46" width="48" height="20" rx="2" fill="#d9d9d4" />
+			<rect x="62" y="46" width="48" height="20" rx="2" fill="#e2e2dd" />
+		{:else}
+			<rect width="120" height="34" rx="6" fill="#231f20" />
+			<rect x="10" y="22" width="40" height="3" rx="1" fill="#00b451" />
+			<rect x="76" y="6" width="34" height="22" rx="2" fill="#3b3738" />
+			<rect x="10" y="42" width="30" height="24" rx="2" fill="#d9d9d4" />
+			<rect x="45" y="42" width="30" height="24" rx="2" fill="#d9d9d4" />
+			<rect x="80" y="42" width="30" height="24" rx="2" fill="#d9d9d4" />
+		{/if}
+	</svg>
+{/snippet}
+
 {#snippet textList(label: string, list: string[], set: (v: string[]) => void, hint = 'One per line')}
 	<label class="field">
 		<span class="field__label">{label} <small>{hint}</small></span>
@@ -66,11 +104,19 @@
 		<p class="group__sub">How your page is laid out. Everything you fill in below is kept whichever you pick.</p>
 		<div class="layouts">
 			{#each PROFILE_LAYOUTS as l (l.value)}
-				<label class="layout" class:layout--on={value.layout === l.value}>
-					<input type="radio" name="layout" value={l.value} bind:group={value.layout} />
-					<strong>{l.label}</strong>
-					<span>{l.hint}</span>
-				</label>
+				<div class="layout" class:layout--on={value.layout === l.value}>
+					<label class="layout__pick">
+						<input type="radio" name="layout" value={l.value} bind:group={value.layout} />
+						{@render thumb(l.value)}
+						<strong>{l.label}</strong>
+						<span>{l.hint}</span>
+					</label>
+					<!-- An example page on the public site, opened in a new tab. -->
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a class="link" href={`/incubated-startups/preview/layout/${l.value}`} target="_blank" rel="noopener"
+						>See an example</a
+					>
+				</div>
 			{/each}
 		</div>
 	</section>
@@ -409,16 +455,28 @@
 
 	.layouts {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+		// Two across even on a phone, five on a wide screen.
+		grid-template-columns: repeat(auto-fit, minmax(min(140px, 45%), 1fr));
 		gap: 10px;
 	}
 
 	.layout {
 		display: grid;
-		gap: 4px;
+		gap: 10px;
+		align-content: start;
 		padding: 14px;
 		border: 1px solid $admin-line;
 		border-radius: 10px;
+
+		.link {
+			justify-self: start;
+			text-decoration: underline;
+		}
+	}
+
+	.layout__pick {
+		display: grid;
+		gap: 4px;
 		cursor: pointer;
 
 		input {
@@ -428,6 +486,7 @@
 		}
 
 		strong {
+			margin-top: 6px;
 			font-size: 14px;
 			color: $admin-ink;
 		}
@@ -436,6 +495,12 @@
 			font-size: 12.5px;
 			color: rgba($admin-ink, 0.6);
 		}
+	}
+
+	.thumb {
+		display: block;
+		width: 100%;
+		height: auto;
 	}
 
 	.layout--on {
@@ -464,6 +529,8 @@
 
 		input {
 			@include admin-input;
+			width: 100%;
+			min-width: 0;
 		}
 	}
 
@@ -502,6 +569,8 @@
 
 	.btn {
 		@include admin-btn-base;
+		// Sits at its own width inside the grid cards rather than stretching.
+		justify-self: start;
 		cursor: pointer;
 	}
 

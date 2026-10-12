@@ -96,7 +96,8 @@
 
 	.bar {
 		@include admin-card;
-		display: flex;
+		// The card mixin stacks its children; this one is a row of actions.
+		flex-direction: row;
 		flex-wrap: wrap;
 		gap: 8px;
 		align-items: center;
