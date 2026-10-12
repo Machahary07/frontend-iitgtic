@@ -464,7 +464,7 @@ Links marked 🔒 need a session; opening one signed-out redirects to the matchi
 | Programs                | [`/programs`](https://iitgtic.itsjeu.com/programs)                                                       | Programme overview                                           |
 | Schemes                 | [`/schemes`](https://iitgtic.itsjeu.com/schemes)                                                         | Funding and support schemes                                  |
 | Incubation pillars      | [`/incubation`](https://iitgtic.itsjeu.com/incubation) · `/incubation/[slug]`                            | Five support pillars, each with a scrollspy detail page      |
-| Incubated startups      | [`/incubated-startups`](https://iitgtic.itsjeu.com/incubated-startups) · `/[slug]/[startupSlug]`         | Current, virtual and graduated cohorts, down to one startup  |
+| Incubated startups      | [`/incubated-startups`](https://iitgtic.itsjeu.com/incubated-startups) · `/[slug]/[startupSlug]`         | Current, virtual and graduated cohorts, down to one startup — each page in the layout its founder chose (Classic, Story roadmap or One-pager). `/preview/[id]` shows a draft to its founders and TIC staff only |
 | Events                  | [`/events`](https://iitgtic.itsjeu.com/events) · `/events/[slug]`                                        | Upcoming and past events                                     |
 | Partners                | [`/partners`](https://iitgtic.itsjeu.com/partners)                                                       | Partner grid                                                 |
 | Contact                 | [`/contact`](https://iitgtic.itsjeu.com/contact)                                                         | Enquiry form and a click-to-load map                         |
@@ -516,6 +516,7 @@ they are posted; team members and company detail changes wait for a TIC admin.
 | Overview           | [`/founder`](https://iitgtic.itsjeu.com/founder)                         | Live, closed and removed roles, applicants, team, application progress      |
 | Startups           | [`/founder/companies`](https://iitgtic.itsjeu.com/founder/companies)     | Register a startup, switch between them, delete one                         |
 | Application        | [`/founder/application`](https://iitgtic.itsjeu.com/founder/application) | The eight-step form, filled in per startup, with a draft kept per startup   |
+| Public profile     | [`/founder/public-profile`](https://iitgtic.itsjeu.com/founder/public-profile) | Opens once accepted, pre-filled from the application: layout, text, photos, milestones; preview, then send to TIC |
 | Job postings       | [`/founder/jobs`](https://iitgtic.itsjeu.com/founder/jobs)               | Post a role (live at once), edit, close, reopen, delete; applied / limit    |
 | Post / edit a role | `/founder/jobs/new` · `/founder/jobs/[id]`                               | The shared posting form; a role TIC removed shows the reason instead        |
 | Applicants         | [`/founder/applicants`](https://iitgtic.itsjeu.com/founder/applicants)   | Received and read: details, resumes, CSV export, every resume as one zip    |
@@ -537,7 +538,8 @@ The old `/tic-admin/login` survives only to create the very first admin on an em
 | ----------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | First-admin setup       | [`/tic-admin/login`](https://iitgtic.itsjeu.com/tic-admin/login)                                               | Creates the very first admin, then hands over to `/login` for good               |
 | Overview 🔒              | [`/tic-admin`](https://iitgtic.itsjeu.com/tic-admin)                                                           | A different front page per role — what is waiting on you                         |
-| **Approvals** 🔒         | [`/tic-admin/approvals`](https://iitgtic.itsjeu.com/tic-admin/approvals)                                       | Two queues: team members and company detail changes                              |
+| **Approvals** 🔒         | [`/tic-admin/approvals`](https://iitgtic.itsjeu.com/tic-admin/approvals)                                       | Three queues: public profiles, team members and company detail changes           |
+| Incubatees 🔒            | [`/tic-admin/startups`](https://iitgtic.itsjeu.com/tic-admin/startups) · `/[id]`                               | Every public startup page: Current, Virtual, Graduated, not listed; make virtual, graduate, take off the site, edit and publish |
 | Companies 🔒             | [`/tic-admin/companies`](https://iitgtic.itsjeu.com/tic-admin/companies)                                       | Accepted startups; reject, revert or delete                                      |
 | Incubation applications 🔒 | [`/tic-admin/applications`](https://iitgtic.itsjeu.com/tic-admin/applications) · `/[id]`                     | The six-step review chain: 0–100 step scores, assignments, decisions             |
 | Evaluation 🔒            | [`/tic-admin/evaluation`](https://iitgtic.itsjeu.com/tic-admin/evaluation)                                     | Coordinators’ Google Meet screening calls and eight-criterion scorecards         |
@@ -583,6 +585,8 @@ admin's id.
 | `/api/tic-admin/companies`          | `PATCH` `DELETE`              | Verify / reject / delete an account                                                                                                                       |
 | `/api/tic-admin/applications`       | `PATCH` `DELETE`              | Move an incubation application through review, or send a just-submitted one back to the founder (`status: returned`)                                    |
 | `/api/founder/application/resubmit` | `POST`                        | The founder who submitted a returned application sends it again — checks a confirmed email, every required answer and a pitch deck, then moves it back to `submitted` |
+| `/api/founder/startup-profile`      | `PUT` `POST`                  | The founder's public profile: save the draft, send it for review or withdraw it; `/upload` takes an image                                              |
+| `/api/tic-admin/startups`           | `PATCH` `PUT` `POST`          | Incubatees: list as current, virtual on/off, graduate, take off the site (admin); edit and publish a profile, upload an image (content roles)        |
 | `/api/founder/users`                | `POST` `DELETE`               | A founder adds a team member (pending TIC approval, emailed their sign-in details) or removes one                                                         |
 | `/api/tic-admin/job-applications`   | `GET` `POST` `DELETE`         | TIC roles only: full records for the CSV, `?resumes=1` signed links for the zip, `POST ?jobSlug=` clears a role, `DELETE` one applicant — resumes first |
 | `/api/tic-admin/jobs`               | `POST` `PATCH` `DELETE`       | Post, edit, close, reopen or delete a TIC role; `PATCH action: remove` takes a startup role down with a reason and emails the founder                 |
@@ -624,6 +628,7 @@ Twenty tables, all with RLS enabled. The main ones:
 | `audit_log`              | Every row change, with actor and before/after                | Service role only — RLS on, zero policies                                                                                               |
 | `page_views`             | One row per page view, admin routes included                 | Service role only — RLS on, zero policies                                                                                               |
 | `site_content`           | Editable copy for every public page                          | Service role only; read on the server, written from the console                                                                         |
+| `startup_profiles`       | One public profile per incubated startup: the founder's `draft`, the approved `published` copy, stage (current / graduated / exited), `is_virtual`, `listed` | Service role only — RLS on, zero policies; the founder and staff routes check access themselves |
 | `rate_limits`            | Fixed-window request counters for the public write routes    | Service role only — RLS on, zero policies                                                                                               |
 | `email_events`           | Delivery feedback from Resend: what happened after a send    | Service role only — RLS on, zero policies                                                                                               |
 | `email_suppressions`     | Addresses that hard-bounced or complained                    | Service role only — checked before every non-test send                                                                                  |
@@ -657,6 +662,14 @@ erDiagram
         int max_applicants "1-200"
         date closes_on
     }
+    startup_profiles {
+        uuid id PK
+        uuid company_id FK "one per company"
+        text stage "current / graduated / exited"
+        bool is_virtual "a subset of current"
+        jsonb draft "what the founder is editing"
+        jsonb published "what the site shows"
+    }
     applications {
         uuid id PK
         uuid user_id FK
@@ -675,6 +688,7 @@ erDiagram
 
     profiles ||--o| companies : "same auth user"
     companies ||--o{ jobs : "posts"
+    companies ||--o| startup_profiles : "is shown as"
     profiles ||--o{ applications : "submits"
     jobs ||--o{ job_applications : "receives"
     companies ||--o{ job_applications : "reads its own — via policy"
@@ -888,13 +902,13 @@ Mail goes out through [Resend](https://resend.com), and everything about it is v
 
 **What gets sent, and when**
 
-Twenty-six messages, each editable in the console. The full list with triggers is in the
+Twenty-eight messages, each editable in the console. The full list with triggers is in the
 operations manual, chapter 18. In short:
 
 | Group                 | Messages                                                                                                     |
 | --------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Founders              | Welcome & confirm, sign-in notice, startup registered, account deleted, team member added (sign-in details and confirm link) |
-| Incubation            | Application received, under review, screening call invite, accepted (with scores), declined, sent back to the founder (with the confirm link if unconfirmed), startup live |
+| Incubation            | Application received, under review, screening call invite, accepted (with scores and a prompt to set up the public profile), declined, sent back to the founder (with the confirm link if unconfirmed), public profile approved or sent back, startup live, startup graduated |
 | Staff                 | Staff account created (role, sign-in details and confirm link), an application needs your review, screening call scheduled, admin sign-in alert, new founder signed up |
 | Job board             | Application received, new applicant (to the startup or the TIC inbox), role removed by TIC, resumes clearing soon |
 | Newsletter and direct | Newsletter, subscription confirmed, direct message from the assistant                                        |
@@ -1166,7 +1180,25 @@ mirrors from the same list, are the first surface to use it.
 > The `value` column is `json` rather than `jsonb` on purpose — `jsonb` sorts object keys, which
 > reordered the fields in the editor (an FAQ showed its answer above its question).
 
-Historically most pages rendered straight from `src/lib/data/content.json`. Dynamic routes (`events/[slug]`, `about/blog/[slug]`, `incubation/[slug]`, `incubated-startups/[slug]/[startupSlug]`, `opportunities/[id]`) look up entries by slug from the same file. Adding a new event/post means adding an entry — no new files needed.
+Historically most pages rendered straight from `src/lib/data/content.json`. Dynamic routes (`events/[slug]`, `about/blog/[slug]`, `incubation/[slug]`, `opportunities/[id]`) look up entries by slug from the same file. Adding a new event/post means adding an entry — no new files needed.
+
+**Incubated startups are not content.** Each one is a row in `startup_profiles`
+(`20261012020000_startup_profiles.sql` moved the old hand-written entries across). The flow:
+
+1. **Accepted.** The acceptance email points the founder to **Public profile** in their console.
+   The first visit creates the profile from their application answers.
+2. **Founder edits and submits.** They pick a layout (`src/lib/components/startup/`: Classic,
+   Story roadmap, One-pager), add a logo, photos and milestones, preview it at
+   `/incubated-startups/preview/[id]`, and send it for review. Everything they type passes
+   through `sanitizeProfile()` in `src/lib/utils/startupProfile.ts`; images go to
+   `site-assets/startups/<id>/`, raster formats only.
+3. **Approvals.** Admins, TIC Admins and Coordinators approve it (the draft becomes
+   `published`) or send it back with a note. Both email the founder.
+4. **Mark live.** The last step on the application lists the startup as a **current**
+   incubatee, with a tick for **virtual**. It is refused until a profile has been approved.
+5. **Incubatees.** Admins move a startup in and out of Virtual (a subset of Current), graduate
+   it with an outcome line (the founder is emailed) or take it off the site. Edits after it is
+   live go through Approvals again; the live page keeps the last approved version until then.
 
 Job postings are not content: every role, TIC's included, is a row in `public.jobs`, posted
 from the TIC or founder console. An application records the role's slug plus a snapshot of

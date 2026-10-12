@@ -15,6 +15,7 @@ import Users from '@lucide/svelte/icons/users';
 import Activity from '@lucide/svelte/icons/activity';
 import Building2 from '@lucide/svelte/icons/building-2';
 import Rocket from '@lucide/svelte/icons/rocket';
+import Globe from '@lucide/svelte/icons/globe';
 import LifeBuoy from '@lucide/svelte/icons/life-buoy';
 import Settings from '@lucide/svelte/icons/settings';
 
@@ -24,6 +25,7 @@ export const FOUNDER_NAV: NavItem[] = [
 	{ label: 'Overview', href: '/founder', icon: Home, tone: 'neutral' },
 	{ label: 'Startups', href: '/founder/companies', icon: Rocket, tone: 'info' },
 	{ label: 'Application', href: '/founder/application', icon: FileText, tone: 'good' },
+	{ label: 'Public profile', href: '/founder/public-profile', icon: Globe, tone: 'violet' },
 	{ separator: true as const },
 	{ label: 'Job postings', href: '/founder/jobs', icon: Briefcase, tone: 'warn' },
 	{ label: 'Applicants', href: '/founder/applicants', icon: UserSearch, tone: 'violet' },

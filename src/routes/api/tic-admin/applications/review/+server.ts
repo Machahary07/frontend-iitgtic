@@ -8,6 +8,7 @@ import {
 	type ReviewerKind
 } from '$lib/server/applicationReview';
 import { notifyReviewers } from '$lib/server/reviewMail';
+import { ensureProfile, goLive } from '$lib/server/startupProfiles';
 import type { RequestHandler } from './$types';
 
 // Moves an application along the review chain. Each action is allowed to one
@@ -28,6 +29,8 @@ type Body = {
 	kind?: ReviewerKind;
 	userIds?: string[];
 	note?: string;
+	/** Mark live: list it among the virtual incubatees as well. */
+	virtual?: boolean;
 };
 
 export const POST: RequestHandler = async ({ cookies, request, url }) => {
@@ -39,7 +42,7 @@ export const POST: RequestHandler = async ({ cookies, request, url }) => {
 
 	const { data: app } = await ctx.db
 		.from('applications')
-		.select('id, status, review_stage, email, full_name, startup_name')
+		.select('id, status, review_stage, email, full_name, startup_name, company_id')
 		.eq('id', body.id)
 		.maybeSingle();
 	if (!app) error(404, 'Application not found.');
@@ -201,6 +204,11 @@ export const POST: RequestHandler = async ({ cookies, request, url }) => {
 		case 'live': {
 			if (scope !== 'admin') error(403, 'Only admin marks a startup live.');
 			if (app.status !== 'accepted') error(409, 'Accept it and send the final email first.');
+			// Live means listed on the website, which needs an approved profile.
+			const profile = app.company_id ? await ensureProfile(app.company_id as string) : null;
+			if (!profile) error(409, 'This startup has no company to list.');
+			const refusal = await goLive(profile.id, body.virtual === true);
+			if (refusal) error(409, refusal);
 			await setStage(6);
 			await logAdminAction(ctx, 'marked startup live', { table: 'applications', recordId: app.id });
 			if (app.email) {

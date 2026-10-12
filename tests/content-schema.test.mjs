@@ -73,21 +73,17 @@ test('partners are grouped only into categories that exist', () => {
 	}
 });
 
-test('startup sectors come from the section, stages are fixed', () => {
+test('startups live in startup_profiles, not in site content', () => {
 	const section = content.pages.incubatedStartups;
-	const sectors = FIELD_OPTIONS['pages.incubatedStartups.categories[].startups[].sector'](section);
-	assert.equal(sectors.length, section.sectors.length);
-	assert.ok(sectors.length > 0);
-	const stages = FIELD_OPTIONS['pages.incubatedStartups.categories[].startups[].stage'](section);
-	assert.ok(stages.some((s) => s.value === 'MVP'));
-
-	const blank = LIST_TEMPLATES['pages.incubatedStartups.categories[].startups']();
-	assert.equal(blank.featured, false);
-	assert.deepEqual(Object.keys(blank.founderStory), [
-		'whatTheyBuilt',
-		'whatTicContributed',
-		'whereTheyAreNow'
-	]);
+	// The profile editor's sector dropdown still reads this list.
+	assert.ok(section.sectors.length > 0);
+	assert.deepEqual(
+		section.categories.map((c) => c.slug),
+		['current', 'virtual', 'graduated']
+	);
+	for (const category of section.categories) assert.equal(category.startups, undefined);
+	assert.ok(!Object.keys(LIST_TEMPLATES).some((k) => k.includes('startups')));
+	assert.ok(!Object.keys(FIELD_OPTIONS).some((k) => k.includes('startups')));
 });
 
 test('homepage sections answer the brief and link to real pages', () => {

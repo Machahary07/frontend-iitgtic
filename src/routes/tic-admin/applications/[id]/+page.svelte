@@ -42,6 +42,8 @@
 	const scope = $derived(data.scope);
 	const isAdmin = $derived(scope === 'admin');
 	const canAssign = $derived(scope === 'admin' || scope === 'ceo');
+	// Mark live: also list it among the virtual incubatees.
+	let markVirtual = $state(false);
 	const rejected = $derived(application.status === 'rejected');
 	const stage = $derived(
 		((rejected ? application.rejected_stage : application.review_stage) ?? 0) as ReviewStage
@@ -484,17 +486,22 @@
 						{:else if stage === 5}
 							{#if isAdmin && application.status === 'accepted'}
 								<p class="step__hint">
-									Final email sent. Mark it live once it shows among the incubated startups.
+									Final email sent. The founder fills in their public profile from their console;
+									once it is approved in Approvals, mark the startup live to list it on the site.
 								</p>
+								<label class="step__check">
+									<input type="checkbox" bind:checked={markVirtual} /> Virtual incubatee — list it
+									under Virtual as well as Current
+								</label>
 								<button
 									class="btn btn--primary"
 									disabled={saving}
 									onclick={() =>
 										passOn(
 											'Mark this startup live?',
-											'The founder is emailed that their startup is now listed among the incubated startups.',
+											`It is listed among the current${markVirtual ? ' and virtual' : ''} incubatees on the website, and the founder is emailed.`,
 											'Yes, mark live',
-											() => step('live', {}, 'Marked live.')
+											() => step('live', { virtual: markVirtual }, 'Marked live.')
 										)}>Mark live</button
 								>
 							{:else if headsDone}
@@ -982,6 +989,15 @@
 		padding: 14px;
 		background: $admin-sunken;
 		border-radius: $admin-radius-sm;
+	}
+
+	.step__check {
+		display: flex;
+		gap: 8px;
+		align-items: flex-start;
+		margin: 0 0 10px;
+		font-size: 13px;
+		color: $admin-ink-2;
 	}
 
 	.step__hint {

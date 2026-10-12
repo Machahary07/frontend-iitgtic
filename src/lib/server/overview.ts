@@ -368,7 +368,7 @@ export async function loadOverview(admin: ConsoleSession): Promise<Overview> {
 		...toLaunch.map((a) => ({
 			id: a.id,
 			title: name(a),
-			meta: 'Accepted · mark it live once it is listed',
+			meta: 'Accepted · mark it live once its public profile is approved',
 			href: appHref(a.id),
 			cta: 'Mark live'
 		}))

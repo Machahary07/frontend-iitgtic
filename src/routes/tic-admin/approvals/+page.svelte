@@ -33,7 +33,8 @@
 		data.companies as { id: string; company_name: string; status: string }[]
 	);
 
-	const total = $derived(members.length + changes.length);
+	const profiles = $derived(data.pendingProfiles);
+	const total = $derived(members.length + changes.length + profiles.length);
 
 	const LABEL: Record<string, string> = {
 		companyName: 'Company name',
@@ -51,7 +52,7 @@
 	let busy = $state('');
 
 	async function decide(
-		kind: 'member' | 'profile',
+		kind: 'member' | 'profile' | 'startup',
 		id: string,
 		decision: 'approve' | 'reject'
 	) {
@@ -120,13 +121,74 @@
 	onLogout={handleLogout}
 >
 	<p class="lede">
-		New team members and company detail changes wait here for a decision. A refusal needs a reason,
+		New team members, company detail changes and public profile updates wait here for a decision. A refusal needs a reason,
 		which the founder reads in their own console. Job postings go live without approval — manage
 		them under Job postings.
 	</p>
 
 	{#if total === 0}
 		<div class="empty"><p>Nothing waiting. Everything founders have sent has been decided.</p></div>
+	{/if}
+
+	{#if profiles.length > 0}
+		<section class="group">
+			<h2 class="group__title">
+				Public profiles <span class="group__count">{profiles.length}</span>
+			</h2>
+			{#each profiles as p (p.id)}
+				<article class="item">
+					<div class="item__head">
+						<div class="item__text">
+							<p class="item__name">{p.name}</p>
+							<p class="item__sub">
+								{p.isLive ? 'Changes to a live page' : 'First version'} · sent {when(p.submittedAt)}
+								·
+								<!-- The preview is a public-site route, opened in a new tab. -->
+								<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+								<a href={`/incubated-startups/preview/${p.id}`} target="_blank" rel="noopener"
+									>Preview the changes</a
+								>
+								{#if p.isLive}
+									·
+									<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+									<a href={`/incubated-startups/preview/${p.id}?v=live`} target="_blank" rel="noopener"
+										>Live version</a
+									>
+								{/if}
+							</p>
+							{#if !data.canPublish}
+								<p class="item__flag">Admins, TIC Admins and Coordinators decide these.</p>
+							{/if}
+						</div>
+					</div>
+					{#if data.canPublish}
+						<div class="decide">
+							<input
+								type="text"
+								class="note"
+								placeholder="What to change, if sending back"
+								value={notes[p.id] ?? ''}
+								oninput={(e) => (notes = { ...notes, [p.id]: e.currentTarget.value })}
+							/>
+							<button
+								class="btn-small btn-small--primary"
+								disabled={busy === p.id}
+								onclick={() => decide('startup', p.id, 'approve')}
+							>
+								Approve
+							</button>
+							<button
+								class="btn-small btn-small--danger"
+								disabled={busy === p.id}
+								onclick={() => decide('startup', p.id, 'reject')}
+							>
+								Send back
+							</button>
+						</div>
+					{/if}
+				</article>
+			{/each}
+		</section>
 	{/if}
 
 	{#if members.length > 0}

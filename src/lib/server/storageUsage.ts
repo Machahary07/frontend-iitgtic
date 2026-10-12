@@ -107,11 +107,13 @@ async function walk(
 // any content section — leave those two out and every document belonging to a
 // real person is labelled "Unused", which is an invitation to delete it.
 async function referenceHaystack(db: SupabaseClient): Promise<string> {
-	const [content, templates, applications, jobApplications] = await Promise.all([
+	const [content, templates, applications, jobApplications, startups] = await Promise.all([
 		db.from('site_content').select('value'),
 		db.from('email_templates').select('*'),
 		db.from('applications').select('documents'),
-		db.from('job_applications').select('resume')
+		db.from('job_applications').select('resume'),
+		// Startup photos and logos, in the draft as well as the live version.
+		db.from('startup_profiles').select('draft, published')
 	]);
 
 	const parts: string[] = [];
@@ -119,6 +121,7 @@ async function referenceHaystack(db: SupabaseClient): Promise<string> {
 	for (const row of templates.data ?? []) parts.push(JSON.stringify(row));
 	for (const row of applications.data ?? []) parts.push(JSON.stringify(row.documents));
 	for (const row of jobApplications.data ?? []) parts.push(JSON.stringify(row.resume));
+	for (const row of startups.data ?? []) parts.push(JSON.stringify(row));
 	return parts.join('\n');
 }
 

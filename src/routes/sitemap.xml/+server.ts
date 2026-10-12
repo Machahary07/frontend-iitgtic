@@ -1,6 +1,7 @@
 import { getSiteContent } from '$lib/server/siteContent';
 import { listOpenJobs } from '$lib/server/jobs';
 import type { SiteContent } from '$lib/content';
+import { listPublicStartups } from '$lib/server/startupProfiles';
 import type { RequestHandler } from './$types';
 
 const SITE = 'https://iitgtic.itsjeu.com';
@@ -31,7 +32,11 @@ const STATIC_ROUTES = [
 	'/terms'
 ];
 
-function buildUrls(content: SiteContent, jobSlugs: string[]): string[] {
+function buildUrls(
+	content: SiteContent,
+	jobSlugs: string[],
+	startups: { slug: string; groups: string[] }[]
+): string[] {
 	const urls = [...STATIC_ROUTES];
 
 	for (const p of content.pages.events.posts) urls.push(`/events/${p.slug}`);
@@ -40,7 +45,8 @@ function buildUrls(content: SiteContent, jobSlugs: string[]): string[] {
 
 	for (const cat of content.pages.incubatedStartups.categories) {
 		urls.push(`/incubated-startups/${cat.slug}`);
-		for (const s of cat.startups) urls.push(`/incubated-startups/${cat.slug}/${s.slug}`);
+		for (const s of startups.filter((x) => x.groups.includes(cat.slug)))
+			urls.push(`/incubated-startups/${cat.slug}/${s.slug}`);
 	}
 
 	for (const slug of jobSlugs) urls.push(`/opportunities/${slug}`);
@@ -49,16 +55,18 @@ function buildUrls(content: SiteContent, jobSlugs: string[]): string[] {
 }
 
 export const GET: RequestHandler = async () => {
-	const [content, ticJobs, startupJobs] = await Promise.all([
+	const [content, ticJobs, startupJobs, startups] = await Promise.all([
 		getSiteContent(),
 		listOpenJobs('tic'),
-		listOpenJobs('incubatee')
+		listOpenJobs('incubatee'),
+		listPublicStartups()
 	]);
 
 	const today = new Date().toISOString().split('T')[0];
 	const urls = buildUrls(
 		content,
-		[...ticJobs, ...startupJobs].map((j) => j.slug)
+		[...ticJobs, ...startupJobs].map((j) => j.slug),
+		startups
 	);
 
 	const body = `<?xml version="1.0" encoding="UTF-8"?>

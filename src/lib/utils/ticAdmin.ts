@@ -75,7 +75,7 @@ export async function adminSetApplicationStatus(
 export async function adminReviewAction(
 	id: string,
 	action: 'forward' | 'assign' | 'sign-off' | 'live',
-	extra: { kind?: 'coordinator' | 'head'; userIds?: string[]; note?: string } = {}
+	extra: { kind?: 'coordinator' | 'head'; userIds?: string[]; note?: string; virtual?: boolean } = {}
 ): Promise<string | null> {
 	const res = await fetch('/api/tic-admin/applications/review', {
 		method: 'POST',

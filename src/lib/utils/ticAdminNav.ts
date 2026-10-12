@@ -19,6 +19,7 @@ import ShieldCheck from '@lucide/svelte/icons/shield-check';
 import KeyRound from '@lucide/svelte/icons/key-round';
 import ClipboardCheck from '@lucide/svelte/icons/clipboard-check';
 import Settings from '@lucide/svelte/icons/settings';
+import Rocket from '@lucide/svelte/icons/rocket';
 
 import type { NavItem } from '$lib/utils/adminNavTypes';
 
@@ -30,6 +31,7 @@ export const TIC_ADMIN_NAV: NavItem[] = [
 	{ label: 'Companies', href: '/tic-admin/companies', icon: Building2, tone: 'info' },
 	{ label: 'Applications', href: '/tic-admin/applications', icon: FileText, tone: 'good' },
 	{ label: 'Evaluation', href: '/tic-admin/evaluation', icon: ClipboardCheck, tone: 'info' },
+	{ label: 'Incubatees', href: '/tic-admin/startups', icon: Rocket, tone: 'good' },
 	{ label: 'Job postings', href: '/tic-admin/jobs', icon: Briefcase, tone: 'warn' },
 	{
 		label: 'Job responses',

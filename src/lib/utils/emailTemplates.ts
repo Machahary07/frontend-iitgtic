@@ -642,7 +642,13 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 					'Your startup will appear among our incubated startups shortly.'
 				]
 			},
-			{ type: 'button', label: 'Open your founder console', href: '{{siteUrl}}/founder' },
+			{
+				type: 'callout',
+				tone: 'info',
+				label: 'Next: your page on our website',
+				text: 'Your public profile is open in the founder console, filled in from your application. Add your logo and photos, pick a layout and send it to us — it goes live once we approve it.'
+			},
+			{ type: 'button', label: 'Set up your public profile', href: '{{siteUrl}}/founder/public-profile' },
 			SIGN_OFF
 		])
 	},
@@ -739,7 +745,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		name: 'Startup is live',
 		description:
 			'Closes the loop: the startup now shows among the incubated startups on the website.',
-		trigger: 'Admin marks the startup live (the sixth dot)',
+		trigger: 'Admin marks the startup live (the sixth dot) — needs an approved public profile',
 		group: 'Incubation applications',
 		variables: [
 			{ name: 'fullName', description: 'Founder name', sample: 'Rahul Bora' },
@@ -755,7 +761,81 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				text: 'Your startup now appears on our incubated startups page — share it with your investors, customers and team.'
 			},
 			{ type: 'button', label: 'See your listing', href: '{{siteUrl}}/incubated-startups' },
-			{ type: 'link', label: 'Update your startup details', href: '{{siteUrl}}/founder/settings' },
+			{ type: 'link', label: 'Keep your public profile current', href: '{{siteUrl}}/founder/public-profile' },
+			SIGN_OFF
+		])
+	},
+	{
+		key: 'startup-profile-reviewed',
+		name: 'Public profile approved or sent back',
+		description:
+			'Tells a founder TIC has approved the changes to their public profile, or sent it back with what to change.',
+		trigger: 'Staff approve or send back a public profile in Approvals',
+		group: 'Incubation applications',
+		variables: [
+			{ name: 'fullName', description: 'Founder name', sample: 'Rahul Bora' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{ name: 'approved', description: 'Set when approved; empty when sent back', sample: '1' },
+			{ name: 'isListed', description: 'Set when the startup is already on the website', sample: '' },
+			{ name: 'note', description: 'What to change — when sent back', sample: '' }
+		],
+		subject: '{{#if approved}}Your public profile is approved{{else}}Your public profile needs a change{{/if}}',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'good', text: 'Approved', showIf: 'approved' },
+			{ type: 'sticker', tone: 'bad', text: 'Sent back', hideIf: 'approved' },
+			{ type: 'heading', text: '_{{startupName}}_ is ready', showIf: 'approved' },
+			{ type: 'heading', text: 'One more pass on _{{startupName}}_', hideIf: 'approved' },
+			{
+				type: 'lede',
+				text: 'Hi {{fullName}}, we have approved your public profile.',
+				showIf: 'approved'
+			},
+			{
+				type: 'text',
+				text: 'The changes are live on your page now.',
+				showIf: 'isListed'
+			},
+			{
+				type: 'text',
+				text: 'It goes on the website when we mark your startup live.',
+				hideIf: 'isListed'
+			},
+			{
+				type: 'lede',
+				text: 'Hi {{fullName}}, we have looked at your public profile and sent it back with a note.',
+				hideIf: 'approved'
+			},
+			{ type: 'callout', tone: 'bad', label: 'What to change', text: '{{note}}', showIf: 'note' },
+			{ type: 'button', label: 'Open your public profile', href: '{{siteUrl}}/founder/public-profile' },
+			SIGN_OFF
+		])
+	},
+	{
+		key: 'startup-graduated',
+		name: 'Startup graduated',
+		description: 'Congratulates a founder whose startup has graduated from the incubator.',
+		trigger: 'An admin graduates the startup in Incubatees',
+		group: 'Incubation applications',
+		variables: [
+			{ name: 'fullName', description: 'Founder name', sample: 'Rahul Bora' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{ name: 'outcome', description: 'What they graduated with — dropped if empty', sample: 'Raised a seed round' },
+			{ name: 'profileUrl', description: 'Path of their page among the graduates', sample: '/incubated-startups/graduated/brahmaputra-bio' }
+		],
+		subject: '{{startupName}} has graduated from {{siteName}}',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'good', text: 'Graduated' },
+			{ type: 'heading', text: 'Congratulations, _{{startupName}}_' },
+			{
+				type: 'lede',
+				text: 'Hi {{fullName}}, your startup has graduated from the incubator. Your page now sits among our graduated startups.'
+			},
+			{ type: 'callout', tone: 'good', label: 'Graduated with', text: '{{outcome}}', showIf: 'outcome' },
+			{
+				type: 'text',
+				text: 'You keep your founder console, and your public profile stays yours to update — send us changes any time.'
+			},
+			{ type: 'button', label: 'See your page', href: '{{siteUrl}}{{profileUrl}}' },
 			SIGN_OFF
 		])
 	},

@@ -1,5 +1,9 @@
 import { error, json } from '@sveltejs/kit';
 import { logAdminAction, requireAdmin } from '$lib/server/adminGuard';
+import { supabaseAdmin } from '$lib/server/supabaseAdmin';
+import { sendTemplateEmail } from '$lib/server/email';
+import { profileById } from '$lib/server/startupProfiles';
+import { canOpen } from '$lib/utils/roles';
 import type { RequestHandler } from './$types';
 
 // The verdict side of the founder queues. One route rather than three
@@ -10,7 +14,7 @@ import type { RequestHandler } from './$types';
 // PATCH { kind: 'member' | 'profile', id, decision, note? }
 
 type Body = {
-	kind?: 'company' | 'member' | 'profile';
+	kind?: 'company' | 'member' | 'profile' | 'startup';
 	id?: string;
 	decision?: 'approve' | 'reject';
 	note?: string;
@@ -116,6 +120,62 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 			recordId: body.id,
 			after: { status: approved ? 'approved' : 'rejected', note }
 		});
+		return json({ ok: true });
+	}
+
+	// A public profile: approving copies the draft to what the website shows.
+	// Publishing to the site is for the roles that may edit its content.
+	if (body.kind === 'startup') {
+		if (!canOpen(ctx.admin.actor?.role ?? ctx.admin.role, 'content')) {
+			error(403, 'Admins, TIC Admins and Coordinators decide public profiles.');
+		}
+		if (!approved && !note) error(400, 'Say what to change — the founder reads it.');
+		const profile = await profileById(body.id);
+		if (!profile) error(404, 'Profile not found.');
+		if (profile.draft_status !== 'in_review') error(409, 'This has already been decided.');
+
+		const { error: dbError } = await supabaseAdmin
+			.from('startup_profiles')
+			.update({
+				...(approved ? { published: profile.draft } : {}),
+				draft_status: approved ? 'approved' : 'sent_back',
+				review_note: approved ? null : note,
+				reviewed_at: new Date().toISOString(),
+				reviewed_by: ctx.admin.userId
+			})
+			.eq('id', profile.id);
+		if (dbError) error(500, dbError.message);
+
+		await logAdminAction(
+			ctx,
+			`${approved ? 'approved' : 'sent back'} the public profile of ${profile.draft.name || profile.slug}`,
+			{ table: 'startup_profiles', recordId: profile.id }
+		);
+
+		if (profile.company_id) {
+			const { data: company } = await supabaseAdmin
+				.from('companies')
+				.select('email, contact_email, contact_name')
+				.eq('id', profile.company_id)
+				.maybeSingle();
+			const to = (company?.contact_email as string) || (company?.email as string) || '';
+			if (to) {
+				await sendTemplateEmail({
+					templateKey: 'startup-profile-reviewed',
+					to,
+					toName: (company?.contact_name as string) ?? '',
+					variables: {
+						fullName: ((company?.contact_name as string) ?? '').split(' ')[0] ?? '',
+						startupName: profile.draft.name || profile.slug,
+						approved: approved ? '1' : '',
+						isListed: profile.listed ? '1' : '',
+						note: note ?? ''
+					},
+					context: { table: 'startup_profiles', recordId: profile.id },
+					sentBy: ctx.admin.userId
+				});
+			}
+		}
 		return json({ ok: true });
 	}
 

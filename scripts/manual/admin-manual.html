@@ -185,7 +185,7 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
     <div class="cover__meta">
       <p><b>Audience</b> TIC staff — admins, CEO, coordinators, heads</p>
       <p><b>Console</b> iitgtic.itsjeu.com/tic-admin</p>
-      <p><b>Edition</b> October 2026 · build v37</p>
+      <p><b>Edition</b> October 2026 · build v38</p>
       <p><b>Status</b> Console complete · hosting and domain cutover pending</p>
       <p><b>Prepared by</b> Jeu Machahary · Veeshal D Bodosa</p>
     </div>
@@ -220,8 +220,8 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
     <div class="toc__row"><span class="toc__n">01</span><span class="toc__t">Getting in</span><span class="toc__d">Sign-in, sessions, the first admin, the staff roles</span></div>
     <div class="toc__row"><span class="toc__n">02</span><span class="toc__t">The console at a glance</span><span class="toc__d">Sidebar, conventions, the daily round</span></div>
     <div class="toc__row"><span class="toc__n">03</span><span class="toc__t">Overview</span><span class="toc__d">A different front page for each role</span></div>
-    <div class="toc__row"><span class="toc__n">04</span><span class="toc__t">Approvals</span><span class="toc__d">Team members and company detail changes</span></div>
-    <div class="toc__row"><span class="toc__n">05</span><span class="toc__t">Companies</span><span class="toc__d">The register of incubated startups</span></div>
+    <div class="toc__row"><span class="toc__n">04</span><span class="toc__t">Approvals</span><span class="toc__d">Public profiles, team members, company details</span></div>
+    <div class="toc__row"><span class="toc__n">05</span><span class="toc__t">Companies</span><span class="toc__d">The register, and Incubatees on the site</span></div>
     <div class="toc__row"><span class="toc__n">06</span><span class="toc__t">Applications</span><span class="toc__d">The six-step review chain, scores, decisions</span></div>
     <div class="toc__row"><span class="toc__n">07</span><span class="toc__t">Evaluation</span><span class="toc__d">The coordinators’ screening call</span></div>
     <div class="toc__row"><span class="toc__n">08</span><span class="toc__t">Job postings</span><span class="toc__d">TIC’s own roles, and every startup’s</span></div>
@@ -358,10 +358,11 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
 <section class="sheet">
   <h1 class="part"><span class="num">04</span> &nbsp;Approvals</h1>
   <hr class="part-rule" />
-  <p class="part-lede">What founders send up for a decision. Two queues share one screen, and it is empty when there is nothing to decide.</p>
+  <p class="part-lede">What founders send up for a decision. Three queues share one screen, and it is empty when there is nothing to decide.</p>
   <table>
     <thead><tr><th style="width:38mm">Queue</th><th>What is waiting</th><th style="width:36mm">Buttons</th></tr></thead>
     <tbody>
+      <tr><td class="k">Public profiles</td><td>A startup's page for the website, or changes to it. Open <em>Preview</em> to see it as the site will. Admins, TIC Admins and Coordinators decide.</td><td><strong>Approve</strong> · <strong>Send back</strong></td></tr>
       <tr><td class="k">Team members</td><td>Somebody a founder added to their startup. Until approved they can sign in but do nothing.</td><td><strong>Approve</strong> · <strong>Send back</strong></td></tr>
       <tr><td class="k">Company detail changes</td><td>An edit to a startup’s name, website, contact person, contact email or phone, shown as before-and-after. Approving a rename also renames the company on every role it has posted.</td><td><strong>Approve</strong> · <strong>Send back</strong></td></tr>
     </tbody>
@@ -399,6 +400,8 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
       <tr><td class="k">Delete</td><td>Removes the company and its account. Asks first. Irreversible.</td></tr>
     </tbody>
   </table>
+  <h2><span class="num">5.1</span>Incubatees</h2>
+  <p>Every startup's public page, under tabs <em>Current · Virtual · Graduated · Not listed</em>. Virtual is a subset of Current. Admins use <strong>Make virtual</strong>, <strong>Graduate</strong> (with an outcome line; the founder is emailed) and <strong>Take off site</strong>. Content editors use <strong>Edit</strong> to correct a profile and publish it directly.</p>
   <p><span class="chip chip--done">Done</span></p>
 </section>
 
@@ -418,7 +421,7 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
       <tr><td class="k">4</td><td>CEO</td><td>The CEO rechecks the coordinators’ notes and chooses the TIC heads.</td></tr>
       <tr><td class="k">5</td><td>TIC heads</td><td>Each assigned head scores and <strong>Signs off</strong>. When every head has signed off, it returns to admin.</td></tr>
       <tr><td class="k">—</td><td>Admin</td><td><strong>Accept and send final email</strong>: the applicant gets the acceptance with the panel’s average scores, and the company is verified.</td></tr>
-      <tr><td class="k">6</td><td>Admin</td><td><strong>Mark live</strong>: the startup is listed among the incubated startups and the founder is told.</td></tr>
+      <tr><td class="k">6</td><td>Admin</td><td><strong>Mark live</strong>, ticking <em>Virtual</em> if it applies: the startup is listed as a current incubatee and the founder is told. Needs an approved public profile (§4).</td></tr>
     </tbody>
   </table>
   <p>The coloured dots on each row show where an application stands; a rejected one shows the step it stopped at. Each person who must act next is emailed when it reaches them.</p>
@@ -700,7 +703,8 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
       <tr><td class="k">Application accepted</td><td>Admin accepts after every head signs off, with average scores</td></tr>
       <tr><td class="k">Application declined</td><td>Admin or the CEO rejects it</td></tr>
       <tr><td class="k">Application sent back</td><td>Admin sends it back to the founder</td></tr>
-      <tr><td class="k">Startup is live</td><td>Admin marks it live</td></tr>
+      <tr><td class="k">Startup is live · graduated</td><td>Admin marks it live; admin graduates it in Incubatees</td></tr>
+      <tr><td class="k">Public profile approved · sent back</td><td>A decision in Approvals</td></tr>
       <tr><td class="k">Role application received</td><td>A candidate applies to any role</td></tr>
       <tr><td class="k">New applicant for your role</td><td>To the startup, when someone applies to its role</td></tr>
       <tr><td class="k">New applicant for a TIC role</td><td>To the operating inbox, when someone applies to a TIC role</td></tr>

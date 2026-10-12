@@ -27,6 +27,7 @@ export type ConsoleSection =
 	| 'approvals'
 	| 'companies'
 	| 'applications'
+	| 'startups'
 	| 'evaluation'
 	| 'jobs'
 	| 'job-applications'
@@ -46,6 +47,7 @@ export const CONSOLE_SECTIONS: { key: ConsoleSection; label: string }[] = [
 	{ key: 'approvals', label: 'Approvals' },
 	{ key: 'companies', label: 'Companies' },
 	{ key: 'applications', label: 'Applications' },
+	{ key: 'startups', label: 'Incubatees' },
 	{ key: 'evaluation', label: 'Evaluation' },
 	{ key: 'jobs', label: 'Job postings' },
 	{ key: 'job-applications', label: 'Job responses' },
@@ -69,6 +71,7 @@ const PIPELINE: ConsoleSection[] = [
 	'approvals',
 	'companies',
 	'applications',
+	'startups',
 	'jobs',
 	'job-applications',
 	'support',

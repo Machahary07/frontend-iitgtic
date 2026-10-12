@@ -56,6 +56,11 @@
 	const releases: Release[] = [
 		{
 			date: '12 Oct',
+			version: 'v38',
+			note: 'Founder-written public profiles, three page layouts, Current / Virtual / Graduated'
+		},
+		{
+			date: '12 Oct',
 			version: 'v37',
 			note: 'New-account emails, confirm-email gate restored, send application back'
 		},

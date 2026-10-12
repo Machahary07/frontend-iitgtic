@@ -86,11 +86,11 @@
 	<div class="list-section__inner">
 		<div class="list-section__head">
 			<p class="list-section__eyebrow">{category.listEyebrow}</p>
-			<span class="list-section__count">{category.startups.length}</span>
+			<span class="list-section__count">{data.startups.length}</span>
 		</div>
 
 		<div class="grid">
-			{#each category.startups as startup, i (startup.slug)}
+			{#each data.startups as startup, i (startup.slug)}
 				{@const reg = primaryRegistration(startup)}
 				{@const socials = socialLinks(startup)}
 				<article

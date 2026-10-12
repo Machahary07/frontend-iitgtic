@@ -25,63 +25,15 @@ export type BlogPost = {
 	body: ContentDoc['pages']['events']['posts'][number]['body'];
 };
 
-export type Startup = {
-	slug: string;
-	name: string;
-	/** One of `pages.incubatedStartups.sectors` — the portfolio filters on it. */
-	sector: string;
-	tagline?: string;
-	oneLiner?: string;
-	industry?: string;
-	/** Current status: one of STARTUP_STAGES. */
-	stage?: string;
-	foundingYear?: number;
-	hqLocation?: string;
-	description?: string;
-	logo: { src?: string; alt: string };
-	website?: string;
-	/** Shown in the homepage founder stories when set and the story is filled in. */
-	featured?: boolean;
-	founderStory?: { whatTheyBuilt: string; whatTicContributed: string; whereTheyAreNow: string };
-	socials?: Partial<
-		Record<'linkedin' | 'twitter' | 'instagram' | 'facebook' | 'github' | 'youtube', string>
-	>;
-	registration?: Record<string, string>;
-	problem?: string;
-	solution?: string;
-	features?: string[];
-	targetMarket?: string;
-	traction?: { label: string; value: string }[];
-	funding?: { raised?: string; grants?: string[] };
-	incubation?: { program?: string; duration?: string; mentors?: string[] };
-	founders?: { name: string; role: string; bio?: string }[];
-	achievements?: string[];
-	mediaMentions?: { outlet: string; title: string; url: string }[];
-	partnerships?: string[];
-	techStack?: string[];
-	hiring?: { isHiring: boolean; rolesUrl?: string; openRoles?: number };
-	contactEmail?: string;
-	testimonials?: { quote: string; author: string; role?: string }[];
-	/** Funding and market milestones, oldest first. */
-	milestones?: { year: string; event: string }[];
-	supportedBy?: string[];
-	graduateOutcome?: string | null;
-	impactCreated?: string;
-	ipPatents?: string[];
-	sdgAlignment?: string[];
-};
+/** Startups now live in startup_profiles; see $lib/utils/startupProfile. */
+export type { StartupProfileData as Startup } from '$lib/utils/startupProfile';
 
 type Pages = ContentDoc['pages'];
 type WithPosts<T, P> = Omit<T, 'posts'> & { posts: P[] };
 
 export type SiteContent = Omit<ContentDoc, 'pages'> & {
-	pages: Omit<Pages, 'blog' | 'incubatedStartups'> & {
+	pages: Omit<Pages, 'blog'> & {
 		blog: WithPosts<Pages['blog'], BlogPost>;
-		incubatedStartups: Omit<Pages['incubatedStartups'], 'categories'> & {
-			categories: (Omit<Pages['incubatedStartups']['categories'][number], 'startups'> & {
-				startups: Startup[];
-			})[];
-		};
 	};
 };
 
@@ -174,63 +126,6 @@ export const LIST_TEMPLATES: Record<string, () => unknown> = {
 		eligibility: [],
 		help: []
 	}),
-	'pages.incubatedStartups.categories[].startups': () => ({
-		slug: '',
-		name: '',
-		sector: '',
-		stage: '',
-		tagline: '',
-		oneLiner: '',
-		industry: '',
-		foundingYear: new Date().getFullYear(),
-		hqLocation: '',
-		description: '',
-		logo: { src: '', alt: '' },
-		website: '',
-		featured: false,
-		founderStory: { whatTheyBuilt: '', whatTicContributed: '', whereTheyAreNow: '' },
-		milestones: [],
-		funding: { raised: '', grants: [] },
-		traction: [],
-		founders: [],
-		problem: '',
-		solution: '',
-		features: [],
-		targetMarket: '',
-		incubation: { program: '', duration: '', mentors: [] },
-		achievements: [],
-		mediaMentions: [],
-		partnerships: [],
-		techStack: [],
-		supportedBy: [],
-		impactCreated: '',
-		ipPatents: [],
-		sdgAlignment: [],
-		testimonials: [],
-		hiring: { isHiring: false, rolesUrl: '/opportunities', openRoles: 0 },
-		contactEmail: '',
-		socials: { linkedin: '', twitter: '', instagram: '', facebook: '', github: '', youtube: '' },
-		registration: { type: '', cin: '', gstin: '', dpiit: '', incorporatedOn: '' },
-		graduateOutcome: ''
-	}),
-	// The startup's own lists start empty too, and most hold small records.
-	'pages.incubatedStartups.categories[].startups[].milestones': () => ({ year: '', event: '' }),
-	'pages.incubatedStartups.categories[].startups[].traction': () => ({ label: '', value: '' }),
-	'pages.incubatedStartups.categories[].startups[].founders': () => ({
-		name: '',
-		role: '',
-		bio: ''
-	}),
-	'pages.incubatedStartups.categories[].startups[].mediaMentions': () => ({
-		outlet: '',
-		title: '',
-		url: ''
-	}),
-	'pages.incubatedStartups.categories[].startups[].testimonials': () => ({
-		quote: '',
-		author: '',
-		role: ''
-	}),
 	'pages.partners.partners': () => ({ name: '', image: '', href: '', category: '', enables: '' })
 };
 
@@ -256,10 +151,6 @@ export const FIELD_OPTIONS: Record<string, (section: unknown) => FieldOption[]> 
 			value: c.id,
 			label: c.title
 		})),
-	'pages.incubatedStartups.categories[].startups[].sector': (section) =>
-		listAt<string>(section, 'sectors').map((s) => ({ value: s, label: s })),
-	'pages.incubatedStartups.categories[].startups[].stage': () =>
-		STARTUP_STAGES.map((s) => ({ value: s, label: s }))
 };
 
 function listAt<T>(section: unknown, field: string): T[] {

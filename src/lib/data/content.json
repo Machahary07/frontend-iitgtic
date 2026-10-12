@@ -952,8 +952,7 @@
 						"headlineEmphasis": "building right now.",
 						"lede": "These are the ventures currently incubating at IITG-TIC — working from our labs, drawing on our mentor network and shipping to their first cohort of customers. Most are in their first two years."
 					},
-					"listEyebrow": "Current cohort",
-					"startups": []
+					"listEyebrow": "Current cohort"
 				},
 				{
 					"slug": "virtual",
@@ -966,8 +965,7 @@
 						"headlineEmphasis": "without the relocation.",
 						"lede": "Teams on the virtual track work with the same mentors, the same programme structure and the same investor network as our in-house cohort — they just do it from wherever they are. The depth of engagement does not change with geography."
 					},
-					"listEyebrow": "Virtual cohort",
-					"startups": []
+					"listEyebrow": "Virtual cohort"
 				},
 				{
 					"slug": "graduated",
@@ -980,8 +978,7 @@
 						"headlineEmphasis": "operating on their own.",
 						"lede": "These ventures completed their time at IITG-TIC and have since moved on — most still have a working relationship with the centre through mentor swaps, hiring referrals or pilot partnerships. A few have raised follow-on capital; all are operating with their own teams and customers."
 					},
-					"listEyebrow": "Alumni",
-					"startups": []
+					"listEyebrow": "Alumni"
 				}
 			],
 			"sectors": [
