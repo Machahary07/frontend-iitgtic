@@ -870,7 +870,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		key: 'team-member-account-created',
 		name: 'Team member account created',
 		description:
-			'Gives someone a founder added to their startup their sign-in details, and says TIC still has to approve the account. The password is masked in the email log.',
+			'Gives someone a founder added to their startup their sign-in details and a link to confirm their email, and says TIC still has to approve the account. The password is masked in the email log.',
 		trigger: 'A founder adds a team member in /founder/users',
 		group: 'Founder console',
 		variables: [
@@ -878,7 +878,12 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 			{ name: 'companyName', description: 'Startup name', sample: 'Brahmaputra Bio' },
 			{ name: 'founderName', description: 'Founder who added them', sample: 'Rahul Bora' },
 			{ name: 'email', description: 'Their sign-in email', sample: 'meera@example.com' },
-			{ name: 'password', description: 'The password the founder set', sample: 'Welcome@2026' }
+			{ name: 'password', description: 'The password the founder set', sample: 'Welcome@2026' },
+			{
+				name: 'verifyUrl',
+				description: 'Signed one-off link that confirms the address',
+				sample: 'https://iitgtic.com/verify-email?u=…&e=…&t=…'
+			}
 		],
 		subject: 'Your {{companyName}} account on {{siteName}}',
 		...fromBlocks([
@@ -900,7 +905,8 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				label: 'Waiting on TIC',
 				text: 'You can sign in now, but the console opens once the TIC team approves your account.'
 			},
-			{ type: 'button', label: 'Sign in', href: '{{siteUrl}}/login' },
+			{ type: 'button', label: 'Confirm your email', href: '{{verifyUrl}}' },
+			{ type: 'link', label: 'Sign in', href: '{{siteUrl}}/login' },
 			{
 				type: 'note',
 				text: 'After you sign in, set a password of your own from your account settings.'
@@ -943,14 +949,19 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		key: 'staff-account-created',
 		name: 'Staff account created',
 		description:
-			'Gives a new member of TIC staff their role and sign-in details. The password is masked in the email log.',
+			'Gives a new member of TIC staff their role, sign-in details and a link to confirm their email. The password is masked in the email log.',
 		trigger: 'An admin creates a staff account in /tic-admin/users',
 		group: 'Admin',
 		variables: [
 			{ name: 'fullName', description: 'Account holder name', sample: 'Ananya Sharma' },
 			{ name: 'roleLabel', description: 'The role they were given', sample: 'TIC Coordinator' },
 			{ name: 'email', description: 'Their sign-in email', sample: 'ananya@iitg.ac.in' },
-			{ name: 'password', description: 'The password the admin set', sample: 'Welcome@2026' }
+			{ name: 'password', description: 'The password the admin set', sample: 'Welcome@2026' },
+			{
+				name: 'verifyUrl',
+				description: 'Signed one-off link that confirms the address',
+				sample: 'https://iitgtic.com/verify-email?u=…&e=…&t=…'
+			}
 		],
 		subject: 'Your {{siteName}} {{roleLabel}} account is ready',
 		...fromBlocks([
@@ -966,7 +977,8 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				title: 'Sign-in details',
 				items: ['Role: {{roleLabel}}', 'Email: {{email}}', 'Password: {{password}}']
 			},
-			{ type: 'button', label: 'Sign in', href: '{{siteUrl}}/login' },
+			{ type: 'button', label: 'Confirm your email', href: '{{verifyUrl}}' },
+			{ type: 'link', label: 'Sign in to the console', href: '{{siteUrl}}/login' },
 			{
 				type: 'callout',
 				tone: 'info',

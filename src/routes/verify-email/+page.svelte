@@ -15,14 +15,26 @@
 		{#if data.ok}
 			<p class="eyebrow">Email confirmation</p>
 			<h1>Email confirmed</h1>
-			<p class="sub">
-				Thank you — your email is confirmed. You can now finish and submit your incubation
-				application.
-			</p>
-			<div class="actions">
-				<a class="btn-primary" href={resolve('/founder/application')}>Continue your application</a>
-				<a class="btn" href={resolve('/founder')}>Go to your console</a>
-			</div>
+			{#if data.kind === 'staff'}
+				<p class="sub">Thank you — your email is confirmed.</p>
+				<div class="actions">
+					<a class="btn-primary" href={resolve('/tic-admin')}>Go to the console</a>
+				</div>
+			{:else if data.kind === 'member'}
+				<p class="sub">Thank you — your email is confirmed.</p>
+				<div class="actions">
+					<a class="btn-primary" href={resolve('/founder')}>Go to your console</a>
+				</div>
+			{:else}
+				<p class="sub">
+					Thank you — your email is confirmed. You can now finish and submit your incubation
+					application.
+				</p>
+				<div class="actions">
+					<a class="btn-primary" href={resolve('/founder/application')}>Continue your application</a>
+					<a class="btn" href={resolve('/founder')}>Go to your console</a>
+				</div>
+			{/if}
 		{:else}
 			<p class="eyebrow">Email confirmation</p>
 			<h1>Link could not be used</h1>

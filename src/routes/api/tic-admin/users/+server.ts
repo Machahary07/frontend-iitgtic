@@ -14,7 +14,8 @@ import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { removeApplicationDocuments } from '$lib/server/storageCleanup';
 import { AFTER_PASSWORD_RESET, AUTH_CALLBACK_PATH } from '$lib/utils/authRedirect';
 import { isValidPhone } from '$lib/utils/phone';
-import { sendTemplateEmail } from '$lib/server/email';
+import { emailConfig, sendTemplateEmail } from '$lib/server/email';
+import { verifyEmailUrl } from '$lib/server/emailVerify';
 import type { RequestHandler } from './$types';
 
 // Account management. Roles, sign-in state and password resets all live here;
@@ -342,7 +343,8 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 			fullName: details.fullName.split(' ')[0] ?? '',
 			roleLabel: roleLabel(role),
 			email,
-			password: body.password
+			password: body.password,
+			verifyUrl: verifyEmailUrl(emailConfig().siteUrl, data.user.id)
 		},
 		secrets: [body.password],
 		context: { table: 'profiles', recordId: data.user.id },

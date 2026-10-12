@@ -122,8 +122,8 @@
 	let submitted = $state(false);
 	let submitting = $state(false);
 	let submitError = $state('');
-	// Email-confirmation gate for step 8. Defaults to true so the consent boxes are
-	// never blocked before the session has loaded, or if the flag cannot be read.
+	// Email-confirmation gate for step 8. Starts true so the consent boxes do not
+	// flash locked while the session loads; a flag that cannot be read locks them.
 	let emailVerified = $state(true);
 	let resending = $state(false);
 	let resent = $state(false);
@@ -447,7 +447,7 @@
 			goto('/login?next=/founder/application');
 			return;
 		}
-		emailVerified = session.emailVerified ?? true;
+		emailVerified = session.emailVerified ?? false;
 		if (session.name && !data.fullName) data.fullName = session.name;
 		// The startup name is the company's, not a free-text answer: the row it
 		// creates is about that company, so the two must not be able to disagree.

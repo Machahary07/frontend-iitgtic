@@ -1,7 +1,8 @@
 import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logFounderAction, requireCompanyOwner } from '$lib/server/founderGuard';
-import { sendTemplateEmail } from '$lib/server/email';
+import { emailConfig, sendTemplateEmail } from '$lib/server/email';
+import { verifyEmailUrl } from '$lib/server/emailVerify';
 import type { RequestHandler } from './$types';
 
 // The people a founder adds to one of their startups.
@@ -81,7 +82,8 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 			companyName: ctx.company.name,
 			founderName: ctx.founder.name || ctx.founder.email,
 			email,
-			password
+			password,
+			verifyUrl: verifyEmailUrl(emailConfig().siteUrl, created.user.id)
 		},
 		secrets: [password],
 		context: { table: 'profiles', recordId: created.user.id },

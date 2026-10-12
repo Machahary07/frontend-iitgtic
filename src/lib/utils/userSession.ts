@@ -18,10 +18,9 @@ export type UserSession = {
 	name?: string;
 	email?: string;
 	phone?: string;
-	// Whether the address has been confirmed via the /verify-email link. Defaults
-	// to true when it cannot be read, so the step-8 gate stays open until the
-	// email_verified column actually exists — deploying the code ahead of the
-	// migration must not block anyone from submitting.
+	// Whether the address has been confirmed via the /verify-email link. False
+	// when it cannot be read, so a failed read holds the step-8 gate shut rather
+	// than letting an unconfirmed account submit.
 	emailVerified?: boolean;
 };
 
@@ -87,17 +86,16 @@ export async function loadUserSession(): Promise<UserSession> {
 	};
 }
 
-// Read the verification flag on its own, so a pre-migration missing column (or
-// any read error) defaults the step-8 gate to open rather than wiping the whole
-// profile read above. Once the migration is live this returns the real value.
+// Read the verification flag on its own, so a failed read only shuts the step-8
+// gate rather than wiping the whole profile read above.
 async function readEmailVerified(userId: string): Promise<boolean> {
 	const { data, error } = await supabase
 		.from('profiles')
 		.select('email_verified')
 		.eq('id', userId)
 		.maybeSingle();
-	if (error || !data) return true;
-	return (data.email_verified as boolean | undefined) ?? true;
+	if (error || !data) return false;
+	return (data.email_verified as boolean | undefined) ?? false;
 }
 
 export async function saveUserSession(patch: Partial<UserSession>): Promise<void> {
