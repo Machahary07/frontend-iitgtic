@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { supabaseAdmin } from '$lib/server/supabaseAdmin';
 import { logFounderAction, requireCompanyOwner } from '$lib/server/founderGuard';
+import { sendTemplateEmail } from '$lib/server/email';
 import type { RequestHandler } from './$types';
 
 // The people a founder adds to one of their startups.
@@ -68,6 +69,23 @@ export const POST: RequestHandler = async ({ cookies, request }) => {
 		table: 'profiles',
 		recordId: created.user.id,
 		after: { full_name: fullName, email, member_status: 'pending' }
+	});
+
+	// Never fails the add, which has already happened.
+	await sendTemplateEmail({
+		templateKey: 'team-member-account-created',
+		to: email,
+		toName: fullName,
+		variables: {
+			fullName: fullName.split(' ')[0] ?? '',
+			companyName: ctx.company.name,
+			founderName: ctx.founder.name || ctx.founder.email,
+			email,
+			password
+		},
+		secrets: [password],
+		context: { table: 'profiles', recordId: created.user.id },
+		sentBy: ctx.founder.userId
 	});
 
 	return json({ ok: true, id: created.user.id });

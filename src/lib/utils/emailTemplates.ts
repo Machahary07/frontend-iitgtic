@@ -866,6 +866,48 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 			SIGN_OFF
 		])
 	},
+	{
+		key: 'team-member-account-created',
+		name: 'Team member account created',
+		description:
+			'Gives someone a founder added to their startup their sign-in details, and says TIC still has to approve the account. The password is masked in the email log.',
+		trigger: 'A founder adds a team member in /founder/users',
+		group: 'Founder console',
+		variables: [
+			{ name: 'fullName', description: 'Team member name', sample: 'Meera Das' },
+			{ name: 'companyName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{ name: 'founderName', description: 'Founder who added them', sample: 'Rahul Bora' },
+			{ name: 'email', description: 'Their sign-in email', sample: 'meera@example.com' },
+			{ name: 'password', description: 'The password the founder set', sample: 'Welcome@2026' }
+		],
+		subject: 'Your {{companyName}} account on {{siteName}}',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'good', text: 'Account created' },
+			{ type: 'heading', text: 'Welcome, _{{fullName}}_', showIf: 'fullName' },
+			{ type: 'heading', text: 'Welcome to _TIC IITG_', hideIf: 'fullName' },
+			{
+				type: 'lede',
+				text: '{{founderName}} has added you to the {{companyName}} team on the TIC IITG founder console. Here are your sign-in details.'
+			},
+			{
+				type: 'details',
+				title: 'Sign-in details',
+				items: ['Startup: {{companyName}}', 'Email: {{email}}', 'Password: {{password}}']
+			},
+			{
+				type: 'callout',
+				tone: 'info',
+				label: 'Waiting on TIC',
+				text: 'You can sign in now, but the console opens once the TIC team approves your account.'
+			},
+			{ type: 'button', label: 'Sign in', href: '{{siteUrl}}/login' },
+			{
+				type: 'note',
+				text: 'After you sign in, set a password of your own from your account settings.'
+			},
+			SIGN_OFF
+		])
+	},
 
 	// --- admin --------------------------------------------------------------
 	{
