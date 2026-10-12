@@ -36,7 +36,7 @@
 	async function copyPrompt(layout: StartupProfileData['layout']) {
 		try {
 			await navigator.clipboard.writeText(layoutPrompt(value, layout));
-			showToast('Prompt copied — paste it into ChatGPT.');
+			showToast('Copied. Open ChatGPT, paste it in and send — then paste its answers into the boxes here.');
 		} catch {
 			showToast('Could not copy. Your browser blocked the clipboard.', 'err');
 		}
@@ -115,8 +115,9 @@
 		<h3>Layout</h3>
 		<p class="group__sub">
 			How your page is laid out. Everything you fill in below is kept whichever you pick. Stuck for
-			words? <em>Copy ChatGPT prompt</em> gives ChatGPT what you have so far and asks it to write that
-			layout's fields, and the photos you'll need.
+			words? <em>Write it with ChatGPT</em> copies a request you paste into ChatGPT — it writes each
+			field for that layout from your details, and lists the photos you'll need. Paste the answers back
+			into the boxes below.
 		</p>
 		<div class="layouts">
 			{#each PROFILE_LAYOUTS as l (l.value)}
@@ -132,7 +133,11 @@
 					<a class="link" href={`/incubated-startups/preview/layout/${l.value}`} target="_blank" rel="noopener"
 						>See an example</a
 					>
-					<button type="button" class="link" onclick={() => copyPrompt(l.value)}>Copy ChatGPT prompt</button>
+					<button type="button" class="link" onclick={() => copyPrompt(l.value)}>Write it with ChatGPT</button>
+					<small class="layout__hint">
+						Copies a ready-made request with your details. Paste it into ChatGPT to get the text for
+						each field of this layout, and a list of the photos to add.
+					</small>
 				</div>
 			{/each}
 		</div>
@@ -512,6 +517,12 @@
 			font-size: 12.5px;
 			color: rgba($admin-ink, 0.6);
 		}
+	}
+
+	.layout__hint {
+		font-size: 12px;
+		line-height: 1.45;
+		color: rgba($admin-ink, 0.6);
 	}
 
 	.thumb {
