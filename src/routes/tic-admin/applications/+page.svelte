@@ -6,7 +6,10 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
+	import { askConfirm } from '$lib/utils/dialog.svelte';
+	import { showToast } from '$lib/utils/toast.svelte';
 	import {
+		adminDeleteApplication,
 		adminSetApplicationStatus,
 		type ApplicationStatus,
 		type ApplicationSummary
@@ -45,6 +48,27 @@
 	async function setStatus(id: string, status: ApplicationStatus) {
 		await adminSetApplicationStatus(id, status);
 		await refresh();
+	}
+
+	// Admin only, like the delete on the application itself. The documents go
+	// with each row.
+	const canDelete = $derived(data.scope === 'admin');
+
+	async function removeRejected(ids: string[], title: string) {
+		const ok = await askConfirm({
+			title,
+			body: 'The uploaded documents are deleted too. This cannot be undone.',
+			confirmLabel: ids.length === 1 ? 'Delete application' : `Delete ${ids.length} applications`,
+			tone: 'danger'
+		});
+		if (!ok) return;
+		let failed = 0;
+		for (const id of ids) {
+			if (!(await adminDeleteApplication(id))) failed += 1;
+		}
+		await refresh();
+		if (failed) showToast(`Could not delete ${failed} of ${ids.length}.`, 'err');
+		else showToast(ids.length === 1 ? 'Application deleted.' : `${ids.length} applications deleted.`);
 	}
 
 	async function handleLogout() {
@@ -156,6 +180,21 @@
 		</button>
 	</div>
 
+	{#if canDelete && filter === 'rejected' && counts.rejected > 0}
+		<div class="bulk">
+			<button
+				class="btn btn--danger"
+				onclick={() =>
+					removeRejected(
+						applications.filter((a) => a.status === 'rejected').map((a) => a.id),
+						`Delete all ${counts.rejected} rejected applications?`
+					)}
+			>
+				Delete all rejected
+			</button>
+		</div>
+	{/if}
+
 	<div class="panel">
 		{#if filtered.length === 0}
 			{#if applications.length === 0}
@@ -246,6 +285,18 @@
 												Reject
 											</button>
 										{/if}
+										{#if canDelete && application.status === 'rejected'}
+											<button
+												class="btn btn--danger"
+												onclick={() =>
+													removeRejected(
+														[application.id],
+														`Delete ${application.startup_name || 'this application'}?`
+													)}
+											>
+												Delete
+											</button>
+										{/if}
 									</div>
 								</td>
 							</tr>
@@ -267,6 +318,12 @@
 		gap: 4px;
 		margin-bottom: 16px;
 		flex-wrap: wrap;
+	}
+
+	.bulk {
+		display: flex;
+		justify-content: flex-end;
+		margin-bottom: 12px;
 	}
 
 	.tab {
