@@ -14,7 +14,8 @@ export const load: PageServerLoad = async ({ params, parent }) => {
 			id: profile.id,
 			draft: profile.draft,
 			status: profile.draft_status,
-			hasPublished: Boolean(profile.published)
+			hasPublished: Boolean(profile.published),
+			onSite: profile.listed && profile.stage !== 'exited'
 		},
 		sectors: sectorList(content.pages.incubatedStartups)
 	};

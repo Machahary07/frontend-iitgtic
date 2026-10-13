@@ -263,7 +263,7 @@
 													>Graduate</button
 												>
 											{/if}
-											{#if !p.onSite && p.stage === 'exited' && p.hasPublished}
+											{#if !p.onSite && p.hasPublished}
 												<button class="btn" disabled={busy === p.id} onclick={() => act(p.id, 'list', { virtual: p.isVirtual }, 'Listed as current.')}
 													>List as current</button
 												>

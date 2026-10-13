@@ -79,7 +79,9 @@
 		<span class="bar__note">
 			{data.profile.status === 'in_review'
 				? 'The founder has changes waiting in Approvals. Editing here changes that draft.'
-				: 'Saving changes the draft; publishing puts it on the website.'}
+				: data.profile.onSite
+					? 'Saving changes the draft; publishing puts it on the website.'
+					: 'Not listed on the website yet. Publishing updates the profile; list it from All incubatees to show it.'}
 		</span>
 		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 		<a class="btn" href={`/incubated-startups/preview/${data.profile.id}`} target="_blank" rel="noopener">Preview draft</a>
