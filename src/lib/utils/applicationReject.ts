@@ -34,9 +34,9 @@ export function rejectRefusal(
 export const canReject = (scope: string, stage: number, status: string, headPending = false) =>
 	rejectRefusal(scope, stage, status, headPending) === null;
 
-/** How long a declined startup waits before it may apply again. The PATCH
- *  endpoint stores the date as `reapply_from`, which the founder console and
- *  the insert policy both read. */
+/** How long a declined startup — and the founder behind it, under any company —
+ *  waits before applying again. The PATCH endpoint stores the date as
+ *  `reapply_from`, which the founder console and the insert policy both read. */
 export const REAPPLY_WAIT_MONTHS = 3;
 
 export function reapplyFrom(rejectedAt: Date): Date {

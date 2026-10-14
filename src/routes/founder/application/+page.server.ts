@@ -14,7 +14,7 @@ import type { PageServerLoad } from './$types';
 export type DocumentLink = { field: string; name: string; size: number; url: string | null };
 
 export const load: PageServerLoad = async ({ parent, url }) => {
-	const { founder, activeCompanyId } = await parent();
+	const { founder, activeCompanyId, companies } = await parent();
 	if (!activeCompanyId) {
 		return {
 			application: null,
@@ -44,13 +44,37 @@ export const load: PageServerLoad = async ({ parent, url }) => {
 			? { meetUrl: data.meet_url as string, meetAt: (data.meet_at as string | null) ?? null }
 			: null;
 
-	// While the wait after a rejection runs, the date they may apply again from.
-	// The insert policy refuses an early application too.
-	const waitUntil = data ? reapplyWaitUntil(data) : null;
+	// While the wait after a rejection runs, the date they may apply again from:
+	// this startup's own, or the founder's from a rejection they filed or one for
+	// a company they own, whichever ends later — a new company does not skip it.
+	// The insert policy (reapply_wait_over) refuses an early application too.
+	const owned = companies.filter((c) => c.relation === 'owner').map((c) => c.id);
+	const { data: mine } = await db
+		.from('applications')
+		.select('reapply_from')
+		.eq('status', 'rejected')
+		.is('reapply_allowed_at', null)
+		.gt('reapply_from', new Date().toISOString())
+		.or(
+			[`user_id.eq.${founder.userId}`, owned.length ? `company_id.in.(${owned.join(',')})` : '']
+				.filter(Boolean)
+				.join(',')
+		)
+		.order('reapply_from', { ascending: false })
+		.limit(1)
+		.maybeSingle();
+	const waits = [data ? reapplyWaitUntil(data) : null, (mine?.reapply_from as string) ?? null];
+	const waitUntil =
+		waits
+			.filter((w): w is string => Boolean(w))
+			.sort()
+			.at(-1) ?? null;
 
 	// A declined startup may apply again once the wait is over; `?new` opens the
 	// form for that. Any other standing keeps the submitted record in view, so a
 	// second application cannot be started while the first is still with TIC.
+	// With nothing on file for this startup, the founder's own wait still holds:
+	// the page says when instead of opening the form.
 	if (
 		!application ||
 		(application.status === 'rejected' && !waitUntil && url.searchParams.has('new'))
@@ -60,7 +84,7 @@ export const load: PageServerLoad = async ({ parent, url }) => {
 			documents: [] as DocumentLink[],
 			screening: null,
 			returned: null,
-			waitUntil: null
+			waitUntil: application ? null : waitUntil
 		};
 	}
 
