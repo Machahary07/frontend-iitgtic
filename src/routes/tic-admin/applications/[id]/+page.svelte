@@ -7,6 +7,7 @@
 	import ReviewProgress, { type ReviewStage } from '$lib/components/ReviewProgress.svelte';
 	import ScreeningScores from '$lib/components/ScreeningScores.svelte';
 	import {
+		adminAllowReapply,
 		adminDeleteApplication,
 		adminReviewAction,
 		adminSetApplicationStatus,
@@ -23,6 +24,8 @@
 	} from '$lib/utils/applicationSchema';
 	import { isScoredStep, SCORED_STEPS } from '$lib/utils/applicationScores';
 	import { roleLabel } from '$lib/utils/roles';
+	import { reapplyWaitUntil, rejectRefusal } from '$lib/utils/applicationReject';
+	import { REVIEW_STEP_NAMES } from '$lib/utils/emailBlocks';
 
 	let { data }: { data: PageData } = $props();
 
@@ -61,6 +64,10 @@
 	);
 	// Only heads sign off here; coordinators submit from Evaluation.
 	const mySignOffOpen = $derived(myPending?.kind === 'head' && stage === 5);
+	// The same rule the PATCH endpoint applies; null when Reject is open to you.
+	const rejectBlock = $derived(
+		rejectRefusal(scope, stage, application.status, myPending?.kind === 'head')
+	);
 
 	let picked = $state<string[]>([]);
 	let signOffNote = $state('');
@@ -112,6 +119,27 @@
 		showToast(`Marked ${statusLabel(status)}.`);
 	}
 
+	// The wait before this startup may apply again, while it is still running.
+	const waitUntil = $derived(reapplyWaitUntil(application));
+
+	async function allowReapply() {
+		const ok = await askConfirm({
+			title: `Let ${application.startup_name || 'this startup'} apply again now?`,
+			body: 'The waiting period is lifted and the founder can start a new application straight away.',
+			confirmLabel: 'Yes, allow it'
+		});
+		if (!ok) return;
+		saving = true;
+		const refusal = await adminAllowReapply(application.id);
+		saving = false;
+		if (refusal) {
+			showToast(refusal, 'err');
+			return;
+		}
+		await invalidateAll();
+		showToast('They can apply again now.');
+	}
+
 	async function remove() {
 		const confirmed = await askConfirm({
 			title: `Permanently delete ${application.startup_name || 'this application'}?`,
@@ -134,6 +162,11 @@
 		return status === 'under-review' ? 'under review' : status;
 	}
 
+	// The step names the decision emails use.
+	function stepName(stage: number) {
+		return stage === 0 ? 'Admin check' : (REVIEW_STEP_NAMES[stage - 1] ?? '');
+	}
+
 	function fmtDateTime(iso: string) {
 		return new Date(iso).toLocaleString('en-GB', {
 			day: 'numeric',
@@ -141,6 +174,14 @@
 			year: 'numeric',
 			hour: '2-digit',
 			minute: '2-digit'
+		});
+	}
+
+	function fmtDate(iso: string) {
+		return new Date(iso).toLocaleDateString('en-GB', {
+			day: 'numeric',
+			month: 'short',
+			year: 'numeric'
 		});
 	}
 
@@ -152,7 +193,8 @@
 	}
 
 	// ---- scores --------------------------------------------------------------
-	// Your own marks only; admin also gets everyone's in `scores.all`.
+	// Your own marks only; admin also gets everyone's in `scores.all`, and the
+	// CEO admin's in `scores.admin`.
 	const scores = $derived(data.scores);
 
 	// Nobody passes an application on until they have scored every step
@@ -275,7 +317,8 @@
 
 {#snippet scoreBox(step: number)}
 	{#if isScoredStep(step)}
-		{#if scores.canScore}
+		<!-- At the CEO's recheck only a step they never scored stays open. -->
+		{#if scores.canScore || (scores.fillGaps && scores.mine[step] === undefined)}
 			<label class="score" class:score--busy={savingStep === step}>
 				<input
 					type="number"
@@ -308,6 +351,17 @@
 	{/if}
 {/snippet}
 
+<!-- The CEO reads admin's marks beside their own; never an average. -->
+{#snippet adminScores(step: number)}
+	{#if scores.admin?.[step]?.length}
+		<p class="marks">
+			{#each scores.admin[step] as entry (entry.userId)}
+				<span class="marks__one">{entry.name} · {roleLabel(entry.role)} <b>{entry.score}</b></span>
+			{/each}
+		</p>
+	{/if}
+{/snippet}
+
 <AdminShell
 	brand="TIC Team Admin"
 	navItems={TIC_ADMIN_NAV}
@@ -323,6 +377,32 @@
 
 	<div class="layout">
 		<div class="main">
+			{#if data.earlier.length}
+				<section class="card">
+					<header class="card__head">
+						<h2><span class="card__step">History</span> Applied before</h2>
+					</header>
+					<ul class="earlier">
+						{#each data.earlier as prev (prev.id)}
+							<li class="earlier__row">
+								<a
+									class="earlier__link"
+									href={resolve('/tic-admin/applications/[id]', { id: prev.id })}
+									>{prev.startup_name || 'Untitled startup'} · {fmtDate(prev.created_at)}</a
+								>
+								<span class="earlier__outcome">
+									{statusLabel(prev.status)}{#if prev.status === 'rejected'}
+										at {stepName(prev.rejected_stage ?? 0)}{/if}
+								</span>
+								{#if prev.status === 'rejected' && prev.applicant_message}
+									<p class="earlier__reason">{prev.applicant_message}</p>
+								{/if}
+							</li>
+						{/each}
+					</ul>
+				</section>
+			{/if}
+
 			{#if data.screening?.people.length}
 				<section class="card">
 					<header class="card__head">
@@ -348,6 +428,7 @@
 						{@render scoreBox(section.step)}
 					</header>
 					{@render allScores(section.step)}
+					{@render adminScores(section.step)}
 					<dl class="answers">
 						{#each section.fields as field (field.key)}
 							<div class="answer" class:answer--long={field.long}>
@@ -365,6 +446,7 @@
 					{@render scoreBox(7)}
 				</header>
 				{@render allScores(7)}
+				{@render adminScores(7)}
 				{#if documentFields.length === 0}
 					<p class="none">No documents were attached.</p>
 				{:else}
@@ -413,6 +495,7 @@
 						{@render scoreBox(section.step)}
 					</header>
 					{@render allScores(section.step)}
+					{@render adminScores(section.step)}
 					<dl class="answers">
 						{#each section.fields as field (field.key)}
 							<div class="answer" class:answer--long={field.long}>
@@ -479,6 +562,9 @@
 							{/if}
 						{:else if stage === 4}
 							{#if canAssign}
+								{#if scores.fillGaps}
+									<p class="step__hint">Your scores are locked from your first review.</p>
+								{/if}
 								{@render picker('head', data.assignable.heads)}
 							{:else}
 								<p class="step__hint">With the CEO for a recheck.</p>
@@ -490,8 +576,8 @@
 									once it is approved in Approvals, mark the startup live to list it on the site.
 								</p>
 								<label class="step__check">
-									<input type="checkbox" bind:checked={markVirtual} /> Virtual incubatee — list it
-									under Virtual as well as Current
+									<input type="checkbox" bind:checked={markVirtual} /> Virtual incubatee — list it under
+									Virtual as well as Current
 								</label>
 								<button
 									class="btn btn--primary"
@@ -569,7 +655,7 @@
 					</div>
 				{/if}
 
-				{#if isAdmin || (scope === 'ceo' && !rejected)}
+				{#if isAdmin || (scope === 'ceo' && !rejected) || (scope === 'head' && !rejectBlock)}
 					<label class="field">
 						<span>Message to applicant</span>
 						<textarea
@@ -623,13 +709,38 @@
 								<button class="btn" disabled={saving} onclick={() => setStatus('under-review')}
 									>Reopen</button
 								>
+								{#if waitUntil}
+									<p class="step__hint">
+										The startup can apply again from {fmtDate(waitUntil)}.
+									</p>
+									<button class="btn" disabled={saving} onclick={allowReapply}
+										>Allow reapplying now</button
+									>
+								{:else if application.reapply_allowed_at}
+									<p class="step__hint">
+										Allowed to reapply early on {fmtDate(application.reapply_allowed_at)}.
+									</p>
+								{/if}
 							{/if}
-						{:else}
+						{:else if !rejectBlock}
+							{#if !applicantMessage.trim()}
+								<p class="step__hint">
+									Write the message to the applicant first: it is the reason they are given.
+								</p>
+							{/if}
 							<button
 								class="btn btn--danger"
-								disabled={saving}
-								onclick={() => setStatus('rejected')}>Reject</button
+								disabled={saving || !applicantMessage.trim()}
+								onclick={() =>
+									passOn(
+										`Reject ${application.startup_name || 'this application'}?`,
+										'The applicant is emailed that it was declined, with your message and the panel’s average scores. This cannot be unsent.',
+										'Yes, reject and send',
+										() => setStatus('rejected')
+									)}>Reject</button
 							>
+						{:else if rejectBlock === 'with-ceo'}
+							<p class="step__hint">With the CEO. You can't reject it at this stage.</p>
 						{/if}
 					</div>
 				{/if}
@@ -1121,6 +1232,42 @@
 	.reviewer__note {
 		flex-basis: 100%;
 		margin: 2px 0 0;
+		font-size: 12px;
+		line-height: 1.45;
+		color: $admin-ink-2;
+		white-space: pre-wrap;
+	}
+
+	.earlier {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.earlier__row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 4px 12px;
+		font-size: 13px;
+	}
+
+	.earlier__link {
+		font-weight: $font-weight-semibold;
+		color: $admin-ink;
+	}
+
+	.earlier__outcome {
+		color: $admin-ink-3;
+	}
+
+	.earlier__reason {
+		flex-basis: 100%;
+		margin: 0;
 		font-size: 12px;
 		line-height: 1.45;
 		color: $admin-ink-2;

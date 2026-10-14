@@ -18,18 +18,23 @@ export type ConfirmRequest = {
 	points?: string[];
 	/** Confirm stays disabled until this exact text is typed (case-insensitive). */
 	typeToConfirm?: string;
+	/** A required free-text answer, e.g. a reason; see askText(). */
+	input?: { label: string; placeholder?: string };
 };
 
 type Active = ConfirmRequest & { settle: (answer: boolean) => void };
 
 class DialogHost {
 	active = $state<Active | null>(null);
+	// What was typed into `input`, cleared for every new request.
+	text = $state('');
 
 	ask(request: ConfirmRequest): Promise<boolean> {
 		// A second request arriving while one is open would strand the first
 		// promise forever, so the outgoing one is answered "no" rather than left
 		// hanging — the safe answer for a question nobody got to see.
 		this.active?.settle(false);
+		this.text = '';
 
 		return new Promise((resolve) => {
 			this.active = {
@@ -51,3 +56,10 @@ export const dialog = new DialogHost();
 
 /** Ask a yes/no question. Resolves false on Cancel, Esc, or a backdrop click. */
 export const askConfirm = (request: ConfirmRequest) => dialog.ask(request);
+
+/** Ask for a required piece of text. Resolves to it, trimmed, or null on Cancel. */
+export async function askText(
+	request: ConfirmRequest & { input: { label: string; placeholder?: string } }
+): Promise<string | null> {
+	return (await dialog.ask(request)) ? dialog.text.trim() : null;
+}

@@ -6,7 +6,7 @@
 	import AdminShell from '$lib/components/AdminShell.svelte';
 	import { TIC_ADMIN_NAV } from '$lib/utils/ticAdminNav';
 	import { logoutTicAdmin } from '$lib/utils/ticAdminAuth';
-	import { askConfirm } from '$lib/utils/dialog.svelte';
+	import { askConfirm, askText } from '$lib/utils/dialog.svelte';
 	import { showToast } from '$lib/utils/toast.svelte';
 	import {
 		adminDeleteApplication,
@@ -20,6 +20,7 @@
 	} from '$lib/components/ReviewProgress.svelte';
 	import Info from '@lucide/svelte/icons/info';
 	import { floating } from '$lib/utils/floating';
+	import { canReject } from '$lib/utils/applicationReject';
 	import type { PageData } from './$types';
 
 	type Filter = 'all' | ApplicationStatus;
@@ -46,11 +47,6 @@
 		returned: applications.filter((a) => a.status === 'returned').length
 	});
 
-	async function setStatus(id: string, status: ApplicationStatus) {
-		await adminSetApplicationStatus(id, status);
-		await refresh();
-	}
-
 	// Admin only, like the delete on the application itself. The documents go
 	// with each row.
 	const canDelete = $derived(data.scope === 'admin');
@@ -69,7 +65,8 @@
 		}
 		await refresh();
 		if (failed) showToast(`Could not delete ${failed} of ${ids.length}.`, 'err');
-		else showToast(ids.length === 1 ? 'Application deleted.' : `${ids.length} applications deleted.`);
+		else
+			showToast(ids.length === 1 ? 'Application deleted.' : `${ids.length} applications deleted.`);
 	}
 
 	async function handleLogout() {
@@ -91,13 +88,45 @@
 	const hideTip = () => (tipAnchor = null);
 
 	// Where it sits in the chain; for a rejection, the step it was turned down at.
-	function stageOf(application: Pick<ApplicationSummary, 'status' | 'review_stage' | 'rejected_stage'>): ReviewStage {
-		const stage = application.status === 'rejected' ? application.rejected_stage : application.review_stage;
+	function stageOf(
+		application: Pick<ApplicationSummary, 'status' | 'review_stage' | 'rejected_stage'>
+	): ReviewStage {
+		const stage =
+			application.status === 'rejected' ? application.rejected_stage : application.review_stage;
 		return (stage ?? 0) as ReviewStage;
 	}
 
-	// Admin decides; the CEO may also turn one down. Everyone else reviews.
-	const canReject = $derived(data.scope === 'admin' || data.scope === 'ceo');
+	// The same rule the PATCH endpoint applies (applicationReject).
+	const mayReject = (application: ApplicationSummary) =>
+		canReject(
+			data.scope,
+			application.review_stage,
+			application.status,
+			data.headPending.includes(application.id)
+		);
+
+	async function reject(application: ApplicationSummary) {
+		// The founder is always told why; Reject stays disabled until it is written.
+		const reason = await askText({
+			title: `Reject ${application.startup_name || 'this application'}?`,
+			body: 'The applicant is emailed that it was declined, with your reason and the panel’s average scores. This cannot be unsent.',
+			confirmLabel: 'Yes, reject and send',
+			tone: 'danger',
+			input: {
+				label: 'Reason for the founder',
+				placeholder: 'Shown to the applicant and included in the decision email.'
+			}
+		});
+		if (!reason) return;
+		// The internal note is sent back as it is, or the save would clear it.
+		const kept = application.review_note ?? undefined;
+		if (!(await adminSetApplicationStatus(application.id, 'rejected', reason, kept))) {
+			showToast('Could not reject it. Please try again.', 'err');
+			return;
+		}
+		await refresh();
+		showToast('Rejected.');
+	}
 
 	function statusLabel(status: ApplicationStatus) {
 		return status === 'under-review' ? 'under review' : status;
@@ -285,11 +314,8 @@
 										>
 											Review
 										</a>
-										{#if canReject && application.status !== 'rejected'}
-											<button
-												class="btn btn--danger"
-												onclick={() => setStatus(application.id, 'rejected')}
-											>
+										{#if mayReject(application)}
+											<button class="btn btn--danger" onclick={() => reject(application)}>
 												Reject
 											</button>
 										{/if}
@@ -554,7 +580,9 @@
 		height: 8px;
 		border-radius: 50%;
 		background: #f5a524;
-		box-shadow: 0 0 0 3px rgba(245, 165, 36, 0.25), 0 0 8px 1px rgba(245, 165, 36, 0.7);
+		box-shadow:
+			0 0 0 3px rgba(245, 165, 36, 0.25),
+			0 0 8px 1px rgba(245, 165, 36, 0.7);
 	}
 
 	tbody td {

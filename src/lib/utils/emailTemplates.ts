@@ -648,7 +648,11 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				label: 'Next: your page on our website',
 				text: 'Your public profile is open in the founder console, filled in from your application. Add your logo and photos, pick a layout and send it to us — it goes live once we approve it.'
 			},
-			{ type: 'button', label: 'Set up your public profile', href: '{{siteUrl}}/founder/public-profile' },
+			{
+				type: 'button',
+				label: 'Set up your public profile',
+				href: '{{siteUrl}}/founder/public-profile'
+			},
 			SIGN_OFF
 		])
 	},
@@ -656,7 +660,7 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		key: 'application-rejected',
 		name: 'Application declined',
 		description: 'Tells the applicant they were not accepted this time, with the panel’s feedback.',
-		trigger: 'Admin or the CEO rejects the application',
+		trigger: 'Admin, the CEO or a TIC head rejects the application',
 		group: 'Incubation applications',
 		variables: [
 			{ name: 'fullName', description: 'Applicant name', sample: 'Rahul Bora' },
@@ -721,7 +725,13 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				type: 'lede',
 				text: 'Hi {{fullName}}, we have sent the **{{startupName}}** application back to you. Every answer and document you sent is kept — you only need to submit it again.'
 			},
-			{ type: 'callout', tone: 'info', label: 'From the TIC team', text: '{{note}}', showIf: 'note' },
+			{
+				type: 'callout',
+				tone: 'info',
+				label: 'From the TIC team',
+				text: '{{note}}',
+				showIf: 'note'
+			},
 			{
 				type: 'callout',
 				tone: 'info',
@@ -730,7 +740,12 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				showIf: 'verifyUrl'
 			},
 			{ type: 'button', label: 'Confirm your email', href: '{{verifyUrl}}', showIf: 'verifyUrl' },
-			{ type: 'button', label: 'Open your application', href: '{{siteUrl}}/founder/application', hideIf: 'verifyUrl' },
+			{
+				type: 'button',
+				label: 'Open your application',
+				href: '{{siteUrl}}/founder/application',
+				hideIf: 'verifyUrl'
+			},
 			{
 				type: 'link',
 				label: 'Then open your application',
@@ -761,7 +776,11 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				text: 'Your startup now appears on our incubated startups page — share it with your investors, customers and team.'
 			},
 			{ type: 'button', label: 'See your listing', href: '{{siteUrl}}/incubated-startups' },
-			{ type: 'link', label: 'Keep your public profile current', href: '{{siteUrl}}/founder/public-profile' },
+			{
+				type: 'link',
+				label: 'Keep your public profile current',
+				href: '{{siteUrl}}/founder/public-profile'
+			},
 			SIGN_OFF
 		])
 	},
@@ -776,10 +795,15 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 			{ name: 'fullName', description: 'Founder name', sample: 'Rahul Bora' },
 			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
 			{ name: 'approved', description: 'Set when approved; empty when sent back', sample: '1' },
-			{ name: 'isListed', description: 'Set when the startup is already on the website', sample: '' },
+			{
+				name: 'isListed',
+				description: 'Set when the startup is already on the website',
+				sample: ''
+			},
 			{ name: 'note', description: 'What to change — when sent back', sample: '' }
 		],
-		subject: '{{#if approved}}Your public profile is approved{{else}}Your public profile needs a change{{/if}}',
+		subject:
+			'{{#if approved}}Your public profile is approved{{else}}Your public profile needs a change{{/if}}',
 		...fromBlocks([
 			{ type: 'sticker', tone: 'good', text: 'Approved', showIf: 'approved' },
 			{ type: 'sticker', tone: 'bad', text: 'Sent back', hideIf: 'approved' },
@@ -806,7 +830,11 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				hideIf: 'approved'
 			},
 			{ type: 'callout', tone: 'bad', label: 'What to change', text: '{{note}}', showIf: 'note' },
-			{ type: 'button', label: 'Open your public profile', href: '{{siteUrl}}/founder/public-profile' },
+			{
+				type: 'button',
+				label: 'Open your public profile',
+				href: '{{siteUrl}}/founder/public-profile'
+			},
 			SIGN_OFF
 		])
 	},
@@ -819,8 +847,16 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 		variables: [
 			{ name: 'fullName', description: 'Founder name', sample: 'Rahul Bora' },
 			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
-			{ name: 'outcome', description: 'What they graduated with — dropped if empty', sample: 'Raised a seed round' },
-			{ name: 'profileUrl', description: 'Path of their page among the graduates', sample: '/incubated-startups/graduated/brahmaputra-bio' }
+			{
+				name: 'outcome',
+				description: 'What they graduated with — dropped if empty',
+				sample: 'Raised a seed round'
+			},
+			{
+				name: 'profileUrl',
+				description: 'Path of their page among the graduates',
+				sample: '/incubated-startups/graduated/brahmaputra-bio'
+			}
 		],
 		subject: '{{startupName}} has graduated from {{siteName}}',
 		...fromBlocks([
@@ -830,7 +866,13 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 				type: 'lede',
 				text: 'Hi {{fullName}}, your startup has graduated from the incubator. Your page now sits among our graduated startups.'
 			},
-			{ type: 'callout', tone: 'good', label: 'Graduated with', text: '{{outcome}}', showIf: 'outcome' },
+			{
+				type: 'callout',
+				tone: 'good',
+				label: 'Graduated with',
+				text: '{{outcome}}',
+				showIf: 'outcome'
+			},
 			{
 				type: 'text',
 				text: 'You keep your founder console, and your public profile stays yours to update — send us changes any time.'
@@ -884,6 +926,66 @@ export const EMAIL_TEMPLATES: EmailTemplateDef[] = [
 			},
 			{ type: 'button', label: 'Open the application', href: '{{applicationUrl}}' },
 			{ type: 'note', text: 'You are getting this because of your role in the TIC review chain.' }
+		])
+	},
+	{
+		key: 'application-rejected-team',
+		name: 'An application was rejected',
+		description:
+			'Tells the staff who worked on an application that it was turned down: admin, the CEO once it had reached them, and the coordinators and TIC heads assigned to it. Not the person who rejected it.',
+		trigger: 'Admin, the CEO or a TIC head rejects the application',
+		group: 'Internal review',
+		variables: [
+			{ name: 'recipientName', description: 'Who is being told', sample: 'Priya' },
+			{ name: 'startupName', description: 'Startup name', sample: 'Brahmaputra Bio' },
+			{ name: 'founderName', description: 'Founder name', sample: 'Rahul Bora' },
+			{ name: 'rejectedBy', description: 'Who rejected it', sample: 'Anita Das' },
+			{ name: 'rejectedByRole', description: 'Their role', sample: 'TIC CEO' },
+			{ name: 'stageName', description: 'The step it was rejected at', sample: 'CEO review' },
+			{
+				name: 'reason',
+				description: 'The reason the founder was given',
+				sample: 'The market is too early for a product at this price.'
+			},
+			{
+				name: 'internalNote',
+				description: 'The team’s private note — dropped if empty',
+				sample: ''
+			},
+			{
+				name: 'applicationUrl',
+				description: 'Link to the application in the console',
+				sample: 'https://iitgtic.com/tic-admin/applications/…'
+			}
+		],
+		subject: 'Rejected: {{startupName}}',
+		...fromBlocks([
+			{ type: 'sticker', tone: 'bad', text: 'Rejected · {{stageName}}' },
+			{ type: 'heading', text: 'An application was _turned down_' },
+			{
+				type: 'lede',
+				text: 'Hi {{recipientName}}, **{{startupName}}** was rejected by {{rejectedBy}} ({{rejectedByRole}}). The founder has been emailed.'
+			},
+			{
+				type: 'details',
+				title: 'The application',
+				items: [
+					'Startup: {{startupName}}',
+					'Founder: {{founderName}}',
+					'Rejected at: {{stageName}}',
+					'Rejected by: {{rejectedBy}} · {{rejectedByRole}}'
+				]
+			},
+			{ type: 'callout', tone: 'bad', label: 'Reason given to the founder', text: '{{reason}}' },
+			{
+				type: 'callout',
+				tone: 'info',
+				label: 'Internal note',
+				text: '{{internalNote}}',
+				showIf: 'internalNote'
+			},
+			{ type: 'button', label: 'Open the application', href: '{{applicationUrl}}' },
+			{ type: 'note', text: 'You are getting this because you worked on this application.' }
 		])
 	},
 

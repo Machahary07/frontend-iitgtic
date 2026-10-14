@@ -48,9 +48,19 @@
 >
 	{#snippet pageActions()}
 		{#if data.application?.status === 'rejected'}
-			<!-- A query string on this route, which resolve() cannot express. -->
-			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-			<a class="apply-again" href={`${resolve('/founder/application')}?new`}>Apply again</a>
+			{#if data.waitUntil}
+				<p class="apply-wait">
+					You can apply again from {new Date(data.waitUntil).toLocaleDateString('en-GB', {
+						day: 'numeric',
+						month: 'long',
+						year: 'numeric'
+					})}.
+				</p>
+			{:else}
+				<!-- A query string on this route, which resolve() cannot express. -->
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+				<a class="apply-again" href={`${resolve('/founder/application')}?new`}>Apply again</a>
+			{/if}
 		{/if}
 	{/snippet}
 
@@ -149,5 +159,11 @@
 
 	.apply-again {
 		@include admin-btn-primary;
+	}
+
+	.apply-wait {
+		margin: 0;
+		font-size: 14px;
+		color: $admin-ink-2;
 	}
 </style>
