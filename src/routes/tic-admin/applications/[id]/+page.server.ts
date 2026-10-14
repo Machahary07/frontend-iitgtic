@@ -4,12 +4,16 @@ import {
 	APPLICATION_COLUMNS,
 	canScore,
 	canSeeApplication,
+	loadAdminScores,
 	loadAllScores,
 	loadAssignable,
 	loadMyScores,
 	loadReviewers,
-	reviewScope
+	reviewScope,
+	scoreLock,
+	visibleApplicationIds
 } from '$lib/server/applicationReview';
+import type { EarlierApplication } from '$lib/utils/ticAdmin';
 import { loadScreening } from '$lib/server/evaluation';
 import type { PageServerLoad } from './$types';
 
@@ -29,7 +33,9 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 
 	const { data, error: dbError } = await db
 		.from('applications')
-		.select(`${APPLICATION_COLUMNS}, answers, documents, meet_at, meeting_ended_at`)
+		.select(
+			`${APPLICATION_COLUMNS}, answers, documents, meet_at, meeting_ended_at, company_id, rejected_at, reapply_from, reapply_allowed_at`
+		)
 		.eq('id', params.id)
 		.maybeSingle();
 
@@ -51,7 +57,7 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 	// on (stage 4), once the call has ended. Nobody else.
 	const seesScreening = scope === 'admin' || (scope === 'ceo' && Boolean(data.meeting_ended_at));
 
-	const [reviewers, coordinators, heads, myScores, allScores, scoring, screening] =
+	const [reviewers, coordinators, heads, myScores, allScores, adminScores, scoring, screening] =
 		await Promise.all([
 			loadReviewers(db, data.id),
 			assigns ? loadAssignable(db, 'coordinator') : Promise.resolve([]),
@@ -59,9 +65,27 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 			loadMyScores(db, data.id, admin!.userId),
 			// Everyone's marks go to admin and nobody else — not even as a total.
 			scope === 'admin' ? loadAllScores(db, data.id) : Promise.resolve(null),
+			// The CEO also reads admin's marks; coordinators and heads only their own.
+			scope === 'ceo' ? loadAdminScores(db, data.id) : Promise.resolve(null),
 			canScore(db, admin!, data),
 			seesScreening ? loadScreening(db, data.id) : Promise.resolve(null)
 		]);
+
+	// "Applied before": the same startup's (or founder's) earlier applications,
+	// only those this person could open anyway — so the CEO never learns of one
+	// admin turned down before passing it on.
+	const visibleIds = await visibleApplicationIds(db, admin!);
+	let earlierQuery = db
+		.from('applications')
+		.select('id, status, startup_name, created_at, rejected_stage, applicant_message')
+		.neq('id', data.id)
+		.lt('created_at', data.created_at)
+		.order('created_at', { ascending: false });
+	earlierQuery = data.company_id
+		? earlierQuery.or(`company_id.eq.${data.company_id},user_id.eq.${data.user_id}`)
+		: earlierQuery.eq('user_id', data.user_id);
+	if (visibleIds !== null) earlierQuery = earlierQuery.in('id', visibleIds);
+	const { data: earlier } = await earlierQuery;
 
 	const documents = (data.documents ?? {}) as Record<string, DocumentEntry>;
 	const documentLinks: Record<string, { name: string; size: number; url: string | null }> = {};
@@ -81,7 +105,16 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 		me: admin!.userId,
 		reviewers,
 		assignable: { coordinators, heads },
-		scores: { mine: myScores, all: allScores, canScore: scoring },
+		scores: {
+			mine: myScores,
+			all: allScores,
+			admin: adminScores,
+			canScore: scoring,
+			// Admin after passing it on, the CEO at the recheck: their marks are
+			// locked, gaps may be filled.
+			fillGaps: scoreLock(admin!, data) !== null
+		},
+		earlier: (earlier ?? []) as EarlierApplication[],
 		screening: screening
 			? { people: screening, meetAt: data.meet_at, endedAt: data.meeting_ended_at }
 			: null

@@ -5,12 +5,15 @@ import { emailConfig, sendTemplateEmail } from '$lib/server/email';
 import { verifyEmailUrl } from '$lib/server/emailVerify';
 import {
 	canSeeApplication,
+	pendingHeadReviews,
 	requireAllScored,
 	reviewScope,
 	scoreEmailVariables
 } from '$lib/server/applicationReview';
 import { screeningEmailVariables } from '$lib/server/evaluation';
 import { REVIEW_STEP_NAMES } from '$lib/utils/emailBlocks';
+import { REJECT_REFUSALS, reapplyFrom, rejectRefusal } from '$lib/utils/applicationReject';
+import { notifyRejection } from '$lib/server/reviewMail';
 import { roleLabel } from '$lib/utils/roles';
 import type { RequestHandler } from './$types';
 
@@ -45,11 +48,11 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 	if (!body.id) error(400, 'Missing application id.');
 	if (!STATUSES.includes(body.status as Status)) error(400, 'Unknown status.');
 
-	// Admin decides; the CEO may also turn one down while it is with them.
-	// Nobody else changes status — coordinators and heads sign off instead.
+	// Admin decides; the CEO and an assigned TIC head may also turn one down
+	// (rejectRefusal says when). Nobody else changes status.
 	const scope = reviewScope(ctx.admin);
 	const rejecting = body.status === 'rejected';
-	if (scope !== 'admin' && !(rejecting && scope === 'ceo')) error(403, 'Not allowed.');
+	if (scope !== 'admin' && !rejecting) error(403, 'Not allowed.');
 	if (!(await canSeeApplication(ctx.db, ctx.admin, body.id))) error(404, 'Application not found.');
 
 	const { data: current } = await ctx.db
@@ -64,6 +67,15 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 	// while the founder has it.
 	if (body.status === 'returned' && (current.status !== 'submitted' || stage !== 0)) {
 		error(409, 'Only a submitted application that has not gone into review can be sent back.');
+	}
+
+	if (rejecting) {
+		const headPending =
+			scope === 'head' && (await pendingHeadReviews(ctx.db, ctx.admin.userId)).includes(body.id);
+		const refusal = rejectRefusal(scope, stage, current.status as string, headPending);
+		if (refusal) error(refusal === 'not-allowed' ? 403 : 409, REJECT_REFUSALS[refusal]);
+		// The founder is always told why.
+		if (!body.applicantMessage?.trim()) error(400, 'Give the founder a reason before rejecting.');
 	}
 
 	// The final email goes out only once every assigned head has signed off.
@@ -84,19 +96,24 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 		await requireAllScored(ctx.db, body.id, ctx.admin.userId, 'accept it');
 	}
 
+	const now = new Date();
 	const { data: application, error: dbError } = await ctx.db
 		.from('applications')
 		.update({
 			status: body.status,
 			applicant_message: body.applicantMessage?.trim() || null,
 			review_note: body.reviewNote?.trim() || null,
-			reviewed_at: new Date().toISOString(),
+			reviewed_at: now.toISOString(),
 			// Where it was turned down, kept for the dots; cleared if reopened.
 			rejected_stage: rejecting ? stage : null,
+			// When, and when the startup may apply again; also cleared if reopened.
+			rejected_at: rejecting ? now.toISOString() : null,
+			reapply_from: rejecting ? reapplyFrom(now).toISOString() : null,
+			reapply_allowed_at: null,
 			...(body.status === 'under-review' && stage === 0 ? { review_stage: 1 } : {})
 		})
 		.eq('id', body.id)
-		.select('email, full_name, startup_name, applicant_message, company_id, user_id')
+		.select('email, full_name, startup_name, applicant_message, review_note, company_id, user_id')
 		.maybeSingle();
 	if (dbError) error(500, dbError.message);
 
@@ -118,6 +135,7 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 	// throws, so a mail problem cannot turn a completed review into a 500.
 	const templateKey = TEMPLATE_FOR[body.status as Status];
 	let email: { status: string; error: string | null } | null = null;
+	const decidedAt = stage === 0 ? 'Admin check' : (REVIEW_STEP_NAMES[stage - 1] ?? '');
 
 	if (templateKey && application?.email) {
 		// The panel's marks go out with the decision only — never while it is
@@ -149,20 +167,38 @@ export const PATCH: RequestHandler = async ({ cookies, request }) => {
 			variables: {
 				fullName: (application.full_name as string) ?? '',
 				startupName: (application.startup_name as string) ?? '',
+				// applicant_message only: the internal note never goes to the founder.
 				note: (application.applicant_message as string) ?? '',
 				verifyUrl,
 				...scoreVars,
-				...(rejecting
-					? {
-							decidedAt: stage === 0 ? 'Admin check' : (REVIEW_STEP_NAMES[stage - 1] ?? ''),
-							decidedBy: roleLabel(ctx.admin.role)
-						}
-					: {})
+				...(rejecting ? { decidedAt, decidedBy: roleLabel(ctx.admin.role) } : {})
 			},
 			context: { table: 'applications', recordId: body.id, status: body.status },
 			sentBy: ctx.admin.userId
 		});
 		email = { status: result.status, error: result.error };
+	}
+
+	// And the staff who worked on it, internal note included. Never throws.
+	if (rejecting && application) {
+		await notifyRejection({
+			db: ctx.db,
+			siteUrl: emailConfig().siteUrl,
+			rejectedBy: {
+				userId: ctx.admin.userId,
+				name: ctx.admin.name || ctx.admin.email,
+				role: roleLabel(ctx.admin.role)
+			},
+			application: {
+				id: body.id,
+				startup_name: application.startup_name as string | null,
+				full_name: application.full_name as string | null
+			},
+			stage,
+			stageName: decidedAt,
+			reason: (application.applicant_message as string) ?? '',
+			internalNote: (application.review_note as string) ?? ''
+		});
 	}
 
 	return json({ ok: true, email });

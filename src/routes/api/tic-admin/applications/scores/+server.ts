@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { requireAdmin } from '$lib/server/adminGuard';
-import { canScore, canSeeApplication } from '$lib/server/applicationReview';
+import { canScore, canSeeApplication, scoreLock } from '$lib/server/applicationReview';
 import { isScoredStep } from '$lib/utils/applicationScores';
 import type { RequestHandler } from './$types';
 
@@ -30,14 +30,21 @@ export const PUT: RequestHandler = async ({ cookies, request }) => {
 		.eq('id', body.id)
 		.maybeSingle();
 	if (!app) error(404, 'Application not found.');
-	if (
-		!(await canScore(
-			ctx.db,
-			ctx.admin,
-			app as { id: string; status: string; review_stage: number }
-		))
-	)
-		error(403, 'You cannot score this application at its current step.');
+	const current = app as { id: string; status: string; review_stage: number };
+	if (!(await canScore(ctx.db, ctx.admin, current))) {
+		// Admin after passing it on, or the CEO's recheck: only a step they never
+		// scored, and only to add a mark.
+		const locked = scoreLock(ctx.admin, current);
+		if (!locked) error(403, 'You cannot score this application at its current step.');
+		const { data: existing } = await ctx.db
+			.from('application_scores')
+			.select('step')
+			.eq('application_id', app.id)
+			.eq('user_id', ctx.admin.userId)
+			.eq('step', step)
+			.maybeSingle();
+		if (existing || score === null) error(403, locked);
+	}
 
 	const { error: dbError } =
 		score === null

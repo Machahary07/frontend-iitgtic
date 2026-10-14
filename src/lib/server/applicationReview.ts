@@ -100,6 +100,17 @@ export async function loadVisibleApplications(
 	return data ?? [];
 }
 
+/** Applications this person is an assigned head on and has not signed off yet. */
+export async function pendingHeadReviews(db: SupabaseClient, userId: string): Promise<string[]> {
+	const { data } = await db
+		.from('application_reviewers')
+		.select('application_id')
+		.eq('user_id', userId)
+		.eq('kind', 'head')
+		.is('done_at', null);
+	return (data ?? []).map((row) => row.application_id as string);
+}
+
 export type ReviewerRow = {
 	id: string;
 	user_id: string;
@@ -153,10 +164,10 @@ export async function loadAssignable(db: SupabaseClient, kind: ReviewerKind) {
 
 // ---- scores ------------------------------------------------------------------
 
-/** Whether this person may mark the application's steps right now: admin
- *  until the decision, the CEO at its own steps, and an assigned head at step 5
- *  until they sign off. Coordinators score the screening call instead
- *  ($lib/server/evaluation). */
+/** Whether this person may mark the application's steps right now: admin at
+ *  the admin check only (stage 0), the CEO during their first review only
+ *  (stages 1–2), and an assigned head at step 5 until they sign off.
+ *  Coordinators score the screening call instead ($lib/server/evaluation). */
 export async function canScore(
 	db: SupabaseClient,
 	admin: Pick<ConsoleSession, 'role' | 'userId'>,
@@ -165,8 +176,8 @@ export async function canScore(
 	if (app.status === 'rejected' || app.status === 'accepted') return false;
 	const scope = reviewScope(admin);
 	const stage = app.review_stage;
-	if (scope === 'admin') return true;
-	if (scope === 'ceo') return stage === 1 || stage === 2 || stage === 4;
+	if (scope === 'admin') return stage === 0;
+	if (scope === 'ceo') return stage === 1 || stage === 2;
 	if (scope !== 'head' || stage !== 5) return false;
 
 	const { data } = await db
@@ -180,17 +191,38 @@ export async function canScore(
 	return Boolean(data);
 }
 
+/** Once admin passes it to the CEO, and once the CEO reaches the recheck
+ *  (stage 4), their marks are locked — except a step they never scored. Older
+ *  applications may have gaps, and a second admin account may never have
+ *  scored, yet assigning the heads and accepting both need every step marked.
+ *  Those steps they may fill in, once. Returns the refusal for a locked step,
+ *  or null when this person is not in that position. */
+export function scoreLock(
+	admin: Pick<ConsoleSession, 'role'>,
+	app: { status: string; review_stage: number }
+): string | null {
+	if (app.status === 'rejected' || app.status === 'accepted') return null;
+	const scope = reviewScope(admin);
+	if (scope === 'admin' && app.review_stage >= 1)
+		return 'Your scores were locked when you passed it to the CEO.';
+	if (scope === 'ceo' && app.review_stage === 4)
+		return 'Your scores were locked when you assigned the coordinators.';
+	return null;
+}
+
 export type ScoreEntry = { userId: string; name: string; role: string; score: number };
 
-/** Everyone's marks, by step. Only ever sent to admin. */
-export async function loadAllScores(db: SupabaseClient, applicationId: string) {
-	const { data } = await db
+/** Everyone's marks, by step, or only those given by `roles`. All of them go
+ *  to admin only; the CEO gets admin's (loadAdminScores). */
+export async function loadAllScores(db: SupabaseClient, applicationId: string, roles?: string[]) {
+	let query = db
 		.from('application_scores')
 		.select(
 			'user_id, role, step, score, profile:profiles!application_scores_user_id_fkey(full_name, email)'
 		)
-		.eq('application_id', applicationId)
-		.order('updated_at');
+		.eq('application_id', applicationId);
+	if (roles) query = query.in('role', roles);
+	const { data } = await query.order('updated_at');
 	const byStep: Record<number, ScoreEntry[]> = {};
 	for (const row of data ?? []) {
 		const profile = (Array.isArray(row.profile) ? row.profile[0] : row.profile) as {
@@ -205,6 +237,11 @@ export async function loadAllScores(db: SupabaseClient, applicationId: string) {
 		});
 	}
 	return byStep;
+}
+
+/** The marks admin-scope staff gave, by step. Sent to the CEO alongside their own. */
+export function loadAdminScores(db: SupabaseClient, applicationId: string) {
+	return loadAllScores(db, applicationId, ['developer', 'admin', 'tic_admin']);
 }
 
 /** This person's own marks, by step. */

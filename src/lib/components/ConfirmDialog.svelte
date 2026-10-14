@@ -15,8 +15,9 @@
 		if (active) typed = '';
 	});
 	const locked = $derived(
-		Boolean(active?.typeToConfirm) &&
-			typed.trim().toLowerCase() !== active!.typeToConfirm!.trim().toLowerCase()
+		(Boolean(active?.typeToConfirm) &&
+			typed.trim().toLowerCase() !== active!.typeToConfirm!.trim().toLowerCase()) ||
+			(Boolean(active?.input) && !dialog.text.trim())
 	);
 
 	$effect(() => {
@@ -103,6 +104,14 @@
 							if (event.key === 'Enter' && !locked) dialog.answer(true);
 						}}
 					/>
+				</label>
+			{/if}
+
+			{#if active.input}
+				<label class="dlg__type">
+					<span>{active.input.label}</span>
+					<textarea bind:value={dialog.text} rows="3" placeholder={active.input.placeholder ?? ''}
+					></textarea>
 				</label>
 			{/if}
 
@@ -229,7 +238,8 @@
 			word-break: break-all;
 		}
 
-		input {
+		input,
+		textarea {
 			min-height: 40px;
 			padding: 0 12px;
 			font: inherit;
@@ -242,6 +252,12 @@
 				outline: 2px solid #b0181c;
 				outline-offset: 1px;
 			}
+		}
+
+		textarea {
+			padding: 10px 12px;
+			line-height: 1.5;
+			resize: vertical;
 		}
 	}
 

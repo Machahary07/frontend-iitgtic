@@ -32,6 +32,14 @@
 		}
 		await invalidateAll();
 	}
+
+	function fmtWait(iso: string) {
+		return new Date(iso).toLocaleDateString('en-GB', {
+			day: 'numeric',
+			month: 'long',
+			year: 'numeric'
+		});
+	}
 </script>
 
 <svelte:head>
@@ -48,9 +56,13 @@
 >
 	{#snippet pageActions()}
 		{#if data.application?.status === 'rejected'}
-			<!-- A query string on this route, which resolve() cannot express. -->
-			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-			<a class="apply-again" href={`${resolve('/founder/application')}?new`}>Apply again</a>
+			{#if data.waitUntil}
+				<p class="apply-wait">You can apply again from {fmtWait(data.waitUntil)}.</p>
+			{:else}
+				<!-- A query string on this route, which resolve() cannot express. -->
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+				<a class="apply-again" href={`${resolve('/founder/application')}?new`}>Apply again</a>
+			{/if}
 		{/if}
 	{/snippet}
 
@@ -84,6 +96,15 @@
 
 	{#if data.application}
 		<ApplicationRecord application={data.application} documents={data.documents} />
+	{:else if data.waitUntil && !data.returned}
+		<!-- An earlier rejection of theirs, under another startup, still has its wait running. -->
+		<section class="wait">
+			<h2 class="wait__title">You can apply again from {fmtWait(data.waitUntil)}.</h2>
+			<p class="wait__body">
+				An application of yours was declined recently, so a new one, under any startup, opens once
+				the waiting period is over.
+			</p>
+		</section>
 	{:else}
 		<ApplicationWizard
 			embedded
@@ -149,5 +170,30 @@
 
 	.apply-again {
 		@include admin-btn-primary;
+	}
+
+	.wait {
+		@include admin-card;
+		max-width: 860px;
+	}
+
+	.wait__title {
+		margin: 0 0 6px;
+		font-size: 17px;
+		font-weight: $font-weight-semibold;
+		color: $admin-ink;
+	}
+
+	.wait__body {
+		margin: 0;
+		font-size: 14px;
+		line-height: 1.55;
+		color: $admin-ink-2;
+	}
+
+	.apply-wait {
+		margin: 0;
+		font-size: 14px;
+		color: $admin-ink-2;
 	}
 </style>

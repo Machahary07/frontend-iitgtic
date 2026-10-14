@@ -52,7 +52,33 @@ export type ApplicationSummary = {
 export type ApplicationDetail = ApplicationSummary & {
 	answers: Record<string, unknown>;
 	documents: Record<string, { path: string; name: string; size: number }>;
+	// The wait before a declined startup may apply again (applicationReject).
+	rejected_at: string | null;
+	reapply_from: string | null;
+	reapply_allowed_at: string | null;
 };
+
+/** An earlier application from the same startup or founder, for "Applied before". */
+export type EarlierApplication = {
+	id: string;
+	status: ApplicationStatus;
+	startup_name: string;
+	created_at: string;
+	rejected_stage: number | null;
+	applicant_message: string | null;
+};
+
+/** Lifts the wait on a rejected application. Returns the refusal, or null. */
+export async function adminAllowReapply(id: string): Promise<string | null> {
+	const res = await fetch('/api/tic-admin/applications/reapply', {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify({ id })
+	});
+	if (res.ok) return null;
+	const body = (await res.json().catch(() => ({}))) as { message?: string };
+	return body.message ?? 'Could not lift the wait.';
+}
 
 export type DocumentLink = { name: string; size: number; url: string | null };
 
@@ -75,7 +101,12 @@ export async function adminSetApplicationStatus(
 export async function adminReviewAction(
 	id: string,
 	action: 'forward' | 'assign' | 'sign-off' | 'live',
-	extra: { kind?: 'coordinator' | 'head'; userIds?: string[]; note?: string; virtual?: boolean } = {}
+	extra: {
+		kind?: 'coordinator' | 'head';
+		userIds?: string[];
+		note?: string;
+		virtual?: boolean;
+	} = {}
 ): Promise<string | null> {
 	const res = await fetch('/api/tic-admin/applications/review', {
 		method: 'POST',
