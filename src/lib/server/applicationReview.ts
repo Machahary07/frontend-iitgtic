@@ -164,10 +164,10 @@ export async function loadAssignable(db: SupabaseClient, kind: ReviewerKind) {
 
 // ---- scores ------------------------------------------------------------------
 
-/** Whether this person may mark the application's steps right now: admin
- *  until the decision, the CEO during their first review only (stages 1–2), and
- *  an assigned head at step 5 until they sign off. Coordinators score the
- *  screening call instead ($lib/server/evaluation). */
+/** Whether this person may mark the application's steps right now: admin at
+ *  the admin check only (stage 0), the CEO during their first review only
+ *  (stages 1–2), and an assigned head at step 5 until they sign off.
+ *  Coordinators score the screening call instead ($lib/server/evaluation). */
 export async function canScore(
 	db: SupabaseClient,
 	admin: Pick<ConsoleSession, 'role' | 'userId'>,
@@ -176,7 +176,7 @@ export async function canScore(
 	if (app.status === 'rejected' || app.status === 'accepted') return false;
 	const scope = reviewScope(admin);
 	const stage = app.review_stage;
-	if (scope === 'admin') return true;
+	if (scope === 'admin') return stage === 0;
 	if (scope === 'ceo') return stage === 1 || stage === 2;
 	if (scope !== 'head' || stage !== 5) return false;
 
@@ -191,19 +191,23 @@ export async function canScore(
 	return Boolean(data);
 }
 
-/** At the recheck (stage 4) the CEO's marks are locked, except a step they never
- *  scored — older applications may have gaps, and assigning the heads needs
- *  every step marked. Those steps they may fill in, once. */
-export function ceoFillsGaps(
+/** Once admin passes it to the CEO, and once the CEO reaches the recheck
+ *  (stage 4), their marks are locked — except a step they never scored. Older
+ *  applications may have gaps, and a second admin account may never have
+ *  scored, yet assigning the heads and accepting both need every step marked.
+ *  Those steps they may fill in, once. Returns the refusal for a locked step,
+ *  or null when this person is not in that position. */
+export function scoreLock(
 	admin: Pick<ConsoleSession, 'role'>,
 	app: { status: string; review_stage: number }
-): boolean {
-	return (
-		reviewScope(admin) === 'ceo' &&
-		app.review_stage === 4 &&
-		app.status !== 'rejected' &&
-		app.status !== 'accepted'
-	);
+): string | null {
+	if (app.status === 'rejected' || app.status === 'accepted') return null;
+	const scope = reviewScope(admin);
+	if (scope === 'admin' && app.review_stage >= 1)
+		return 'Your scores were locked when you passed it to the CEO.';
+	if (scope === 'ceo' && app.review_stage === 4)
+		return 'Your scores were locked when you assigned the coordinators.';
+	return null;
 }
 
 export type ScoreEntry = { userId: string; name: string; role: string; score: number };

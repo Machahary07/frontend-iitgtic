@@ -525,6 +525,9 @@
 
 				{#if !rejected}
 					<div class="step">
+						{#if scores.fillGaps && isAdmin}
+							<p class="step__hint">Your scores were locked when you passed it to the CEO.</p>
+						{/if}
 						{#if stage === 0}
 							{#if isAdmin}
 								<p class="step__hint">Checked it? Pass it to the CEO to start the review.</p>
@@ -562,7 +565,7 @@
 							{/if}
 						{:else if stage === 4}
 							{#if canAssign}
-								{#if scores.fillGaps}
+								{#if scores.fillGaps && scope === 'ceo'}
 									<p class="step__hint">Your scores are locked from your first review.</p>
 								{/if}
 								{@render picker('head', data.assignable.heads)}

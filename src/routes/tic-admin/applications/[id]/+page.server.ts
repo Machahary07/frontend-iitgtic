@@ -4,13 +4,13 @@ import {
 	APPLICATION_COLUMNS,
 	canScore,
 	canSeeApplication,
-	ceoFillsGaps,
 	loadAdminScores,
 	loadAllScores,
 	loadAssignable,
 	loadMyScores,
 	loadReviewers,
 	reviewScope,
+	scoreLock,
 	visibleApplicationIds
 } from '$lib/server/applicationReview';
 import type { EarlierApplication } from '$lib/utils/ticAdmin';
@@ -110,8 +110,9 @@ export const load: PageServerLoad = async ({ parent, params }) => {
 			all: allScores,
 			admin: adminScores,
 			canScore: scoring,
-			// The CEO's recheck: their marks are locked, gaps may be filled.
-			fillGaps: ceoFillsGaps(admin!, data)
+			// Admin after passing it on, the CEO at the recheck: their marks are
+			// locked, gaps may be filled.
+			fillGaps: scoreLock(admin!, data) !== null
 		},
 		earlier: (earlier ?? []) as EarlierApplication[],
 		screening: screening

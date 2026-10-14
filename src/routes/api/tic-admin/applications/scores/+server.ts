@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { requireAdmin } from '$lib/server/adminGuard';
-import { canScore, canSeeApplication, ceoFillsGaps } from '$lib/server/applicationReview';
+import { canScore, canSeeApplication, scoreLock } from '$lib/server/applicationReview';
 import { isScoredStep } from '$lib/utils/applicationScores';
 import type { RequestHandler } from './$types';
 
@@ -32,10 +32,10 @@ export const PUT: RequestHandler = async ({ cookies, request }) => {
 	if (!app) error(404, 'Application not found.');
 	const current = app as { id: string; status: string; review_stage: number };
 	if (!(await canScore(ctx.db, ctx.admin, current))) {
-		// The CEO's recheck: only a step they never scored, and only to add a mark.
-		if (!ceoFillsGaps(ctx.admin, current)) {
-			error(403, 'You cannot score this application at its current step.');
-		}
+		// Admin after passing it on, or the CEO's recheck: only a step they never
+		// scored, and only to add a mark.
+		const locked = scoreLock(ctx.admin, current);
+		if (!locked) error(403, 'You cannot score this application at its current step.');
 		const { data: existing } = await ctx.db
 			.from('application_scores')
 			.select('step')
@@ -43,9 +43,7 @@ export const PUT: RequestHandler = async ({ cookies, request }) => {
 			.eq('user_id', ctx.admin.userId)
 			.eq('step', step)
 			.maybeSingle();
-		if (existing || score === null) {
-			error(403, 'Your scores were locked when you assigned the coordinators.');
-		}
+		if (existing || score === null) error(403, locked);
 	}
 
 	const { error: dbError } =
