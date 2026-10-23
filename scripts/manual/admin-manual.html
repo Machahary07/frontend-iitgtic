@@ -185,7 +185,7 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
     <div class="cover__meta">
       <p><b>Audience</b> TIC staff — admins, CEO, coordinators, heads</p>
       <p><b>Console</b> iitgtic.itsjeu.com/tic-admin</p>
-      <p><b>Edition</b> October 2026 · build v38</p>
+      <p><b>Edition</b> October 2026 · build v40</p>
       <p><b>Status</b> Console complete · hosting and domain cutover pending</p>
       <p><b>Prepared by</b> Jeu Machahary · Veeshal D Bodosa</p>
     </div>
@@ -276,7 +276,6 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
       <tr><td class="k">TIC CEO</td><td>Leads the incubator. Second step of the review chain; assigns coordinators and heads.</td><td>Pipeline · Activity</td></tr>
       <tr><td class="k">TIC Coordinator</td><td>Scores startups in the screening call; keeps the website and emails current.</td><td>Pipeline · Evaluation · Content · Email</td></tr>
       <tr><td class="k">TIC Head</td><td>Reviews and signs off applications they are assigned.</td><td>Pipeline · Activity</td></tr>
-      <tr><td class="k">TIC Chairman · TIC President</td><td>Oversee the incubator. Read everything in the pipeline; act on nothing.</td><td>Pipeline · Activity</td></tr>
       <tr><td class="k">Founder</td><td>Runs one or more startups. Uses the founder console (§17), not this one.</td><td>—</td></tr>
     </tbody>
   </table>
@@ -344,7 +343,6 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
       <tr><td class="k">CEO</td><td>New for you · In your review · Back for recheck · With coordinators · With TIC heads</td><td>Needs you</td></tr>
       <tr><td class="k">Coordinator</td><td>Calls to attend · Waiting for a meeting · Submitted</td><td>Your screening calls</td></tr>
       <tr><td class="k">TIC Head</td><td>To review · Signed off</td><td>Your reviews</td></tr>
-      <tr><td class="k">Chairman · President</td><td>Admin check · With the CEO · Screening calls · With TIC heads · Incubated · Rejected</td><td>Recent activity</td></tr>
     </tbody>
   </table>
   <div class="note">
@@ -401,7 +399,7 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
     </tbody>
   </table>
   <h2><span class="num">5.1</span>On the website</h2>
-  <p>Tabs <em>Current · Virtual · Graduated · Not on the site · Rejected · All</em>. Virtual is a subset of Current. Admins use <strong>Make virtual</strong>, <strong>Graduate</strong> (with an outcome line; the founder is emailed) and <strong>Take off site</strong>. Content editors use <strong>Edit</strong> to correct a profile and publish it directly.</p>
+  <p>Tabs <em>Current · Virtual · Graduated · Not on the site · Rejected · All</em>. Virtual is a subset of Current. A published profile that is not listed yet sits under <em>Not on the site</em>, and its editor says so; <strong>List as current</strong> puts it up. Admins use <strong>Make virtual</strong>, <strong>Graduate</strong> (with an outcome line; the founder is emailed) and <strong>Take off site</strong>. Content editors use <strong>Edit</strong> to correct a profile and publish it directly.</p>
   <p><span class="chip chip--done">Done</span></p>
 </section>
 
@@ -427,13 +425,15 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
   <p>The coloured dots on each row show where an application stands; a rejected one shows the step it stopped at. Each person who must act next is emailed when it reaches them.</p>
 
   <h2><span class="num">6.2</span>Scores</h2>
-  <p>Seven parts of the application — the six question steps and the documents — each take a mark out of 100 from every reviewer. <strong>The pass-on button stays locked until you have scored every step.</strong> Reviewers score independently: nobody sees another person’s marks while they are scoring. Scores are averaged into the decision emails.</p>
+  <p>Seven parts of the application — the six question steps and the documents — each take a mark out of 100 from every reviewer. <strong>The pass-on button stays locked until you have scored every step.</strong> Reviewers score independently; the one exception is the CEO, who sees admin’s marks beside their own. Scores are averaged into the decision emails.</p>
+  <p><strong>Marks lock once you pass it on.</strong> Admin’s lock when it goes to the CEO; the CEO’s lock after their first review, so at the recheck they can only fill in a step they never scored.</p>
 
   <h2><span class="num">6.3</span>The review panel</h2>
   <div class="kv">
     <b>Message to applicant</b><span>Goes into the email the founder receives. Write it as if they will read only this sentence.</span>
     <b>Internal note</b><span>Stays in the console, for the team.</span>
-    <b>Reject</b><span>Admin or the CEO can reject at any step; the decline email carries your message.</span>
+    <b>Reject</b><span>Needs a message to the applicant, which the decline email carries. Admin can reject except while it is with the CEO (steps 1, 2 and 4); the CEO at any step; an assigned head only at step 5, before signing off. Nobody once it is accepted. The team who worked on it — admin, the CEO once it reached them, the assigned coordinators and heads — is emailed too.</span>
+    <b>Reapply wait</b><span>A rejected startup, and its founder under any company, cannot apply again for three months. The founder sees the date. Admin can lift it with <strong>Allow reapplying now</strong>; an “Applied before” card shows earlier attempts.</span>
     <b>Reopen · Send back</b><span>Admin only. Reopen brings a rejected application back under review; Send back returns an unreviewed one to the founder, who resubmits it once their email is confirmed.</span>
     <b>Delete application</b><span>Removes the record and its documents. Asks first. Irreversible — reject rather than delete unless it is a duplicate or a test.</span>
   </div>
@@ -564,9 +564,11 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
   <hr class="part-rule" />
   <p class="part-lede">What changed in the data, and what people looked at on the site.</p>
   <h2><span class="num">11.1</span>The audit log</h2>
-  <p>One entry per change to a company, job, application or profile — who, what, when, and a Field / Before / After table. It is written by database triggers, so a change made any way at all — console, script, SQL editor — is recorded the same. Console actions name the person.</p>
+  <p>One entry per change to a company, job, application or profile — who, what, when, and a Field / Before / After table. It is written by database triggers, so a change made any way at all — console, script, SQL editor — is recorded the same. Console actions name the person. What developers do is never shown here, in a founder’s activity, or to the assistant.</p>
   <h2><span class="num">11.2</span>Page impressions</h2>
   <p>A card per public page over All, 30 days or 7 days: impressions, unique human visitors, and bot hits. Crawlers are separated by user agent, so the human figure is the one to quote. Console views are flagged so staff clicking does not inflate public numbers.</p>
+  <h2><span class="num">11.3</span>Clearing a log</h2>
+  <p>Developer and Admin see <strong>Clear audit log</strong> or <strong>Clear impressions</strong>, for whichever tab is open. It asks first, deletes every row for good, and leaves one audit entry saying who cleared it. It cannot be undone.</p>
   <p><span class="chip chip--done">Done</span></p>
 </section>
 
@@ -673,7 +675,7 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
       <tr><td class="k">Sign up</td><td>At <span class="path">/apply</span>: name, email, phone, password with a strength meter. A welcome email confirms the address; the final step of the application waits for that confirmation.</td></tr>
       <tr><td class="k">Overview</td><td>Live, closed and removed roles, applicants, team, and where the application stands.</td></tr>
       <tr><td class="k">Startups</td><td>Register one or many startups. A switcher picks the one they are working on.</td></tr>
-      <tr><td class="k">Application</td><td>The eight-step application per startup, autosaved as a draft. Its progress through the review chain is shown with the same dots you see.</td></tr>
+      <tr><td class="k">Application</td><td>The eight-step application per startup, autosaved as a draft. Its progress through the review chain is shown with the same dots you see. After a rejection it shows the date they may apply again.</td></tr>
       <tr><td class="k">Job postings</td><td>Once verified: post roles that go live immediately; edit, close, reopen, delete; see applied out of the limit. A role TIC removed shows the reason.</td></tr>
       <tr><td class="k">Applicants</td><td>Their own applicants only — details, answers, resumes, CSV export and a zip of every resume. No stages: received and read.</td></tr>
       <tr><td class="k">Team</td><td>Add people to a startup; each waits for TIC in Approvals.</td></tr>
@@ -701,7 +703,7 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
       <tr><td class="k">An application needs your review</td><td>It reaches a new step — to whoever acts next</td></tr>
       <tr><td class="k">Screening call invite · scheduled</td><td>Admin saves or changes the meeting — to the founder and coordinators</td></tr>
       <tr><td class="k">Application accepted</td><td>Admin accepts after every head signs off, with average scores</td></tr>
-      <tr><td class="k">Application declined</td><td>Admin or the CEO rejects it</td></tr>
+      <tr><td class="k">Application declined · team told</td><td>It is rejected — to the founder, and to the staff on it (§6.3)</td></tr>
       <tr><td class="k">Application sent back</td><td>Admin sends it back to the founder</td></tr>
       <tr><td class="k">Startup is live · graduated</td><td>Admin marks it live; admin graduates it in Incubatees</td></tr>
       <tr><td class="k">Public profile approved · sent back</td><td>A decision in Approvals</td></tr>
@@ -756,14 +758,13 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
 <section class="sheet">
   <h1 class="part"><span class="num">20</span> &nbsp;Feature ledger</h1>
   <hr class="part-rule" />
-  <p class="part-lede">The live version is at <span class="path">/status</span>.</p>
   <h2><span class="num">20.1</span>Done</h2>
   <table class="tight">
     <tbody>
       <tr><td class="k" style="width:52mm">Public website</td><td>Every page live and editable, SEO per route, phone-responsive.</td></tr>
       <tr><td class="k">Sign-in and accounts</td><td>One door, bot-checked, 30-day sliding sessions, staff roles with rank, view as, type-to-confirm deletion, password strength.</td></tr>
       <tr><td class="k">Founder console</td><td>Startups, application with drafts, roles, applicants, team, details, settings, account.</td></tr>
-      <tr><td class="k">Review chain</td><td>Six steps with per-role visibility, 0–100 step scores gating every hand-off, confirmations, emails at every step.</td></tr>
+      <tr><td class="k">Review chain</td><td>Six steps with per-role visibility, 0–100 step scores gating every hand-off and locking after it, reject rules with a reason and a team email, a three-month reapply wait, confirmations, emails at every step.</td></tr>
       <tr><td class="k">Screening calls</td><td>Google Meet setup, eight-criterion scorecard, private marks, CEO view.</td></tr>
       <tr><td class="k">Job board</td><td>TIC and startup roles live on save, one apply page, PDF-only 2 MB resumes, application limits, closing dates, removal with reason, 90-day resume clear-out with warning and zip download.</td></tr>
       <tr><td class="k">Console</td><td>Approvals, companies, users, roles, activity, content, email and templates, storage, assistant, settings.</td></tr>
@@ -806,6 +807,8 @@ table.tight td{padding:1.5mm 2.5mm 1.5mm 0;}
       <tr><td class="k">“Pass to …” is greyed out</td><td>You have not scored every step yet.</td><td>Yes</td></tr>
       <tr><td class="k">A first-admin setup form appears</td><td>The server cannot read the accounts. Environment, not data. Do not complete it.</td><td>No — §22</td></tr>
       <tr><td class="k">“Write a reason first”</td><td>The reason box was empty. Type one sentence.</td><td>Yes</td></tr>
+      <tr><td class="k">Reject is not offered</td><td>It is with the CEO (admin), you are not an assigned head who has yet to sign off, or it is already accepted.</td><td>Yes</td></tr>
+      <tr><td class="k">A founder cannot apply again</td><td>A rejection under three months old, for that startup or that founder. Admin can press <strong>Allow reapplying now</strong>.</td><td>Yes</td></tr>
       <tr><td class="k">A role is not on the board</td><td>Closed, full, past its closing date, removed — or the startup is not verified.</td><td>Yes</td></tr>
       <tr><td class="k">A resume reads “cleared”</td><td>The role ended more than 90 days ago. Working as designed.</td><td>Yes</td></tr>
       <tr><td class="k">A document link does nothing</td><td>It expired after ten minutes. Reload.</td><td>Yes</td></tr>

@@ -23,7 +23,6 @@ The public website, the company job portal, the incubation application, and the 
 <p>
   <a href="https://iitgtic.itsjeu.com"><b>Live site</b></a> ·
   <a href="#routes"><b>All page links</b></a> ·
-  <a href="https://iitgtic.itsjeu.com/status">Project status</a> ·
   <a href="https://iitgtic.itsjeu.com/opportunities">Opportunities</a> ·
   <a href="https://iitgtic.itsjeu.com/founder/application">Apply for incubation</a>
 </p>
@@ -72,7 +71,6 @@ The public website, the company job portal, the incubation application, and the 
 | **Applicant inbox**        | A verified startup reads its own applicants — details, answers, resumes, CSV export, one-zip download. TIC sees counts only                                       | `/founder/applicants`                         |
 | **Transactional email**    | Resend-backed mail with editable templates, a delivery log you can preview, usage against the plan allowance, and bounce/complaint feedback from a signed webhook | `/tic-admin/email`                            |
 | **Analytics & audit**      | Page impressions with bot separation, plus a trigger-written audit trail                                                                                          | `/tic-admin/activity`                         |
-| **Build status**           | Self-hosted checklist of every route, component and backend piece                                                                                                 | `/status`                                     |
 
 ## Stack
 
@@ -468,7 +466,6 @@ Links marked 🔒 need a session; opening one signed-out redirects to the matchi
 | Events                  | [`/events`](https://iitgtic.itsjeu.com/events) · `/events/[slug]`                                        | Upcoming and past events                                     |
 | Partners                | [`/partners`](https://iitgtic.itsjeu.com/partners)                                                       | Partner grid                                                 |
 | Contact                 | [`/contact`](https://iitgtic.itsjeu.com/contact)                                                         | Enquiry form and a click-to-load map                         |
-| Project status          | [`/status`](https://iitgtic.itsjeu.com/status)                                                           | Build checklist — frontend and backend rails                 |
 | Sitemap                 | [`/sitemap.xml`](https://iitgtic.itsjeu.com/sitemap.xml)                                                 | Generated from the route list plus content slugs             |
 
 </details>
@@ -540,13 +537,13 @@ The old `/tic-admin/login` survives only to create the very first admin on an em
 | Overview 🔒              | [`/tic-admin`](https://iitgtic.itsjeu.com/tic-admin)                                                           | A different front page per role — what is waiting on you                         |
 | **Approvals** 🔒         | [`/tic-admin/approvals`](https://iitgtic.itsjeu.com/tic-admin/approvals)                                       | Three queues: public profiles, team members and company detail changes           |
 | Incubatees 🔒            | [`/tic-admin/startups`](https://iitgtic.itsjeu.com/tic-admin/startups) · `/[id]`                               | Every accepted startup: its company record (contact; approve, reject, revert, delete) and its public page (Current, Virtual, Graduated, not on the site; make virtual, graduate, take off the site, view, edit and publish). `/tic-admin/companies` redirects here |
-| Incubation applications 🔒 | [`/tic-admin/applications`](https://iitgtic.itsjeu.com/tic-admin/applications) · `/[id]`                     | The six-step review chain: 0–100 step scores, assignments, decisions             |
+| Incubation applications 🔒 | [`/tic-admin/applications`](https://iitgtic.itsjeu.com/tic-admin/applications) · `/[id]`                     | The six-step review chain: 0–100 step scores (locked once passed on), assignments, decisions, reject with a reason, the 3-month reapply wait and its override |
 | Evaluation 🔒            | [`/tic-admin/evaluation`](https://iitgtic.itsjeu.com/tic-admin/evaluation)                                     | Coordinators’ Google Meet screening calls and eight-criterion scorecards         |
 | Job responses 🔒         | [`/tic-admin/job-applications`](https://iitgtic.itsjeu.com/tic-admin/job-applications) · `/[id]`               | Applicants to TIC’s own roles: read, export, download resumes                    |
 | Job postings 🔒          | [`/tic-admin/jobs`](https://iitgtic.itsjeu.com/tic-admin/jobs) · `/[id]`                                       | TIC tab: post and run the centre’s roles. Incubatees tab: counts, remove w/ reason |
 | Users 🔒                 | [`/tic-admin/users`](https://iitgtic.itsjeu.com/tic-admin/users)                                               | All accounts — roles, deactivate, type-to-confirm delete, new account, view as   |
 | Roles 🔒                 | [`/tic-admin/roles`](https://iitgtic.itsjeu.com/tic-admin/roles)                                               | Which staff role opens which section                                             |
-| Activity 🔒              | [`/tic-admin/activity`](https://iitgtic.itsjeu.com/tic-admin/activity)                                         | Audit log with before/after diffs, plus per-page impressions                     |
+| Activity 🔒              | [`/tic-admin/activity`](https://iitgtic.itsjeu.com/tic-admin/activity)                                         | Audit log with before/after diffs, plus per-page impressions. Developer activity never shows; Developer and Admin can clear either log |
 | Content editor 🔒        | [`/tic-admin/content`](https://iitgtic.itsjeu.com/tic-admin/content) · `/[...key]`                             | Schema-driven editor for every content section, with image upload per field      |
 | Storage 🔒               | [`/tic-admin/storage`](https://iitgtic.itsjeu.com/tic-admin/storage)                                           | Every bucket's usage, each object marked in use or unused, with a guarded delete |
 | Email 🔒                 | [`/tic-admin/email`](https://iitgtic.itsjeu.com/tic-admin/email)                                               | Usage against the plan, a 30-day trend, and the delivery log with previews       |
@@ -582,7 +579,8 @@ admin's id.
 | `/api/company-account`              | `POST` `DELETE`               | Signup receipt for a just-created account; a company closing its own account                                                                              |
 | `/api/tic-admin-login`              | `GET` `POST` `DELETE`         | Session state, sign-in, first-admin bootstrap, sign-out                                                                                                   |
 | `/api/tic-admin/companies`          | `PATCH` `DELETE`              | Verify / reject / delete an account                                                                                                                       |
-| `/api/tic-admin/applications`       | `PATCH` `DELETE`              | Move an incubation application through review, or send a just-submitted one back to the founder (`status: returned`)                                    |
+| `/api/tic-admin/applications`       | `PATCH` `DELETE`              | Move an incubation application through review, or send a just-submitted one back to the founder (`status: returned`). A rejection needs a reason, follows `src/lib/utils/applicationReject.ts`, emails the team and sets the reapply date |
+| `/api/tic-admin/applications/reapply` | `POST`                      | Admin only: "Allow reapplying now" lifts the wait on a rejected application                                                                              |
 | `/api/founder/application/resubmit` | `POST`                        | The founder who submitted a returned application sends it again — checks a confirmed email, every required answer and a pitch deck, then moves it back to `submitted` |
 | `/api/founder/startup-profile`      | `PUT` `POST`                  | The founder's public profile: save the draft, send it for review or withdraw it; `/upload` takes an image                                              |
 | `/api/tic-admin/startups`           | `PATCH` `PUT` `POST`          | Incubatees: list as current, virtual on/off, graduate, take off the site (admin); edit and publish a profile, upload an image (content roles)        |
@@ -592,7 +590,7 @@ admin's id.
 | `/api/founder/jobs`                 | `POST` `PATCH` `DELETE`       | A founder’s own roles: post (live at once), edit, close, reopen, delete                                                                                   |
 | `/api/cron/resume-retention`        | `GET`                         | Daily, from Vercel Cron with `CRON_SECRET`: warns posters a week ahead, clears resumes 90 days after a role ends                                         |
 | `/api/tic-admin/users`              | `PATCH` `PUT` `POST` `DELETE` | Roles, suspend, reset mail, delete, create a staff account (emailed their role and sign-in details)                                                      |
-| `/api/tic-admin/activity`           | `GET`                         | Paged audit entries and impressions over 7d / 30d / all                                                                                                   |
+| `/api/tic-admin/activity`           | `GET` `DELETE`                | Paged audit entries and impressions over 7d / 30d / all, developer activity left out; `DELETE ?view=audit\|impressions` clears a log (Developer and Admin only) |
 | `/api/tic-admin/content`            | `PUT` `DELETE`                | Save a section, or reset it to the bundled default                                                                                                        |
 | `/api/tic-admin/content/assets`     | `POST`                        | Upload an image for a media field into the public `site-assets` bucket; returns the public URL saved into the section                                     |
 | `/api/tic-admin/storage`            | `GET` `DELETE`                | Sign a 10-minute link to one object, or delete one — refused with `409` while a content section, template, application or resume still points at the file |
@@ -620,7 +618,7 @@ Twenty tables, all with RLS enabled. The main ones:
 | `companies`              | Startups, owned by a founder, with verification status       | The ones you own or were added to; `status` and the public-facing columns are service-role only                                          |
 | `company_profile_changes` | A founder's request to change a company's public details    | Read by that company; written and decided by the service role                                                                            |
 | `jobs`                   | Every role: `owner` tic / incubatee, status open / closed / removed, work mode, pay, closing date, application limit | Public read while open, not past its closing date, and (for a startup) verified; every write is service-role                            |
-| `applications`           | Submitted incubation applications, one per startup           | Own rows and your company's; `status` is service-role only                                                                               |
+| `applications`           | Submitted incubation applications, one per startup; a rejected one carries `reapply_from` and, if lifted, `reapply_allowed_at` | Own rows and your company's; `status` is service-role only. Insert is refused while the startup, or the founder under any company, is in a reapply wait |
 | `job_applications`       | Applications to a role; the resume is cleared 90 days after the role ends | Service role for writes; a verified startup reads its own applicants through one policy. TIC reads only rows with no company (its own roles) |
 | `email_templates`        | Subject + HTML body per message, overriding the bundled copy | Service role only — RLS on, zero policies                                                                                               |
 | `email_log`              | One row per send attempt, with the rendered body             | Service role only — RLS on, zero policies                                                                                               |
@@ -886,6 +884,12 @@ admin routes flagged and attributed to the signed-in admin. The console shows th
 per page — total impressions, unique human visitors and bot hits — from the
 `page_impressions(since)` function, which separates crawlers out by user agent.
 
+Every read of the trail — Activity, a founder's activity feed, the assistant — goes through
+`withoutDeveloperActivity()` in `$lib/server/auditFilter.ts`, so what a developer does (and
+changes to a developer's own account) never appears. The rows are still written. Developer
+and Admin can clear the audit log or the page impressions from Activity; it deletes the rows
+for good, then writes one audit entry saying who cleared it.
+
 ### Why the admin console is server-rendered
 
 `/tic-admin/+layout.server.ts` reads the session cookie and redirects if it is missing, and
@@ -901,14 +905,14 @@ Mail goes out through [Resend](https://resend.com), and everything about it is v
 
 **What gets sent, and when**
 
-Twenty-eight messages, each editable in the console. The full list with triggers is in the
+Twenty-nine messages, each editable in the console. The full list with triggers is in the
 operations manual, chapter 18. In short:
 
 | Group                 | Messages                                                                                                     |
 | --------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Founders              | Welcome & confirm, sign-in notice, startup registered, account deleted, team member added (sign-in details and confirm link) |
 | Incubation            | Application received, under review, screening call invite, accepted (with scores and a prompt to set up the public profile), declined, sent back to the founder (with the confirm link if unconfirmed), public profile approved or sent back, startup live, startup graduated |
-| Staff                 | Staff account created (role, sign-in details and confirm link), an application needs your review, screening call scheduled, admin sign-in alert, new founder signed up |
+| Staff                 | Staff account created (role, sign-in details and confirm link), an application needs your review, an application was rejected (to admin, the CEO once it reached them, and the assigned coordinators and heads), screening call scheduled, admin sign-in alert, new founder signed up |
 | Job board             | Application received, new applicant (to the startup or the TIC inbox), role removed by TIC, resumes clearing soon |
 | Newsletter and direct | Newsletter, subscription confirmed, direct message from the assistant                                        |
 
@@ -1219,8 +1223,8 @@ Twitter card without 37 pages repeating themselves.
   override.
 - **Canonicals come from the request**, not from `PUBLIC_SITE_URL`, so a Vercel preview is
   correct without being configured.
-- **`noindex, nofollow`** on the consoles, `/auth`, `/login`, `/apply`, `/application` and
-  `/status`, matching what `static/robots.txt` already disallows.
+- **`noindex, nofollow`** on the consoles, `/auth`, `/login`, `/apply` and `/application`,
+  matching what `static/robots.txt` already disallows.
 - **`src/app.html`** keeps only what is genuinely identical everywhere: keywords, author,
   `og:site_name`, `og:locale` and the Organization JSON-LD.
 - **Open Graph image** — `static/banner-iitgtic.webp` served at `/banner-iitgtic.webp`; a
@@ -1262,8 +1266,7 @@ Deployed to Vercel via `@sveltejs/adapter-auto`. Pushes to `main` deploy automat
 
 ## Roadmap
 
-The live checklist is at **[/status](https://iitgtic.itsjeu.com/status)** — every route,
-component and backend piece, with a frontend and a backend rail. The open items today:
+The open items today:
 
 | Area                     | Gap                                                                                                                                                                                                                                                                                                                                                                                   |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

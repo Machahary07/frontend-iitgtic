@@ -49,15 +49,12 @@ const SECTION_FOR: Record<string, string> = {
 };
 
 // Nothing under these belongs in a search result: consoles, the auth plumbing,
-// the pages that show one person their own application, and /status — an
-// internal build checklist that names the architecture is not something to hand
-// to a search engine.
+// and the pages that show one person their own application.
 const PRIVATE_PREFIXES = [
 	'/tic-admin',
 	'/founder',
 	'/auth',
 	'/login',
-	'/status',
 	// static/robots.txt already disallows this one; the two should not disagree.
 	'/apply'
 ];

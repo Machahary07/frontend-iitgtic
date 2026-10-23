@@ -2,7 +2,7 @@
 
 Manuals, the handover document and walkthrough videos for the IITG-TIC platform: the public website, the founder console, the incubation review chain, the job board and the TIC admin console.
 
-Prepared by **Jeu Machahary** and **Veeshal D Bodosa** · October 2026 · build v38
+Prepared by **Jeu Machahary** and **Veeshal D Bodosa** · October 2026 · build v40
 
 ## Start here
 
@@ -31,5 +31,5 @@ Prepared by **Jeu Machahary** and **Veeshal D Bodosa** · October 2026 · build 
 ## Keeping these current
 
 - **Manual.** The source is `scripts/manual/admin-manual.html`; `scripts/manual/build-pdf.mjs` renders it to the PDF here. Update the edition line on the cover when you rebuild.
-- **Status.** The live list of what is done and what is left is at [/status](https://iitgtic.itsjeu.com/status).
+- **Status.** What is done and what is left is in the manual's feature ledger (chapter 20) and the root README's [Roadmap](../README.md#roadmap).
 - **Contacts.** Jeu Machahary — hello@itsjeu.com · +91 7896175454. Veeshal D Bodosa — work@veeshal.me · +91 6000013904.
