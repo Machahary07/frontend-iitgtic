@@ -1,3 +1,4 @@
+import { withoutDeveloperActivity } from '$lib/server/auditFilter';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ACCOUNT_ROLES, canOpen, type ConsoleSection } from '$lib/utils/roles';
 import { canSeeApplication, visibleApplicationIds } from '$lib/server/applicationReview';
@@ -562,7 +563,7 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 	{
 		name: 'list_users',
 		description:
-			'Account profiles. Role is founder, or one of the TIC staff roles: developer, admin, tic_admin, tic_ceo, tic_chairman, tic_coordinator, tic_head, tic_president. Use it for questions about who has access to what.',
+			'Account profiles. Role is founder, or one of the TIC staff roles: developer, admin, tic_admin, tic_ceo, tic_coordinator, tic_head. Use it for questions about who has access to what.',
 		parameters: {
 			type: 'object',
 			properties: {
@@ -613,9 +614,11 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
 		label: (args) =>
 			args.table ? `Reading activity on ${String(args.table)}` : 'Reading the activity log',
 		run: async (db, args) => {
-			let query = db
-				.from('audit_log')
-				.select('id, occurred_at, source, actor_label, action, table_name, record_id')
+			let query = withoutDeveloperActivity(
+				db
+					.from('audit_log')
+					.select('id, occurred_at, source, actor_label, action, table_name, record_id')
+			)
 				.order('id', { ascending: false })
 				.limit(limitOf(args, 40));
 

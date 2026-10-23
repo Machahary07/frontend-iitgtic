@@ -1,3 +1,4 @@
+import { withoutDeveloperActivity } from '$lib/server/auditFilter';
 import { founderDb } from '$lib/server/founderGuard';
 import type { PageServerLoad } from './$types';
 
@@ -41,15 +42,19 @@ export const load: PageServerLoad = async ({ parent }) => {
 	// string, and a list of uuids spliced into one would be a needless place for
 	// quoting to go wrong.
 	const [byUs, aboutUs] = await Promise.all([
-		db
-			.from('audit_log')
-			.select('id, created_at:occurred_at, actor_label, action, table_name, record_id')
+		withoutDeveloperActivity(
+			db
+				.from('audit_log')
+				.select('id, created_at:occurred_at, actor_label, action, table_name, record_id')
+		)
 			.in('actor_id', memberIds)
 			.order('occurred_at', { ascending: false })
 			.limit(LIMIT),
-		db
-			.from('audit_log')
-			.select('id, created_at:occurred_at, actor_label, action, table_name, record_id')
+		withoutDeveloperActivity(
+			db
+				.from('audit_log')
+				.select('id, created_at:occurred_at, actor_label, action, table_name, record_id')
+		)
 			.in('record_id', recordIds)
 			.order('occurred_at', { ascending: false })
 			.limit(LIMIT)
